@@ -1,0 +1,21 @@
+# Segredos e ambientes
+.env
+.env.*
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+.next/
+dist/
+build/
+
+# Sistema
+Thumbs.db
+Desktop.ini
