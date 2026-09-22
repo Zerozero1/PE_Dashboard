@@ -51,9 +51,9 @@ type AudData = {
 
 type FiltrosData = { ufs: string[]; tipos: { id: number; nome: string }[] };
 
-function periodo(dias: number) {
+function periodo(dias: number | "todos") {
   const ate = new Date().toISOString().slice(0, 10);
-  const de = new Date(Date.now() - dias * 864e5).toISOString().slice(0, 10);
+  const de = dias === "todos" ? "2021-10-01" : new Date(Date.now() - dias * 864e5).toISOString().slice(0, 10);
   return { de, ate };
 }
 
@@ -70,7 +70,7 @@ function Sel({ label, value, onChange, options }: { label: string; value: string
   );
 }
 
-const PERIODOS: [string, string][] = [["30", "30 dias"], ["7", "7 dias"], ["90", "90 dias"], ["365", "12 meses"]];
+const PERIODOS: [string, string][] = [["todos", "Todos"], ["30", "30 dias"], ["7", "7 dias"], ["90", "90 dias"], ["365", "12 meses"]];
 
 const VIEWS = ["documentos", "medicos", "dispensacoes", "auditoria"] as const;
 type ViewId = (typeof VIEWS)[number];
@@ -82,14 +82,76 @@ const VIEW_META: Record<ViewId, { title: string; subtitle: string; theme: string
   auditoria: { title: "Auditoria", subtitle: "Anomalias agregadas — média de referência de todos os médicos · somente agregados.", theme: "theme-red" },
 };
 
-const UF_POS: Record<string, [number, number]> = {
-  SP: [325, 152], RJ: [365, 158], MG: [345, 133], ES: [375, 140], PR: [295, 168],
-  SC: [290, 180], RS: [270, 192], BA: [385, 118], SE: [420, 105], AL: [430, 98],
-  PE: [435, 88], PB: [445, 80], RN: [445, 72], CE: [415, 72], PI: [390, 92],
-  MA: [380, 95], PA: [330, 78], AP: [330, 60], AM: [225, 85], RR: [225, 48],
-  AC: [160, 100], RO: [195, 105], MT: [250, 115], MS: [255, 145], GO: [310, 125],
-  DF: [322, 122], TO: [345, 100],
-};
+const MIN_LON = -73.98, MAX_LAT = 5.27;
+const LON_R = 73.98 - 32.39, LAT_R = 5.27 + 33.75;
+const MAP_W = 800;
+const MAP_H = Math.round(MAP_W * (LAT_R / LON_R));
+
+type GeoFeat = { sigla: string; d: string; cx: number; cy: number };
+let geoCache: Promise<GeoFeat[]> | null = null;
+
+function loadGeo(): Promise<GeoFeat[]> {
+  if (!geoCache) {
+    geoCache = fetch("/brazil.geojson")
+      .then((r) => r.json())
+      .then((g: { features: { geometry: { type: string; coordinates: number[][][] | number[][][][] }; properties: { sigla: string } }[] }) =>
+        g.features.map((f) => {
+          const polys = f.geometry.type === "MultiPolygon" ? f.geometry.coordinates as number[][][][] : [f.geometry.coordinates as number[][][]];
+          let d = "";
+          let cx = 0, cy = 0, n = 0;
+          for (const poly of polys) {
+            for (const ring of poly) {
+              let s = "";
+              for (const [lon, lat] of ring) {
+                const x = ((lon - MIN_LON) / LON_R) * MAP_W;
+                const y = ((MAX_LAT - lat) / LAT_R) * MAP_H;
+                s += (s ? " L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
+                cx += x; cy += y; n++;
+              }
+              d += s + " Z";
+            }
+          }
+          return { sigla: f.properties.sigla, d, cx: cx / n, cy: cy / n };
+        })
+      );
+  }
+  return geoCache;
+}
+
+function MapBr({ rows }: { rows: { uf: string; v: number }[] }) {
+  const [geo, setGeo] = useState<GeoFeat[] | null>(null);
+  useEffect(() => {
+    let ok = true;
+    loadGeo().then((g) => { if (ok) setGeo(g); });
+    return () => { ok = false; };
+  }, []);
+  const max = Math.max(...rows.map((r) => r.v), 1);
+  const valor = Object.fromEntries(rows.map((r) => [r.uf, r.v]));
+  return (
+    <div className="map-box">
+      <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} style={{ width: "100%", height: "auto", maxHeight: 272 }}>
+        {geo?.map((g) => {
+          const v = valor[g.sigla] ?? 0;
+          return (
+            <path
+              key={g.sigla}
+              d={g.d}
+              fill={v > 0 ? "var(--va)" : "#0d121a"}
+              fillOpacity={v > 0 ? 0.08 + 0.5 * (v / max) : 1}
+              stroke="#202936"
+              strokeWidth="1"
+            />
+          );
+        })}
+        {geo?.filter((g) => (valor[g.sigla] ?? 0) > 0).map((g) => {
+          const radius = 4 + ((valor[g.sigla] ?? 0) / max) * 20;
+          return <circle key={`b${g.sigla}`} cx={g.cx} cy={g.cy} r={radius} fill="var(--va)" opacity=".55" />;
+        })}
+      </svg>
+      <div className="map-note">{rows.slice(0, 4).map((r) => `${r.uf} ${nf.format(r.v)}`).join(" · ")}</div>
+    </div>
+  );
+}
 
 function useApi<T>(path: string, active: boolean) {
   const [data, setData] = useState<T | null>(null);
@@ -171,24 +233,6 @@ function Donut({ rows }: { rows: { label: string; v: number }[] }) {
   );
 }
 
-function MapBr({ rows }: { rows: { uf: string; v: number }[] }) {
-  const max = Math.max(...rows.map((r) => r.v), 1);
-  const items = rows.filter((r) => UF_POS[r.uf]);
-  return (
-    <div className="map-box">
-      <svg viewBox="0 0 700 250" preserveAspectRatio="none">
-        <path d="M240 30 L300 18 L370 24 L430 40 L470 62 L505 88 L520 118 L505 150 L535 180 L560 200 L520 218 L470 226 L420 230 L370 222 L320 210 L280 190 L250 168 L230 140 L220 112 L222 86 L226 58 Z" fill="#0d121a" stroke="#202936" strokeWidth="1.2" />
-        {items.map((r) => {
-          const [x, y] = UF_POS[r.uf];
-          const radius = 6 + (r.v / max) * 26;
-          return <circle key={r.uf} cx={x} cy={y} r={radius} fill="var(--va)" opacity=".5" />;
-        })}
-      </svg>
-      <div className="map-note">{rows.slice(0, 4).map((r) => `${r.uf} ${nf.format(r.v)}`).join(" · ")}</div>
-    </div>
-  );
-}
-
 function RankRows({ rows }: { rows: { name: string; v: number }[] }) {
   const max = Math.max(...rows.map((r) => r.v), 1);
   return rows.map((r) => (
@@ -211,16 +255,21 @@ function KpiCard({ label, value, meta }: { label: string; value: string; meta: s
 }
 
 function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosData | null }) {
-  const [dias, setDias] = useState("30");
+  const [dias, setDias] = useState<"todos" | string>("todos");
   const [uf, setUf] = useState("");
   const [tipo, setTipo] = useState("");
   const [assinado, setAssinado] = useState("");
-  const { de, ate } = periodo(Number(dias));
+  const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
   const qs = `de=${de}&ate=${ate}&uf=${uf}&tipo=${tipo}&assinado=${assinado}`;
   const { data, erro } = useApi<DocsData>(`/api/dashboard/documentos?${qs}`, active);
   if (erro) return <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>;
   if (!data) return <div className="card" style={{ gridColumn: "span 12", color: "#566271" }}>Carregando…</div>;
   const k = data.kpis;
+  let acumulado = 0;
+  const serieAcumulada = data.serie_mensal.map((s) => {
+    acumulado += Number(s.emitidos);
+    return { x: s.mes, v: acumulado };
+  });
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
@@ -238,9 +287,9 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       <KpiCard label="Pacientes distintos" value={nf.format(k.pacientes)} meta="no período" />
 
       <article className="card chart-main">
-        <div className="section-title"><h2>Emissões por mês</h2><div className="legend"><span><i className="l1" />Emitidos</span><span><i className="l2" />Assinados</span></div></div>
+        <div className="section-title"><h2>Emissões por mês</h2><div className="legend"><span><i className="l1" />Acumulado</span></div></div>
         <div className="chart">
-          <BarChart rows={data.serie_mensal.map((s) => ({ x: s.mes, v: Number(s.emitidos), v2: Number(s.assinados) }))} />
+          <BarChart rows={serieAcumulada} />
         </div>
       </article>
 
@@ -280,9 +329,9 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
 }
 
 function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosData | null }) {
-  const [dias, setDias] = useState("30");
+  const [dias, setDias] = useState<"todos" | string>("todos");
   const [uf, setUf] = useState("");
-  const { de, ate } = periodo(Number(dias));
+  const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
   const qs = `de=${de}&ate=${ate}&uf=${uf}`;
   const { data, erro } = useApi<MedData>(`/api/dashboard/medicos?${qs}`, active);
   if (erro) return <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>;
@@ -342,9 +391,9 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
 }
 
 function DispensacoesView({ active, filtros }: { active: boolean; filtros: FiltrosData | null }) {
-  const [dias, setDias] = useState("30");
+  const [dias, setDias] = useState<"todos" | string>("todos");
   const [uf, setUf] = useState("");
-  const { de, ate } = periodo(Number(dias));
+  const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
   const qs = `de=${de}&ate=${ate}&uf=${uf}`;
   const { data, erro } = useApi<DispData>(`/api/dashboard/dispensacoes?${qs}`, active);
   if (erro) return <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>;
@@ -400,9 +449,9 @@ function DispensacoesView({ active, filtros }: { active: boolean; filtros: Filtr
 }
 
 function AuditoriaView({ active }: { active: boolean }) {
-  const [dias, setDias] = useState("7");
+  const [dias, setDias] = useState<"todos" | string>("todos");
   const [tipo, setTipo] = useState("");
-  const { de, ate } = periodo(Number(dias));
+  const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
   const qs = `de=${de}&ate=${ate}&tipo=${tipo}`;
   const { data, erro } = useApi<AudData>(`/api/dashboard/auditoria?${qs}`, active);
   if (erro) return <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>;
@@ -410,7 +459,7 @@ function AuditoriaView({ active }: { active: boolean }) {
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
-        <Sel label="Período" value={dias} onChange={setDias} options={[["7", "7 dias"], ["30", "30 dias"], ["90", "90 dias"]]} />
+        <Sel label="Período" value={dias} onChange={setDias} options={[["todos", "Todos"], ["7", "7 dias"], ["30", "30 dias"], ["90", "90 dias"]]} />
         <Sel label="Tipo de anomalia" value={tipo} onChange={setTipo} options={[["", "Todas"], ["AN1", "AN1 · Documentos"], ["AN2", "AN2 · Pacientes"], ["AN3", "AN3 · Tempo emissões"], ["AN4", "AN4 · Local"]]} />
         <div className="meta">{de} → {ate} · somente agregados</div>
       </div>
