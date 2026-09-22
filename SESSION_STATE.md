@@ -33,8 +33,8 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 - [ ] Testar run_all.py completo em uma execução.
 - [ ] Fase 1 — Fundacao: projeto web, Google OAuth, validacao de dominio, shell com 4 visões (padrão cyberpunk dark aprovado).
 - [ ] Fase 3 — Visões Documentos, Medicos e Dispensacoes consumindo as fatos do DW.
-  - EM ANDAMENTO (2026-09-22): endpoints /api/dashboard/{documentos,medicos,dispensacoes,auditoria} implementados com SQL real sobre o datamart; componentes do dashboard renderizam KPIs, series (SVG), donut, mapa com bolhas por UF, rankings e tabelas. Validado com dados reais: 30d = 2,99M docs (97,9% assinados), 606,8k inscrições, 394,5k ativos, 202,7k dispensações.
-  - Faltam: filtros interativos (periodo/UF/tipo/assinado na UI), mapa geografico completo (bolhas em posições fixas por enquanto), farmacêuticos por mês.
+  - CONCLUIDA (2026-09-22): endpoints /api/dashboard/{documentos,medicos,dispensacoes,auditoria} com SQL real; KPIs, series (SVG, eixo duplo), donut, mapa real do Brasil (GeoJSON local), rankings, tabelas; filtros por periodo (default "Todos")/UF/tipo.
+  - Refinamentos 2026-09-22: filtro de assinatura removido e fato_documento_dia reestruturada (grão dia×UF×tipo; 536k→337k linhas, −37%); nao_assinados derivado; eyebrow "VISÃO"; logo CFM; "Processando…" animado; tabela UF→tipo removida (sem carga dedicada).
 - [ ] Solicitar ao DBA indices em `tb_consulta_documento.dh_documento`, `tb_consulta.dt_consulta`, `tb_historico_dispensacao.dh_historico_dispensacao` e FKs de dispensacao.
 
 ## ⚠️ Pontos de Atencao

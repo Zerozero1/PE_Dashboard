@@ -216,15 +216,14 @@ Trade-off:
 
 ### 5.2 Fatos recomendadas
 
-`fato_documento_dia`
-- grao: dia + UF + medico + unidade + tipo_documento + especialidade
+`fato_documento_dia` (modelo implementado 2026-09-22)
+- grao: dia + UF + tipo_documento (sem `in_assinado` no grao; filtro de assinatura removido)
 - metricas:
-  - documentos_emitidos
-  - documentos_assinados
-  - documentos_nao_assinados
-  - documentos_cancelados
-  - pacientes_distintos
-  - receitas_emitidas
+  - documentos
+  - assinados (`in_assinado='S'`)
+  - cancelados (`in_cancelado='S'`)
+  - nao_assinados = documentos - assinados (derivado)
+- complementares: `fato_documento_especialidade_dia`, `fato_documento_unidade_dia`, `fato_documento_medico_dia`, `fato_documento_paciente_dia`
 
 `fato_medico_dia`
 - grao: dia + UF + especialidade + situacao
@@ -329,7 +328,6 @@ Filtros:
 - UF.
 - Tipo de documento.
 - Especialidade.
-- Situacao de assinatura.
 - Unidade, se for relevante.
 
 KPIs:
@@ -468,7 +466,7 @@ Cuidados:
 
 ### 6.5 Catalogo de Consultas por Visao
 
-Legenda de filtros: P=periodo, U=UF, T=tipo documento, E=especialidade, S=situacao assinatura, ST=status, A=assinatura, TD=tipo anomalia, DIM=dimensao afetada.
+Legenda de filtros: P=periodo, U=UF, T=tipo documento, E=especialidade, ST=status, A=assinatura, TD=tipo anomalia, DIM=dimensao afetada.
 
 | Codigo | Filtro | Descricao | Valores/Dominio | Onde se aplica |
 |---|---|---|---|---|
@@ -476,7 +474,6 @@ Legenda de filtros: P=periodo, U=UF, T=tipo documento, E=especialidade, S=situac
 | U | UF | Unidade federativa | 27 UFs (dim_uf) | Documentos (UF da unidade de atendimento), Medicos (UF do CRM), Dispensacoes (UF do CRF do farmaceutico) |
 | T | Tipo de documento | Tipo do documento medico | 17 tipos de `td_tipo_documento` (atestado, receita simples, laudo...) | Documentos |
 | E | Especialidade | Especialidade/area de atuacao do medico | dim_especialidade | Documentos, Medicos |
-| S | Situacao de assinatura | Assinado / nao assinado | `in_assinado` S/N | Documentos |
 | ST | Status da dispensacao | Situacao do evento | Dispensada (D), Cancelada (C) | Dispensacoes |
 | A | Assinatura da dispensacao | Assinada / nao assinada | `in_assinado` S/N (tipo unico, sem AE/CD) | Dispensacoes |
 | TD | Tipo de anomalia | Qual anomalia investigar | Documentos por periodo, pacientes unicos por periodo, tempo entre emissoes, documentos por local | Auditoria |
@@ -490,7 +487,7 @@ Notas:
 
 | # | Aba | Objeto visual | Apresenta | Tabelas do datamart | Agregacao/Grao | Filtros | Notas |
 |---|---|---|---|---|---|---|---|
-| 1 | Documentos | Cards KPI | Documentos emitidos, assinados, nao assinados, % assinatura, cancelados, pacientes distintos | fato_documento_dia, dim_data | Soma no periodo (pacientes = distinct) | P,U,T,E,S | % assinatura = assinados/emitidos |
+| 1 | Documentos | Cards KPI | Documentos emitidos, assinados, nao assinados (derivado), % assinatura, cancelados, pacientes distintos | fato_documento_dia, dim_data, fato_documento_paciente_dia | Soma no periodo (pacientes = distinct) | P,U,T,E | % assinatura = assinados/emitidos |
 | 2 | Documentos | Mapa Brasil (bolhas) | Documentos emitidos por UF | fato_documento_dia, dim_uf | Soma por UF | P | UF = unidade de atendimento (decisao 14) |
 | 3 | Documentos | Barras horizontais | Emissoes por mes | fato_documento_dia, dim_data | Soma por ano_mes | P,U,T,E,S | |
 | 4 | Documentos | Donut | Distribuicao por tipo de documento | fato_documento_dia, dim_tipo_documento | Soma por tipo | P,U,E,S | Nome oficial via dim_tipo_documento |
@@ -795,7 +792,7 @@ Objetivo:
 - Implementar as tres visões com base nas imagens de referencia.
 
 Atividades (status):
-- Construir filtros. (FEITO: periodo (default "Todos"), UF, tipo, assinatura)
+- Construir filtros. (FEITO: periodo (default "Todos"), UF, tipo)
 - Criar cards de KPIs. (FEITO)
 - Criar mapas. (FEITO: GeoJSON local do Brasil, choropleth + bolhas)
 - Criar rankings e series temporais. (FEITO: SVG puro, eixo duplo)
