@@ -549,26 +549,25 @@ Observacoes gerais:
 
 ## 7. Experiencia e Interface
 
-Direcao visual:
-- Dashboard profissional, institucional e denso.
-- Manter a logica das telas de referencia: barra superior, navegacao lateral, filtros compactos, cards de indicadores e paineis analiticos.
-- Melhorar legibilidade para web responsiva com espacos consistentes, contraste adequado e estados de carregamento.
+Direcao visual (DECISAO 2026-09-21 — padrao "cyberpunk dark", referencia aprovada pelo usuario):
+- Tema escuro: fundo `#07090d` com gradientes radiais sutis (ciano/roxo) e grade de fundo em overlay.
+- Cores: ciano `#49e7ff`, verde `#65f5ad`, violeta `#9a7cff`, laranja `#ffb454`, vermelho `#ff647c` como acentos; texto `#edf2f7`/`#788493`; superficies `#0d1118` com borda `#202936`.
+- Cards com gradiente sutil, borda fina, raio 15px, sombra profunda e brilho de destaque no topo.
+- Tipografia Inter; numeros com letter-spacing negativo nos KPIs; eyebrow uppercase com letter-spacing largo.
+- KPIs com sparkline e cor de acento por metrica; graficos de area com gridlines; donut com breakdown; tabelas com badges (ok/warn/bad); alertas com icones.
+- Draft de referencia: `design/draft_dashboard.html` (auto-contido, sem dependencias externas).
 
 Navegacao:
-- Menu lateral com quatro icones/itens:
-  - Documentos
-  - Medicos
-  - Dispensacoes
-  - Auditoria
-- Cabecalho com:
-  - nome do dashboard
-  - usuario logado
-  - data/hora da ultima atualizacao
-  - botao de atualizacao
-  - status da carga
+- Sidebar lateral fixa (235px, colapsa a 72px em telas menores) com:
+  - brand "PE Dashboard / Prescricao Eletronica CFM";
+  - grupo "Visões": Documentos, Medicos, Dispensacoes, Auditoria;
+  - grupo "Sistema": Configuracoes, Suporte;
+  - rodape lateral com status da carga e usuario logado.
+- Cabecalho da pagina com eyebrow, titulo da visao, subtitulo e acoes (botao "Atualizar" e "Atualizar dados" primario).
+- Filtros em pills compactas na linha do titulo; periodo e data/hora da ultima carga a direita.
 
 Padroes de UX:
-- Botao de atualizacao com feedback imediato: "Atualizacao em fila", "Atualizando", "Concluido" ou "Falhou".
+- Botao de atualizacao com feedback imediato: "Em fila", "Atualizando", "Concluido" ou "Falhou".
 - Filtros principais sempre visiveis; filtros avancados recolhidos.
 - Skeleton/loading nos paineis durante carregamento.
 - Mensagens claras quando nao houver dados.
@@ -576,9 +575,9 @@ Padroes de UX:
 - Acessibilidade por teclado e contraste adequado.
 
 Responsividade:
-- Desktop: grade densa com multiplos paineis.
-- Tablet: duas colunas principais.
-- Celular: experiencia simplificada, com KPIs e graficos empilhados.
+- Desktop: grade de 12 colunas com multiplos paineis (KPIs span 3, grafico principal span 8, lateral span 4).
+- Tablet: sidebar compacta; paineis empilhados.
+- Celular: KPIs e graficos empilhados.
 
 ## 8. Seguranca e LGPD
 
@@ -880,6 +879,7 @@ Risco: dependencia de mapa externo.
 17. Auditoria do uso do dashboard (2026-09-21): NAO havera (sem registro de logins, acessos ou consultas dos usuarios); tabela `dashboard_access_log` removida do modelo.
 18. Topologia (2026-09-21): aplicacao web (UI + API) e ETL (Python) em maquinas Windows separadas; comunicacao exclusivamente via fila de jobs no `prescricao_dw`.
 19. Anomalias (2026-09-21): media de referencia calculada sobre todos os medicos (nunca o historico individual do emissor).
+20. Design system (2026-09-21): padrao "cyberpunk dark" aprovado (referencia PE_Dashboard_Cyberpunk); tema escuro com acentos ciano/verde/violeta/laranja, sidebar fixa, grade 12 colunas; draft em `design/draft_dashboard.html`.
 
 Fase 0 concluida: todas as confirmacoes previstas foram respondidas.
 
