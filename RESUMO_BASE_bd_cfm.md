@@ -427,7 +427,7 @@ Ponto de modelagem: `prestador` referencia outros schemas sem leitura pelo usuar
 4. Auditoria
    - `tl_prescricao_auditoria_20260702_old` e `tl_prescricao_auditoria` somam centenas de GB.
    - `tl_prescricao_auditoria` (atual) nao e consultavel por `usr_select`.
-   - Decisao (2026-09-21): o dashboard nao usara a tabela de auditoria relacional; a visao Auditoria sera alimentada por anomalias das fatos e pela trilha de acesso do proprio dashboard.
+   - Decisao (2026-09-21): o dashboard nao usara a tabela de auditoria relacional; a visao Auditoria sera alimentada somente por anomalias das fatos, com media de referencia calculada sobre todos os medicos.
 
 5. Permissoes
    - `usr_select` e somente leitura.

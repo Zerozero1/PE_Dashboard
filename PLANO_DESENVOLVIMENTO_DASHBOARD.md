@@ -32,7 +32,7 @@ Implementacao recomendada:
 Regras:
 - Usuario sem dominio permitido nao acessa nenhuma rota de dados.
 - O backend tambem valida permissao; a restricao nao deve ficar apenas no frontend.
-- Registrar eventos de login, logout, falha de acesso e disparo de atualizacao.
+- DECISAO 2026-09-21: nao havera auditoria do uso do dashboard (sem registro de logins, acessos ou consultas dos usuarios).
 
 ### 3.2 Atualizacao dos dados
 
@@ -96,13 +96,26 @@ A navegacao deve usar quatro entradas fixas e claras. As tres primeiras seguem a
 
 ### 4.1 Visao geral
 
+Duas maquinas (DECISAO 2026-09-21): aplicacao web e ETL residem em servidores Windows distintos e se comunicam apenas pela base `prescricao_dw` (fila de jobs + status + fatos).
+
 ```text
-Usuario web
-  -> App web autenticada
-  -> API do dashboard
-  -> Banco/tabelas agregadas do dashboard
-  -> Job de atualizacao
-  -> Base origem bd_cfm, acesso somente leitura
+Maquina A - Aplicacao (UI + API)
+  Usuario web
+    -> App web autenticada (Google OAuth, dominio @portalmedico.org.br)
+    -> API do dashboard
+    -> leitura: fatos/agregados + escrita: jobs de refresh em prescricao_dw
+
+Maquina B - ETL (Python, Windows)
+  Scheduler + Worker
+    -> leitura: jobs queued em prescricao_dw
+    -> leitura: bd_cfm (somente leitura, usr_select)
+    -> escrita: fatos/agregados em prescricao_dw
+
+prescricao_dw (172.16.7.112)
+  -> barramento: fila de jobs, status, config e fatos
+
+bd_cfm (172.16.2.177)
+  -> origem transacional, acesso somente leitura
 ```
 
 ### 4.2 Camadas
@@ -121,14 +134,15 @@ Backend/API:
 Camada de dados:
 - Banco/schema proprio do dashboard, separado da base operacional.
 - Tabelas fato e dimensoes agregadas por dia, UF, tipo de documento, medico, especialidade, farmacia/farmaceutico quando aplicavel.
-- Tabelas de status da carga e logs operacionais do dashboard.
+- Tabelas de status da carga do dashboard.
 - Este banco/schema proprio e o recurso recomendado para BI: um datamart PostgreSQL com modelo estrela e tabelas agregadas fisicas.
 - Arquivos de agregacao, como CSV/Excel, nao devem alimentar o dashboard principal; quando necessarios, devem ser tratados apenas como exportacao, backup analitico ou snapshot auxiliar.
 
-Jobs:
+Jobs (maquina separada da aplicacao - DECISAO 2026-09-21):
 - Carga incremental diaria.
 - Reprocessamento historico sob comando administrativo.
 - Refresh manual assíncrono com status visivel.
+- Comunicacao app <-> ETL exclusivamente via `prescricao_dw`: o app insere jobs na fila e le o status; o ETL consome a fila e grava resultados (sem chamadas HTTP entre as maquinas).
 
 ### 4.3 Decisao arquitetural principal
 
@@ -236,14 +250,15 @@ Trade-off:
 
 `fato_auditoria_dia` (redefinida - ver secao 6.4)
 - Decisao: NAO usar `tl_prescricao_auditoria` (sem SELECT para `usr_select`) nem a tabela antiga (2,1B linhas, consulta inviavel por timeout).
-- A visao Auditoria sera alimentada por:
-  1. anomalias derivadas das demais fatos (documentos, atendimentos, dispensacoes, locais por periodo acima da media);
-  2. trilha de auditoria do proprio dashboard (`dashboard_access_log` e jobs de carga).
+- A visao Auditoria sera alimentada somente por anomalias derivadas das demais fatos (documentos, atendimentos, dispensacoes, locais por periodo acima da media).
+- Linha de base (media de referencia): valores agregados de TODOS os medicos (nao historico individual do emissor).
 - grao: dia + tipo_anomalia + dimensao_afetada
 - metricas:
   - ocorrencias
-  - intensidade/desvio da media, quando aplicavel
-  - eventos de acesso do dashboard (login, falha, exportacao, atualizacao)
+  - valor_observado
+  - valor_esperado (media geral de todos os medicos)
+  - desvio
+  - severidade (2x/3x/5x o desvio)
 
 ### 5.3 Tabelas operacionais do dashboard
 
@@ -268,13 +283,6 @@ Trade-off:
 - lock_key ou identificador equivalente para impedir execucao concorrente
 - created_at
 - updated_at
-
-`dashboard_access_log`
-- usuario
-- acao
-- rota
-- status
-- criado_em
 
 ### 5.4 Validacao da modelagem contra a base (MCP, 2026-09-21)
 
@@ -301,7 +309,7 @@ Validado via MCP PostgreSQL (`usr_select`, `bd_cfm` 13.8). Verdict por requisito
 
 `fato_auditoria_dia` — REDEFINIDA (decisao 2026-09-21):
 - NAO usar a tabela de auditoria da base relacional (`tl_prescricao_auditoria` sem SELECT para `usr_select`; tabela antiga de 2,1B linhas inviavel por timeout).
-- A visao Auditoria sera alimentada por anomalias derivadas das demais fatos e pela trilha de acesso do proprio dashboard.
+- A visao Auditoria sera alimentada somente por anomalias derivadas das demais fatos, com media de referencia calculada sobre todos os medicos.
 
 Tabelas operacionais (secao 5.3): compativeis com PostgreSQL; sem dependencia de recurso externo. OK.
 
@@ -317,7 +325,6 @@ Referencia visual:
 - Distribuicao por UF e tipo de documento.
 - Emissoes por periodo.
 - Distribuicao por tipo de documento.
-- Emissoes por dia da semana.
 - Documentos por especialidade.
 
 Filtros:
@@ -432,10 +439,7 @@ Sem imagem de referencia. DECISOES (2026-09-21):
 - Somente agregados: sem registros individuais no MVP.
 - Sem exportacao na visao de auditoria (exportacao nao permitida em todo o MVP).
 
-A visao sera alimentada por:
-
-1. Anomalias derivadas das fatos do datamart (documentos, atendimentos, dispensacoes, locais);
-2. Trilha de auditoria do proprio dashboard (`dashboard_access_log` e jobs de carga).
+A visao sera alimentada por anomalias derivadas das fatos do datamart (documentos, atendimentos, dispensacoes, locais). A media de referencia (valor esperado) e sempre calculada sobre todos os medicos, nunca sobre o historico individual do emissor.
 
 Proposta:
 - Tela mais textual e investigativa, com filtros obrigatorios antes de executar consulta.
@@ -445,8 +449,7 @@ Proposta:
 Filtros obrigatorios:
 - Periodo curto, com limite padrao e maximo configuravel.
 - Tipo de anomalia.
-- Dimensao afetada (documentos, atendimentos, dispensacoes, local, acesso).
-- Fonte (datamart ou log do dashboard).
+- Dimensao afetada (documentos, atendimentos, dispensacoes, local).
 
 Consultas previstas:
 - Anomalia - Quantidade de documentos emitidos por período (muito acima da média)
@@ -462,9 +465,87 @@ Componentes:
 - Tabela paginada com agregados por periodo/dimensao (sem registros individuais).
 
 Cuidados:
-- Toda consulta de auditoria deve ser registrada em `dashboard_access_log`.
 - Perfil unico: todos os usuarios autenticados do dominio podem ver os agregados da auditoria; sem permissao especial no MVP.
 - Nao tentar ler `tl_prescricao_auditoria*` (volume extremo e/ou sem permissao).
+- DECISAO 2026-09-21: nao havera auditoria do uso do dashboard; as consultas executadas na aba Auditoria nao sao registradas.
+
+### 6.5 Catalogo de Consultas por Visao
+
+Legenda de filtros: P=periodo, U=UF, T=tipo documento, E=especialidade, S=situacao assinatura, ST=status, A=assinatura, TD=tipo anomalia, DIM=dimensao afetada.
+
+| Codigo | Filtro | Descricao | Valores/Dominio | Onde se aplica |
+|---|---|---|---|---|
+| P | Periodo | Data inicio/fim | Datas; padrao ultimos 30 dias | Todas as abas; na Auditoria janela curta com limite maximo configuravel |
+| U | UF | Unidade federativa | 27 UFs (dim_uf) | Documentos (UF da unidade de atendimento), Medicos (UF do CRM), Dispensacoes (UF do CRF do farmaceutico) |
+| T | Tipo de documento | Tipo do documento medico | 17 tipos de `td_tipo_documento` (atestado, receita simples, laudo...) | Documentos |
+| E | Especialidade | Especialidade/area de atuacao do medico | dim_especialidade | Documentos, Medicos |
+| S | Situacao de assinatura | Assinado / nao assinado | `in_assinado` S/N | Documentos |
+| ST | Status da dispensacao | Situacao do evento | Dispensada (D), Cancelada (C) | Dispensacoes |
+| A | Assinatura da dispensacao | Assinada / nao assinada | `in_assinado` S/N (tipo unico, sem AE/CD) | Dispensacoes |
+| TD | Tipo de anomalia | Qual anomalia investigar | Documentos por periodo, pacientes unicos por periodo, tempo entre emissoes, documentos por local | Auditoria |
+| DIM | Dimensao afetada | Qual face do datamart a anomalia envolve | Documentos, atendimentos, dispensacoes, local | Auditoria |
+
+Notas:
+- Filtros principais sempre visiveis; avancados recolhidos (padrao UX, secao 7).
+- Auditoria exige filtros antes de executar qualquer consulta; sem busca livre ampla.
+- Filtro U muda de significado conforme a aba (ver decisao 14: unidade para Documentos, CRM para Medicos, CRF para Dispensacoes).
+- A media de referencia das anomalias e sempre a de todos os medicos (nunca o historico individual do emissor).
+
+| # | Aba | Objeto visual | Apresenta | Tabelas do datamart | Agregacao/Grao | Filtros | Notas |
+|---|---|---|---|---|---|---|---|
+| 1 | Documentos | Cards KPI | Documentos emitidos, assinados, nao assinados, % assinatura, cancelados, pacientes distintos | fato_documento_dia, dim_data | Soma no periodo (pacientes = distinct) | P,U,T,E,S | % assinatura = assinados/emitidos |
+| 2 | Documentos | Mapa Brasil (bolhas) | Documentos emitidos por UF | fato_documento_dia, dim_uf | Soma por UF | P | UF = unidade de atendimento (decisao 14) |
+| 3 | Documentos | Barras horizontais | Emissoes por mes | fato_documento_dia, dim_data | Soma por ano_mes | P,U,T,E,S | |
+| 4 | Documentos | Donut | Distribuicao por tipo de documento | fato_documento_dia, dim_tipo_documento | Soma por tipo | P,U,E,S | Nome oficial via dim_tipo_documento |
+| 5 | Documentos | Tabela hierarquica | UF -> tipo de documento | fato_documento_dia, dim_uf, dim_tipo_documento | Soma por UF+tipo | P,S | Sem drill nominal medico/paciente no MVP |
+| 6 | Documentos | Ranking (barras) | Documentos por especialidade | fato_documento_dia, dim_especialidade | Soma por especialidade | P,U,T | Pre-agregar no ETL (join rl_med_especialidade_consulta e caro) |
+| 7 | Medicos | Cards KPI | Inscricoes cadastradas, medicos cadastrados, ativos, inscricoes ativas, medicos que emitiram no periodo | fato_medico_dia, dim_medico, fato_documento_dia | Distinct por data de referencia | P,U,E | Ativo = in_situacao 'A' (decisao 14) |
+| 8 | Medicos | Mapa Brasil | Medicos ativos por UF | fato_medico_dia, dim_uf | Distinct por UF (snapshot) | U | Snapshot da ultima carga |
+| 9 | Medicos | Barras horizontais | Ranking de medicos por UF | fato_medico_dia, dim_uf | Distinct por UF | U,E | |
+| 10 | Medicos | Linha | Total acumulado de medicos por mes | fato_medico_dia, dim_data | Soma acumulada por ano_mes | P,U | |
+| 11 | Medicos | Linha | Novos medicos por mes | fato_medico_dia, dim_data | Novos por mes (dh_atualizacao) | P,U | Proxy: primeira dh_atualizacao observada (decisao 14) |
+| 12 | Medicos | Matriz/tabela | Inatividade por faixa de dias sem emissao (30/60/90/120) | fato_medico_dia, fato_documento_dia, dim_medico | Contagem por faixa | U | Regra operacional: ultima emissao |
+| 13 | Dispensacoes | Cards KPI | Dispensacoes, assinadas, farmaceuticos, farmacias, pacientes distintos | fato_dispensacao_dia, dim_farmaceutico, dim_farmacia | Soma/distinct no periodo | P,U,ST,A | Assinada = in_assinado 'S' (decisao 14) |
+| 14 | Dispensacoes | Mapa Brasil | Dispensacoes por UF | fato_dispensacao_dia, dim_uf | Soma por UF | P | UF = CRF do farmaceutico |
+| 15 | Dispensacoes | Tabela por UF | Dispensacoes e assinadas por UF | fato_dispensacao_dia, dim_uf | Soma por UF | P | Substitui "com/sem certificado" (assinatura unica) |
+| 16 | Dispensacoes | Barras | Dispensacoes acumuladas por mes | fato_dispensacao_dia, dim_data | Soma acumulada por ano_mes | P,U | |
+| 17 | Dispensacoes | Barras | Novas dispensacoes por mes | fato_dispensacao_dia, dim_data | Soma por ano_mes | P,U | |
+| 18 | Dispensacoes | Linha | Farmaceuticos acumulados | fato_dispensacao_dia, dim_farmaceutico | Distinct acumulado por mes | P,U | |
+| 19 | Dispensacoes | Linha | Novos farmaceuticos por mes | fato_dispensacao_dia, dim_farmaceutico | Primeira atividade no mes | P,U | |
+| 20 | Auditoria | Linha/barras | Anomalias detectadas por dia | fato_auditoria_dia | Contagem por dia | P(curto),TD,DIM | Sem registros individuais; exige filtros obrigatorios |
+| 21 | Auditoria | Ranking (barras) | Tipos de anomalia mais frequentes, com severidade | fato_auditoria_dia | Contagem por tipo_anomalia | P,TD | Severidade por desvio (2x/3x/5x) |
+| 22 | Auditoria | Ranking (barras) | Dimensoes afetadas mais frequentes | fato_auditoria_dia | Contagem por dimensao_afetada | P,DIM | |
+| 23 | Auditoria | Tabela paginada | Detalhe agregado dia x dimensao x tipo: valor observado, media esperada e desvio | fato_auditoria_dia | Soma por dia+dimensao+tipo | P,TD,DIM | |
+| 24 | Auditoria | Bloco SQL | Comando SQL gerado a partir dos filtros escolhidos, editavel para ajuste fino | (metadado da query, nao consulta tabela) | - | - | Re-execucao sempre limitada ao datamart |
+| 25 | Cabecalho (global) | Status de carga | Ultima atualizacao: inicio, fim, duracao, sucesso/falha, solicitante | dashboard_refresh_job, dashboard_refresh_config | Ultimo job + config | - | Polling; visivel em todas as abas |
+| 26 | Cabecalho (global) | Indicador de dados | Data/hora da ultima carga com dados validos | dashboard_refresh_job | Ultimo job success | - | Falha mantem ultima versao valida |
+
+### 6.6 Detalhamento das Consultas da Aba Auditoria
+
+A aba Auditoria usa uma unica fonte: anomalias do datamart (`fato_auditoria_dia`), agregadas e sem registros individuais. Nao ha auditoria do uso do dashboard (decisao 2026-09-21): as consultas executadas na aba nao sao registradas.
+
+Calculadas no ETL (nao em tempo de tela) e gravadas com: `data`, `tipo_anomalia`, `dimensao_afetada`, `valor_observado`, `valor_esperado` (media de todos os medicos), `desvio` e `severidade`.
+
+A media de referencia (valor esperado) e sempre o valor agregado de TODOS os medicos no mesmo periodo de comparacao — nunca o historico individual do emissor.
+
+| Codigo | Anomalia | Como e calculada | Severidade |
+|---|---|---|---|
+| AN1 | Documentos emitidos acima da media | Total diario de documentos (na dimensao escolhida) comparado a media diaria de todos os medicos; dispara quando valor > media + limite | 2x/3x/5x o desvio |
+| AN2 | Atendimentos de pacientes unicos acima da media | Igual AN1, usando pacientes_distintos e a media de todos os medicos | 2x/3x/5x o desvio |
+| AN3 | Tempo entre emissoes acima da media | Intervalo medio entre `dh_documento` do emissor comparado ao intervalo medio de todos os medicos; dispara quando o gap e muito acima da media geral | 2x/3x/5x o desvio |
+| AN4 | Documentos emitidos pelo local acima da media | Volume do local de atendimento comparado a media de todos os locais (que reflete todos os medicos) | 2x/3x/5x o desvio |
+
+Fluxo da aba:
+
+1. Usuario escolhe os filtros obrigatorios (periodo curto, tipo de anomalia, dimensao).
+2. Backend monta e executa o SQL agregado somente sobre o datamart.
+3. A UI exibe os resultados agregados e o SQL executado (consulta 24); o usuario pode editar o SQL e re-executar, sempre limitado ao datamart.
+
+Observacoes gerais:
+- Todas as consultas de tela leem apenas o datamart `prescricao_dw`; nenhuma consulta direta na origem `bd_cfm`.
+- Consultas agregadas sempre filtradas por periodo; limites de linhas em tabelas paginadas.
+- `dim_medico` e `dim_farmaceutico` guardam apenas identificadores tecnicos e atributos agregaveis, sem dados pessoais.
+- A visao Auditoria nao expoe registros individuais nem dados da tabela de auditoria relacional (decisao 14).
 
 ## 7. Experiencia e Interface
 
@@ -520,7 +601,7 @@ Dados que nao devem aparecer por padrao (exceto para o módulo de auditoria):
 Controles:
 - Validacao de dominio no backend.
 - Perfil unico de acesso (DECISAO 2026-09-21): todos os usuarios do dominio visualizam tudo; configuracao de horario de carga restrita a `mrichard@portalmedico.org.br`.
-- Logs de acesso.
+- Sem auditoria do uso do dashboard (DECISAO 2026-09-21): nao ha registro de logins, acessos ou consultas dos usuarios.
 - Sem exportacao CSV/Excel no MVP (DECISAO 2026-09-21).
 - Mascaramento de identificadores.
 - Minimizacao de campos retornados pela API.
@@ -535,7 +616,9 @@ Controles:
 ### 9.1 Orquestracao recomendada
 
 Recurso escolhido (DECISAO 2026-09-21):
-- Aplicacao ETL em Python executada em ambiente Windows + tabela de jobs no PostgreSQL do dashboard (`prescricao_dw`).
+- Aplicacao ETL em Python executada em ambiente Windows, em MAQUINA SEPARADA da aplicacao web (UI + API) + tabela de jobs no PostgreSQL do dashboard (`prescricao_dw`).
+- Comunicacao entre aplicacao e ETL exclusivamente via `prescricao_dw`: a aplicacao grava jobs na fila e le o status; o ETL consome a fila (`SELECT ... FOR UPDATE SKIP LOCKED`) e grava os agregados. Nao ha chamadas HTTP diretas entre as maquinas.
+- Requisitos de rede: maquina da aplicacao alcanca `prescricao_dw`; maquina do ETL alcanca `prescricao_dw` e `bd_cfm`.
 
 Responsabilidades:
 - `dashboard_refresh_config` guarda o horario diario (padrao 02:00 BRT; configuracao restrita a `mrichard@portalmedico.org.br`).
@@ -644,7 +727,6 @@ Dashboards:
 
 Observabilidade:
 - `GET /api/health`
-- `GET /api/admin/audit-log`
 
 ## 12. Fases de Implementacao
 
@@ -727,12 +809,10 @@ Objetivo:
 Atividades:
 - Criar fatos agregadas de auditoria (anomalias).
 - Criar tela com filtros obrigatorios.
-- Criar logs de consulta.
 
 Validacao:
 - Auditoria mostra apenas agregados, sem registros individuais.
 - Auditoria exige periodo/filtros.
-- Toda consulta fica registrada.
 
 ### Fase 5 - Operacao
 
@@ -763,7 +843,7 @@ Risco: definicoes funcionais ambiguas.
 - Mitigacao: registrar conceitos como "medico ativo", "nao assinado", "AE/CD" e "inativo" antes da implementacao final.
 
 Risco: auditoria com volume muito alto.
-- Mitigacao: nao usar a tabela de auditoria relacional; anomalias derivadas das fatos + trilha de acesso do dashboard, somente agregados, filtros obrigatorios e limites.
+- Mitigacao: nao usar a tabela de auditoria relacional; anomalias derivadas das fatos com media de referencia de todos os medicos, somente agregados, filtros obrigatorios e limites.
 
 Risco: atualizacao manual concorrente.
 - Mitigacao: lock de job e status unico de execucao.
@@ -783,7 +863,7 @@ Risco: dependencia de mapa externo.
 3. Medico ativo: `tb_medico.in_situacao='A'`; NULL e demais valores tratados como nao ativos.
 4. Novos medicos por mes: usar `tb_medico.dh_atualizacao` como proxy de cadastro.
 5. Indices: solicitar ao DBA indices em `tb_consulta_documento.dh_documento`, `tb_consulta.dt_consulta`, `tb_historico_dispensacao.dh_historico_dispensacao` e FKs de dispensacao.
-6. Auditoria: nao usar a tabela de auditoria da base relacional; visao alimentada por anomalias das fatos + trilha de acesso do dashboard.
+6. Auditoria: nao usar a tabela de auditoria da base relacional; visao alimentada somente por anomalias das fatos, com media de referencia calculada sobre todos os medicos.
 7. Base analitica (datamart) provisionada e testada (2026-09-21): base `prescricao_dw` em `172.16.7.112:5432`, PostgreSQL 13.7, usuario `usr_prescricao_dw` com gravacao confirmada (create/insert/select/drop) nos schemas `prescricao` e `staging` (ambos de propriedade do usuario) e em `public`.
    - Restricao confirmada: usuario NAO pode criar schemas (sem CREATE no database); usar os schemas existentes `prescricao`/`staging`.
    - Base atualmente vazia (nenhum objeto).
@@ -797,6 +877,9 @@ Risco: dependencia de mapa externo.
 14. Perfis de acesso (2026-09-21): perfil unico — todos os usuarios do dominio veem as quatro visões; sem perfis separados.
 15. Exportacao CSV/Excel (2026-09-21): NAO permitida no MVP.
 16. Auditoria (2026-09-21): somente agregados; sem registros individuais.
+17. Auditoria do uso do dashboard (2026-09-21): NAO havera (sem registro de logins, acessos ou consultas dos usuarios); tabela `dashboard_access_log` removida do modelo.
+18. Topologia (2026-09-21): aplicacao web (UI + API) e ETL (Python) em maquinas Windows separadas; comunicacao exclusivamente via fila de jobs no `prescricao_dw`.
+19. Anomalias (2026-09-21): media de referencia calculada sobre todos os medicos (nunca o historico individual do emissor).
 
 Fase 0 concluida: todas as confirmacoes previstas foram respondidas.
 
