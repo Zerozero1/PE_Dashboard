@@ -22,6 +22,9 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 - Limpeza de colunas sem uso (2026-09-22): removidas `dim_data.dia_semana` e `fato_medico_dia.inscricoes_cadastradas/inscricoes_ativas/medicos_ativos` (sempre vazias; valores correntes vivem em `fato_medico_snapshot`). Demais colunas "redundantes" mantidas por custo baixo.
 
 ## 🔧 Em Progresso / Próximos Passos
+- [ ] Fase 1 — Fundacao (EM ANDAMENTO): projeto Next.js 16 criado em `web/` (app router, TS). Feito: shell com 4 visoes no padrao cyberpunk dark (abas horizontais, acento por visao), `api/health` lendo o DW real (job/config/dados), `api/admin/refresh-jobs` enfileirando job manual, next-auth v4 com Google OAuth + validacao de dominio `@portalmedico.org.br` (signIn callback). Modo dev sem credenciais Google: sessao mock.
+  - Faltam: criar credenciais Google OAuth (console.cloud.google.com, redirect http://localhost:3000/api/auth/callback/google), `NEXTAUTH_SECRET`, `.env.local` em producao; remover mock dev ao subir.
+  - Testado: build OK; dev server OK; `/api/health` retorna DW real (job success, config 02:00, 61,84M docs); pagina renderiza (HTTP 200).
 - [ ] etl/jobs.py — scheduler/worker com `dashboard_refresh_job` (Fase 5) e carga incremental diária (reprocessar janela D-1..hoje via faixas de id recentes).
   - FEITO (2026-09-22): jobs.py criado e testado (worker com claim FOR UPDATE SKIP LOCKED + recover_stale; scheduler lendo dashboard_refresh_config; enqueue-manual). Falta apenas: carga incremental (hoje o job roda o run_all completo, ~40 min) e agendamento no Windows (Task Scheduler).
 - [ ] Testar run_all.py completo em uma execução.
