@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 
 const nf = new Intl.NumberFormat("pt-BR");
+const nfc = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
+
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
 type Health = {
   status: string;
@@ -171,18 +174,35 @@ function useApi<T>(path: string, active: boolean) {
 
 function BarChart({ rows, w = 800, h = 220 }: { rows: { x: string; v: number; v2?: number }[]; w?: number; h?: number }) {
   const max = Math.max(...rows.map((r) => Math.max(r.v, r.v2 ?? 0)), 1);
-  const pad = 26;
+  const pad = 34;
   const iw = w - pad;
   const step = rows.length > 1 ? iw / (rows.length - 1) : 0;
-  const pts = rows.map((r, i) => `${pad + i * step},${h - (r.v / max) * (h - 30)}`).join(" ");
-  const pts2 = rows.filter((r) => r.v2 !== undefined).map((r, i) => `${pad + i * step},${h - ((r.v2 ?? 0) / max) * (h - 30)}`).join(" ");
+  const pts = rows.map((r, i) => `${pad + i * step},${h - (r.v / max) * (h - 26)}`).join(" ");
+  const pts2 = rows.filter((r) => r.v2 !== undefined).map((r, i) => `${pad + i * step},${h - ((r.v2 ?? 0) / max) * (h - 26)}`).join(" ");
+  const ticks = [0, 0.25, 0.5, 0.75, 1];
+  const n = rows.length;
+  const xIdx = n > 1 ? Array.from(new Set([0, Math.floor((n - 1) / 4), Math.floor((n - 1) / 2), Math.floor((3 * (n - 1)) / 4), n - 1])) : [0];
   return (
-    <svg viewBox={`0 0 ${w} ${h + 24}`} preserveAspectRatio="none" style={{ width: "100%", height: "100%" }}>
+    <svg viewBox={`0 0 ${w} ${h + 44}`} style={{ width: "100%", height: "auto" }}>
+      {ticks.map((f) => {
+        const y = h - f * (h - 26);
+        return (
+          <g key={f}>
+            <line x1={pad} x2={w} y1={y} y2={y} stroke="rgba(255,255,255,.06)" />
+            <text x={pad - 8} y={y + 3} fontSize="9" fill="#566271" textAnchor="end">{nfc.format(max * f)}</text>
+          </g>
+        );
+      })}
       <polyline fill="none" stroke="var(--va)" strokeWidth="3" points={pts} />
       {pts2 && <polyline fill="none" stroke="var(--va2)" strokeWidth="2" strokeDasharray="5 5" points={pts2} />}
-      {rows.slice(-1).map((r, i) => (
-        <circle key={i} cx={pad + (rows.length - 1) * step} cy={h - (r.v / max) * (h - 30)} r="4" fill="var(--va)" />
-      ))}
+      <circle cx={pad + (n - 1) * step} cy={h - (rows[n - 1].v / max) * (h - 26)} r="4" fill="var(--va)" />
+      {xIdx.map((i) => {
+        const [y, m] = rows[i].x.split("-");
+        const label = m ? `${MESES[Number(m) - 1]}/${String(y).slice(2)}` : rows[i].x;
+        return (
+          <text key={i} x={pad + i * step} y={h + 16} fontSize="9" fill="#566271" textAnchor="middle">{label}</text>
+        );
+      })}
     </svg>
   );
 }

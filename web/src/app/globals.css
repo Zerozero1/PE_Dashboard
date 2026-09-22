@@ -67,8 +67,7 @@ h1{font-size:24px;margin:5px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
 .section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.section-title h2{font-size:13px;margin:0;font-weight:650}.section-title span{font-size:10px;color:#667381}
 .chart-main{grid-column:span 8;min-height:320px}.side-chart{grid-column:span 4;min-height:320px}
 .chart{height:230px;position:relative;margin-top:6px}
-.gridlines{position:absolute;inset:8px 0 28px;background:repeating-linear-gradient(to bottom,transparent 0,transparent 49px,rgba(255,255,255,.055) 50px)}
-.chart svg{position:absolute;inset:8px 0 28px;width:100%;height:calc(100% - 36px);overflow:visible}
+.chart svg{position:static;width:100%;height:auto;max-height:264px}
 .axis{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;color:#566271;font-size:9px}
 .legend{display:flex;gap:16px;font-size:10px;color:#758190}.legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
 .l1{background:var(--va);box-shadow:0 0 8px var(--va)}.l2{background:var(--va2);box-shadow:0 0 8px var(--va2)}
