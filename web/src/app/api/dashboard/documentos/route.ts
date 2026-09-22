@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   const p = [de, ate, uf, tipo, assinado];
 
   try {
-    const [kpis, serie, porTipo, porUf, esp, pacientes, tabela] = await Promise.all([
+    const [kpis, serie, porTipo, porUf, esp, pacientes] = await Promise.all([
       query(
         `SELECT coalesce(sum(f.documentos),0) AS emitidos,
                 coalesce(sum(f.documentos) FILTER (WHERE f.in_assinado='S'),0) AS assinados,
@@ -68,19 +68,6 @@ export async function GET(req: NextRequest) {
           WHERE dia BETWEEN $1 AND $2 AND ($3::text IS NULL OR sg_uf = $3)`,
         [de, ate, uf]
       ),
-      query(
-        `SELECT f.sg_uf AS uf, t.nm_documento AS tipo,
-                sum(f.documentos) AS emitidos,
-                sum(f.documentos) FILTER (WHERE f.in_assinado='S') AS assinados,
-                round(100.0 * sum(f.documentos) FILTER (WHERE f.in_assinado='S')
-                      / nullif(sum(f.documentos),0), 1) AS pct,
-                sum(f.cancelados) AS cancelados
-           FROM prescricao.fato_documento_dia f
-           JOIN prescricao.dim_tipo_documento t ON t.id_tipo_documento = f.id_tipo_documento
-          WHERE f.dia BETWEEN $1 AND $2 AND ($3::text IS NULL OR f.sg_uf = $3)
-          GROUP BY 1,2 ORDER BY 1, sum(f.documentos) DESC LIMIT 100`,
-        [de, ate, uf]
-      ),
     ]);
 
     const k = kpis.rows[0];
@@ -99,7 +86,6 @@ export async function GET(req: NextRequest) {
       por_tipo: porTipo.rows,
       por_uf: porUf.rows,
       ranking_especialidade: esp.rows,
-      tabela_uf_tipo: tabela.rows,
     });
   } catch (e) {
     return NextResponse.json({ erro: String(e) }, { status: 500 });

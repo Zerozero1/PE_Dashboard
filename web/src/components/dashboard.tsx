@@ -25,7 +25,6 @@ type DocsData = {
   por_tipo: { tipo: string; docs: string }[];
   por_uf: { uf: string; docs: string }[];
   ranking_especialidade: { especialidade: string; docs: string }[];
-  tabela_uf_tipo: { uf: string; tipo: string; emitidos: string; assinados: string; pct: number; cancelados: string }[];
 };
 
 type MedData = {
@@ -172,11 +171,12 @@ function useApi<T>(path: string, active: boolean) {
   return { data, erro };
 }
 
-function BarChart({ rows, w = 800, h = 220 }: { rows: { x: string; v: number; v2?: number }[]; w?: number; h?: number }) {
-  const max = Math.max(...rows.map((r) => Math.max(r.v, r.v2 ?? 0)), 1);
+function BarChart({ rows, bars, w = 800, h = 220 }: { rows: { x: string; v: number; v2?: number }[]; bars?: number[]; w?: number; h?: number }) {
+  const max = Math.max(...rows.map((r) => Math.max(r.v, r.v2 ?? 0)), ...(bars ?? []), 1);
   const pad = 34;
   const iw = w - pad;
   const step = rows.length > 1 ? iw / (rows.length - 1) : 0;
+  const bw = Math.min(step * 0.45, 26);
   const pts = rows.map((r, i) => `${pad + i * step},${h - (r.v / max) * (h - 26)}`).join(" ");
   const pts2 = rows.filter((r) => r.v2 !== undefined).map((r, i) => `${pad + i * step},${h - ((r.v2 ?? 0) / max) * (h - 26)}`).join(" ");
   const ticks = [0, 0.25, 0.5, 0.75, 1];
@@ -189,18 +189,29 @@ function BarChart({ rows, w = 800, h = 220 }: { rows: { x: string; v: number; v2
         return (
           <g key={f}>
             <line x1={pad} x2={w} y1={y} y2={y} stroke="rgba(255,255,255,.06)" />
-            <text x={pad - 8} y={y + 3} fontSize="9" fill="#566271" textAnchor="end">{nfc.format(max * f)}</text>
+            <text x={pad - 8} y={y + 3} fontSize="9" fill="#7d8a99" textAnchor="end">{nfc.format(max * f)}</text>
           </g>
         );
       })}
+      {bars && bars.map((b, i) => {
+        const bh = (b / max) * (h - 26);
+        return <rect key={i} x={pad + i * step - bw / 2} y={h - bh} width={bw} height={bh} fill="var(--va)" opacity=".16" rx="2"><title>{`${rows[i].x} · mês: ${nf.format(b)}`}</title></rect>;
+      })}
       <polyline fill="none" stroke="var(--va)" strokeWidth="3" points={pts} />
       {pts2 && <polyline fill="none" stroke="var(--va2)" strokeWidth="2" strokeDasharray="5 5" points={pts2} />}
-      <circle cx={pad + (n - 1) * step} cy={h - (rows[n - 1].v / max) * (h - 26)} r="4" fill="var(--va)" />
+      {rows.map((r, i) => (
+        <circle key={i} cx={pad + i * step} cy={h - (r.v / max) * (h - 26)} r="3" fill="var(--va)">
+          <title>{`${r.x} · mês: ${nf.format(bars?.[i] ?? 0)} · acumulado: ${nf.format(r.v)}`}</title>
+        </circle>
+      ))}
+      {n > 0 && (
+        <text x={pad + (n - 1) * step + 8} y={h - (rows[n - 1].v / max) * (h - 26) + 3} fontSize="9" fill="#9fb0c1" textAnchor="start">{nf.format(rows[n - 1].v)}</text>
+      )}
       {xIdx.map((i) => {
         const [y, m] = rows[i].x.split("-");
         const label = m ? `${MESES[Number(m) - 1]}/${String(y).slice(2)}` : rows[i].x;
         return (
-          <text key={i} x={pad + i * step} y={h + 16} fontSize="9" fill="#566271" textAnchor="middle">{label}</text>
+          <text key={i} x={pad + i * step} y={h + 16} fontSize="9" fill="#7d8a99" textAnchor="middle">{label}</text>
         );
       })}
     </svg>
@@ -290,6 +301,10 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
     acumulado += Number(s.emitidos);
     return { x: s.mes, v: acumulado };
   });
+  const mensal = data.serie_mensal.map((s) => Number(s.emitidos));
+  const ultimo = data.serie_mensal[data.serie_mensal.length - 1];
+  const [uy, um] = ultimo ? ultimo.mes.split("-") : ["", ""];
+  const ultimoLabel = um ? `${MESES[Number(um) - 1]}/${String(uy).slice(2)}` : "—";
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
@@ -307,10 +322,14 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       <KpiCard label="Pacientes distintos" value={nf.format(k.pacientes)} meta="no período" />
 
       <article className="card chart-main">
-        <div className="section-title"><h2>Emissões por mês</h2><div className="legend"><span><i className="l1" />Acumulado</span></div></div>
-        <div className="chart">
-          <BarChart rows={serieAcumulada} />
+        <div className="section-title">
+          <h2>Emissões por mês</h2>
+          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l1" style={{ opacity: .25 }} />Mês</span></div>
         </div>
+        <div className="chart">
+          <BarChart rows={serieAcumulada} bars={mensal} />
+        </div>
+        <div className="sub" style={{ marginTop: 4 }}>Total emitido em {ultimoLabel}: <b style={{ color: "var(--va)" }}>{nf.format(Number(ultimo?.emitidos ?? 0))}</b> · Acumulado: {nf.format(acumulado)}</div>
       </article>
 
       <article className="card side-chart">
@@ -326,23 +345,6 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       <article className="card" style={{ gridColumn: "span 5" }}>
         <div className="section-title"><h2>Documentos por especialidade</h2><span>ranking</span></div>
         <RankRows rows={data.ranking_especialidade.map((e) => ({ name: e.especialidade, v: Number(e.docs) }))} />
-      </article>
-
-      <article className="card" style={{ gridColumn: "span 12" }}>
-        <div className="section-title"><h2>Distribuição UF → tipo de documento</h2><span>tabela hierárquica · top 100</span></div>
-        <table className="table">
-          <thead><tr><th>UF</th><th>Tipo de documento</th><th>Emitidos</th><th>Assinados</th><th>% Assin.</th><th>Cancelados</th></tr></thead>
-          <tbody>
-            {data.tabela_uf_tipo.map((r, i) => (
-              <tr key={i}>
-                <td>{r.uf}</td><td>{r.tipo}</td>
-                <td>{nf.format(Number(r.emitidos))}</td>
-                <td>{nf.format(Number(r.assinados))}</td>
-                <td>{r.pct}%</td><td>{nf.format(Number(r.cancelados))}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </article>
     </section>
   );

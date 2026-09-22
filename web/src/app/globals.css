@@ -69,7 +69,7 @@ h1{font-size:24px;margin:5px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
 .chart{height:230px;position:relative;margin-top:6px}
 .chart svg{position:static;width:100%;height:auto;max-height:264px}
 .axis{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;color:#566271;font-size:9px}
-.legend{display:flex;gap:16px;font-size:10px;color:#758190}.legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+.legend{display:flex;gap:16px;font-size:10.5px;color:#9fb0c1;font-weight:600}.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
 .l1{background:var(--va);box-shadow:0 0 8px var(--va)}.l2{background:var(--va2);box-shadow:0 0 8px var(--va2)}
 .donut-wrap{display:flex;align-items:center;justify-content:center;height:200px;position:relative}
 .donut{width:150px;height:150px;border-radius:50%;display:grid;place-items:center;box-shadow:0 0 30px rgba(73,231,255,.06)}
