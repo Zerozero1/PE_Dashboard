@@ -172,46 +172,52 @@ function useApi<T>(path: string, active: boolean) {
 }
 
 function BarChart({ rows, bars, w = 800, h = 220 }: { rows: { x: string; v: number; v2?: number }[]; bars?: number[]; w?: number; h?: number }) {
-  const max = Math.max(...rows.map((r) => Math.max(r.v, r.v2 ?? 0)), ...(bars ?? []), 1);
-  const pad = 34;
+  const maxLine = Math.max(...rows.map((r) => Math.max(r.v, r.v2 ?? 0)), 1);
+  const maxBars = Math.max(...(bars ?? []), 1);
+  const pad = 40;
   const iw = w - pad;
   const step = rows.length > 1 ? iw / (rows.length - 1) : 0;
-  const bw = Math.min(step * 0.45, 26);
-  const pts = rows.map((r, i) => `${pad + i * step},${h - (r.v / max) * (h - 26)}`).join(" ");
-  const pts2 = rows.filter((r) => r.v2 !== undefined).map((r, i) => `${pad + i * step},${h - ((r.v2 ?? 0) / max) * (h - 26)}`).join(" ");
+  const bw = Math.min(step * 0.5, 22);
+  const pts = rows.map((r, i) => `${pad + i * step},${h - (r.v / maxLine) * (h - 26)}`).join(" ");
+  const pts2 = rows.filter((r) => r.v2 !== undefined).map((r, i) => `${pad + i * step},${h - ((r.v2 ?? 0) / maxLine) * (h - 26)}`).join(" ");
   const ticks = [0, 0.25, 0.5, 0.75, 1];
   const n = rows.length;
-  const xIdx = n > 1 ? Array.from(new Set([0, Math.floor((n - 1) / 4), Math.floor((n - 1) / 2), Math.floor((3 * (n - 1)) / 4), n - 1])) : [0];
+  const xStep = Math.max(Math.ceil((n - 1) / 8), 1);
+  const xIdx = Array.from(new Set([0, ...Array.from({ length: n }, (_, i) => i).filter((i) => i % xStep === 0), n - 1]));
   return (
-    <svg viewBox={`0 0 ${w} ${h + 44}`} style={{ width: "100%", height: "auto" }}>
+    <svg viewBox={`0 0 ${w} ${h + 48}`} style={{ width: "100%", height: "auto" }}>
       {ticks.map((f) => {
         const y = h - f * (h - 26);
         return (
           <g key={f}>
-            <line x1={pad} x2={w} y1={y} y2={y} stroke="rgba(255,255,255,.06)" />
-            <text x={pad - 8} y={y + 3} fontSize="9" fill="#7d8a99" textAnchor="end">{nfc.format(max * f)}</text>
+            <line x1={pad} x2={w} y1={y} y2={y} stroke="rgba(255,255,255,.07)" />
+            <text x={pad - 8} y={y + 3} fontSize="9" fill="#9fb0c1" textAnchor="end">{nfc.format(maxLine * f)}</text>
           </g>
         );
       })}
       {bars && bars.map((b, i) => {
-        const bh = (b / max) * (h - 26);
-        return <rect key={i} x={pad + i * step - bw / 2} y={h - bh} width={bw} height={bh} fill="var(--va)" opacity=".16" rx="2"><title>{`${rows[i].x} · mês: ${nf.format(b)}`}</title></rect>;
+        const bh = (b / maxBars) * (h - 26);
+        return (
+          <rect key={i} x={pad + i * step - bw / 2} y={h - bh} width={bw} height={bh} fill="var(--va)" opacity=".42" rx="2" stroke="var(--va)" strokeOpacity=".15" strokeWidth="1">
+            <title>{`${rows[i].x} · mês: ${nf.format(b)}`}</title>
+          </rect>
+        );
       })}
       <polyline fill="none" stroke="var(--va)" strokeWidth="3" points={pts} />
       {pts2 && <polyline fill="none" stroke="var(--va2)" strokeWidth="2" strokeDasharray="5 5" points={pts2} />}
       {rows.map((r, i) => (
-        <circle key={i} cx={pad + i * step} cy={h - (r.v / max) * (h - 26)} r="3" fill="var(--va)">
+        <circle key={i} cx={pad + i * step} cy={h - (r.v / maxLine) * (h - 26)} r="3" fill="var(--va)">
           <title>{`${r.x} · mês: ${nf.format(bars?.[i] ?? 0)} · acumulado: ${nf.format(r.v)}`}</title>
         </circle>
       ))}
       {n > 0 && (
-        <text x={pad + (n - 1) * step + 8} y={h - (rows[n - 1].v / max) * (h - 26) + 3} fontSize="9" fill="#9fb0c1" textAnchor="start">{nf.format(rows[n - 1].v)}</text>
+        <text x={pad + (n - 1) * step + 8} y={h - (rows[n - 1].v / maxLine) * (h - 26) + 3} fontSize="9" fill="#9fb0c1" textAnchor="start">{nf.format(rows[n - 1].v)}</text>
       )}
       {xIdx.map((i) => {
-        const [y, m] = rows[i].x.split("-");
-        const label = m ? `${MESES[Number(m) - 1]}/${String(y).slice(2)}` : rows[i].x;
+        const [y, m] = String(rows[i].x).split("-");
+        const label = m ? `${MESES[Number(m) - 1]}/${String(y).slice(2)}` : String(rows[i].x);
         return (
-          <text key={i} x={pad + i * step} y={h + 16} fontSize="9" fill="#7d8a99" textAnchor="middle">{label}</text>
+          <text key={i} x={pad + i * step} y={h + 18} fontSize="9" fill="#9fb0c1" textAnchor="middle">{label}</text>
         );
       })}
     </svg>
@@ -324,7 +330,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       <article className="card chart-main">
         <div className="section-title">
           <h2>Emissões por mês</h2>
-          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l1" style={{ opacity: .25 }} />Mês</span></div>
+          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l1" style={{ opacity: .4 }} />Mês (escala própria)</span></div>
         </div>
         <div className="chart">
           <BarChart rows={serieAcumulada} bars={mensal} />
