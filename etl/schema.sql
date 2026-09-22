@@ -88,8 +88,12 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_dispensacao_dia (
     canceladas BIGINT NOT NULL,
     farmaceuticos_distintos BIGINT NOT NULL,
     farmacias_distintas BIGINT NOT NULL,
+    pacientes_distintos BIGINT NOT NULL DEFAULT 0,
     PRIMARY KEY (dia, sg_uf)
 );
+
+ALTER TABLE prescricao.fato_dispensacao_dia
+    ADD COLUMN IF NOT EXISTS pacientes_distintos BIGINT NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS prescricao.fato_auditoria_dia (
     dia DATE NOT NULL,
