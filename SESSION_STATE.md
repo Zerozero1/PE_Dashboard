@@ -1,5 +1,5 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-21 18:10 BRT_
+_Atualizado em: 2026-09-22 09:00 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python em Windows (maquina separada da aplicacao) e 4 visões: Documentos, Medicos, Dispensacoes, Auditoria.
@@ -13,7 +13,8 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 - Catalogo de consultas criado (secao 6.5, 26 consultas) com legenda de filtros; consulta "emissões por dia da semana" suprimida; detalhamento da aba Auditoria na secao 6.6 (AN1-AN4).
 - Sem auditoria do uso do dashboard (sem `dashboard_access_log`, sem logs de login/acesso/consulta).
 - Topologia de duas maquinas definida: app (UI+API) e ETL em servidores Windows distintos, comunicacao apenas via fila de jobs no `prescricao_dw`.
-- Design system aprovado (decisao 20): padrao "cyberpunk dark" (referencia PE_Dashboard_Cyberpunk) — tema escuro, acentos ciano/verde/violeta/laranja, sidebar fixa, grade 12 colunas; draft em `design/draft_dashboard.html` com as 4 visoes navegáveis.
+- Design system aprovado (decisao 20): padrao "cyberpunk dark" (referencia PE_Dashboard_Cyberpunk) — tema escuro, sidebar fixa, grade 12 colunas; draft em `design/draft_dashboard.html` com as 4 visoes navegáveis.
+- Draft v4 (2026-09-22): menu trocado para abas HORIZONTAIS no topo (sem sidebar); todas as 26 consultas do catalogo 6.5 representadas; acento por visao para diferenciação — Documentos ciano, Medicos azul escuro (#4a6ef0), Dispensacoes verde, Auditoria vermelho; chips de status/dados no cabecalho.
 - Repositorio Git criado localmente, commit `9506f82` enviado para https://github.com/Zerozero1/PE_Dashboard (branch `main`).
 
 ## 🔧 Em Progresso / Próximos Passos

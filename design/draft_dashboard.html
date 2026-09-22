@@ -9,7 +9,7 @@
   --bg:#07090d; --panel:#0d1118; --panel2:#111722; --line:#202936;
   --text:#edf2f7; --muted:#788493; --cyan:#49e7ff; --green:#65f5ad;
   --violet:#9a7cff; --orange:#ffb454; --red:#ff647c;
-  --glow-c:0 0 24px rgba(73,231,255,.16); --glow-g:0 0 24px rgba(101,245,173,.13);
+  --glow-c:0 0 24px rgba(73,231,255,.16);
 }
 *{box-sizing:border-box}
 body{margin:0;background:
@@ -17,30 +17,52 @@ body{margin:0;background:
  radial-gradient(circle at 15% 100%,rgba(154,124,255,.07),transparent 25%),
  var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.01em}
 body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);background-size:36px 36px;mask-image:linear-gradient(to bottom,black,transparent 85%)}
-.app{display:grid;grid-template-columns:235px 1fr;min-height:100vh}
-.sidebar{border-right:1px solid var(--line);background:rgba(7,9,13,.78);backdrop-filter:blur(18px);padding:24px 16px;position:sticky;top:0;height:100vh}
-.brand{display:flex;align-items:center;gap:10px;padding:8px 10px 30px}
+
+/* ---------- top header ---------- */
+.top{display:flex;align-items:center;gap:18px;padding:14px 26px 0;max-width:1800px;margin:auto}
+.brand{display:flex;align-items:center;gap:10px}
 .brand-mark{width:34px;height:34px;border:1px solid rgba(73,231,255,.55);border-radius:10px;display:grid;place-items:center;color:var(--cyan);box-shadow:var(--glow-c);font-weight:800}
-.brand strong{font-size:15px}.brand span{display:block;color:var(--muted);font-size:10px;margin-top:2px;letter-spacing:.14em;text-transform:uppercase}
-.nav-label{font-size:10px;color:#53606e;letter-spacing:.16em;text-transform:uppercase;padding:14px 12px 8px}
-.nav a{display:flex;align-items:center;gap:12px;color:#8994a1;text-decoration:none;padding:11px 12px;border-radius:10px;font-size:13px;margin:3px 0;cursor:pointer}
-.nav a:hover,.nav a.active{background:rgba(73,231,255,.07);color:#eefaff;border:1px solid rgba(73,231,255,.13)}
-.nav a.active:before{content:"";width:3px;height:18px;border-radius:3px;background:var(--cyan);box-shadow:0 0 10px var(--cyan);margin-left:-12px}
-.icon{width:18px;text-align:center;opacity:.9}
-.side-foot{position:absolute;bottom:22px;left:16px;right:16px;padding:14px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(135deg,rgba(101,245,173,.04),rgba(73,231,255,.02))}
-.status{display:flex;align-items:center;gap:7px;font-size:11px;color:#a7b2bf}.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
-.main{padding:24px 28px 34px;max-width:1800px;width:100%;margin:auto}
-.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
-.eyebrow{color:var(--cyan);font-size:10px;letter-spacing:.2em;text-transform:uppercase}
-h1{font-size:26px;margin:6px 0 0;letter-spacing:-.03em}.subtitle{color:var(--muted);font-size:12px;margin-top:5px}
-.actions{display:flex;gap:9px}.btn{border:1px solid var(--line);background:#0c1118;color:#aeb8c4;border-radius:9px;padding:9px 12px;font-size:11px;cursor:pointer}.btn:hover{border-color:#385263;color:white}.btn.primary{border-color:rgba(73,231,255,.35);color:var(--cyan);box-shadow:var(--glow-c)}
-.filters{display:flex;gap:8px;align-items:center;margin-bottom:18px;flex-wrap:wrap}.filter{border:1px solid var(--line);background:rgba(13,17,24,.82);padding:7px 10px;border-radius:8px;color:#9da8b5;font-size:11px}.filter b{color:#e6edf3;font-weight:600}.filter.active{border-color:rgba(101,245,173,.3);color:var(--green);background:rgba(101,245,173,.035)}
+.brand strong{font-size:15px}.brand span{display:block;color:var(--muted);font-size:10px;margin-top:1px;letter-spacing:.14em;text-transform:uppercase}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:rgba(13,17,24,.82);border-radius:8px;padding:6px 10px;font-size:10px;color:#a7b2bf}
+.chip b{color:#e6edf3;font-weight:600}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+.btn{border:1px solid var(--line);background:#0c1118;color:#aeb8c4;border-radius:9px;padding:8px 12px;font-size:11px;cursor:pointer}
+.btn:hover{border-color:#385263;color:white}
+.btn.primary{border-color:rgba(73,231,255,.35);color:var(--cyan);box-shadow:var(--glow-c)}
+
+/* ---------- horizontal tabs ---------- */
+.tabs{display:flex;gap:2px;margin:14px 26px 0;max-width:1800px;margin-left:auto;margin-right:auto;border-bottom:1px solid var(--line)}
+.tab{display:flex;align-items:center;gap:8px;padding:10px 20px;font-size:12.5px;font-weight:600;color:#8994a1;border-bottom:2px solid transparent;cursor:pointer;letter-spacing:.02em}
+.tab .icon{width:15px;text-align:center;opacity:.9}
+.tab:hover{color:#eefaff}
+.tab[data-view="documentos"].active{color:var(--cyan);border-bottom-color:var(--cyan);text-shadow:0 0 12px rgba(73,231,255,.5)}
+.tab[data-view="medicos"].active{color:#4a6ef0;border-bottom-color:#4a6ef0;text-shadow:0 0 12px rgba(74,110,240,.5)}
+.tab[data-view="dispensacoes"].active{color:var(--green);border-bottom-color:var(--green);text-shadow:0 0 12px rgba(101,245,173,.5)}
+.tab[data-view="auditoria"].active{color:var(--red);border-bottom-color:var(--red);text-shadow:0 0 12px rgba(255,100,124,.5)}
+
+/* ---------- main ---------- */
+.main{padding:22px 26px 34px;max-width:1800px;margin:auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase}
+h1{font-size:24px;margin:5px 0 0;letter-spacing:-.03em}.subtitle{color:var(--muted);font-size:12px;margin-top:4px}
+.filters{display:flex;gap:8px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.filter{border:1px solid var(--line);background:rgba(13,17,24,.82);padding:7px 10px;border-radius:8px;color:#9da8b5;font-size:11px}
+.filter b{color:#e6edf3;font-weight:600}
+.filter.active{color:var(--va);background:rgba(101,245,173,.035);border-color:rgba(101,245,173,.3)}
 .filter .req{color:var(--red)}
+.filters .meta{margin-left:auto;color:#53606e;font-size:10px}
+
+/* ---------- grid & cards ---------- */
 .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
 .card{background:linear-gradient(145deg,rgba(17,23,34,.94),rgba(10,14,20,.94));border:1px solid var(--line);border-radius:15px;padding:17px;box-shadow:0 12px 40px rgba(0,0,0,.18);position:relative;overflow:hidden}
 .card:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,rgba(255,255,255,.025),transparent 35%);opacity:.8}
-.kpi{grid-column:span 3;min-height:132px}.kpi .label{font-size:10px;color:#687585;text-transform:uppercase;letter-spacing:.12em}.kpi .value{font-size:31px;font-weight:700;letter-spacing:-.045em;margin:12px 0 5px}.kpi .meta{font-size:11px;color:#8c98a6}.positive{color:var(--green)}.cyan{color:var(--cyan)}.violet{color:var(--violet)}.orange{color:var(--orange)}.red{color:var(--red)}
-.spark{position:absolute;right:13px;bottom:15px;width:90px;height:38px}
+.kpi{grid-column:span 2;min-height:122px}
+.kpi .label{font-size:9.5px;color:#687585;text-transform:uppercase;letter-spacing:.12em}
+.kpi .value{font-size:26px;font-weight:700;letter-spacing:-.045em;margin:10px 0 4px;color:var(--va)}
+.kpi .meta{font-size:10.5px;color:#8c98a6}
+.positive{color:var(--green)}.negative{color:var(--red)}.warn-t{color:var(--orange)}
+.spark{position:absolute;right:12px;bottom:13px;width:76px;height:32px}
 .spark svg{width:100%;height:100%}
 .section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.section-title h2{font-size:13px;margin:0;font-weight:650}.section-title span{font-size:10px;color:#667381}
 .chart-main{grid-column:span 8;min-height:320px}.side-chart{grid-column:span 4;min-height:320px}
@@ -48,53 +70,75 @@ h1{font-size:26px;margin:6px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
 .gridlines{position:absolute;inset:8px 0 28px;background:repeating-linear-gradient(to bottom,transparent 0,transparent 49px,rgba(255,255,255,.055) 50px)}
 .chart svg{position:absolute;inset:8px 0 28px;width:100%;height:calc(100% - 36px);overflow:visible}
 .axis{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;color:#566271;font-size:9px}
-.legend{display:flex;gap:16px;font-size:10px;color:#758190}.legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}.l-c{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}.l-g{background:var(--green);box-shadow:0 0 8px var(--green)}.l-v{background:var(--violet);box-shadow:0 0 8px var(--violet)}.l-o{background:var(--orange);box-shadow:0 0 8px var(--orange)}
-.donut-wrap{display:flex;align-items:center;justify-content:center;height:205px;position:relative}.donut{width:155px;height:155px;border-radius:50%;background:conic-gradient(var(--cyan) 0 48%,var(--violet) 48% 73%,var(--green) 73% 89%,#394452 89%);display:grid;place-items:center;box-shadow:0 0 30px rgba(73,231,255,.08)}.donut:after{content:"";width:105px;height:105px;border-radius:50%;background:#0d121a;border:1px solid #202a35}.donut-center{position:absolute;text-align:center;z-index:2}.donut-center strong{font-size:22px}.donut-center span{display:block;color:#6f7b88;font-size:9px;text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
-.breakdown{display:grid;gap:8px}.row{display:grid;grid-template-columns:1fr 45px;gap:10px;font-size:10px;color:#8d99a7}.bar{height:5px;background:#202833;border-radius:5px;margin-top:5px;overflow:hidden}.bar i{display:block;height:100%;border-radius:5px;background:var(--cyan);box-shadow:0 0 9px rgba(73,231,255,.35)}
-.table-card{grid-column:span 7}.alerts{grid-column:span 5}.table{width:100%;border-collapse:collapse;font-size:11px}.table th{text-align:left;color:#5e6b79;font-size:9px;text-transform:uppercase;letter-spacing:.1em;font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line)}.table td{padding:11px 6px;border-bottom:1px solid rgba(32,41,54,.7);color:#b7c0ca}.table tr:last-child td{border-bottom:0}.badge{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:9px;border:1px solid}.ok{color:var(--green);border-color:rgba(101,245,173,.22);background:rgba(101,245,173,.045)}.warn{color:var(--orange);border-color:rgba(255,180,84,.22);background:rgba(255,180,84,.045)}.bad{color:var(--red);border-color:rgba(255,100,124,.22);background:rgba(255,100,124,.045)}
-.alert{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid rgba(32,41,54,.7)}.alert:last-child{border-bottom:0}.alert-icon{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:rgba(255,100,124,.07);color:var(--red);border:1px solid rgba(255,100,124,.14)}.alert strong{font-size:11px}.alert p{margin:3px 0 0;color:#707c89;font-size:10px;line-height:1.45}
-.footer{display:flex;justify-content:space-between;color:#4e5a67;font-size:9px;margin-top:16px;padding:0 3px}
+.legend{display:flex;gap:16px;font-size:10px;color:#758190}.legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+.l1{background:var(--va);box-shadow:0 0 8px var(--va)}.l2{background:var(--va2);box-shadow:0 0 8px var(--va2)}
+.donut-wrap{display:flex;align-items:center;justify-content:center;height:200px;position:relative}
+.donut{width:150px;height:150px;border-radius:50%;display:grid;place-items:center;box-shadow:0 0 30px rgba(73,231,255,.06)}
+.donut:after{content:"";width:102px;height:102px;border-radius:50%;background:#0d121a;border:1px solid #202a35}
+.donut-center{position:absolute;text-align:center;z-index:2}.donut-center strong{font-size:21px}.donut-center span{display:block;color:#6f7b88;font-size:9px;text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
+.breakdown{display:grid;gap:8px}.row{display:grid;grid-template-columns:1fr 45px;gap:10px;font-size:10px;color:#8d99a7}
+.row .bar{height:5px;background:#202833;border-radius:5px;margin-top:5px;overflow:hidden}.row .bar i{display:block;height:100%;border-radius:5px;background:var(--va);box-shadow:0 0 9px rgba(73,231,255,.25)}
+.table{width:100%;border-collapse:collapse;font-size:11px}
+.table th{text-align:left;color:#5e6b79;font-size:9px;text-transform:uppercase;letter-spacing:.1em;font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line)}
+.table td{padding:11px 6px;border-bottom:1px solid rgba(32,41,54,.7);color:#b7c0ca}
+.table tr:last-child td{border-bottom:0}
+.table .group td{background:rgba(73,231,255,.03);color:var(--va);font-weight:700;letter-spacing:.08em}
+.badge{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:9px;border:1px solid}
+.ok{color:var(--green);border-color:rgba(101,245,173,.22);background:rgba(101,245,173,.045)}
+.warn{color:var(--orange);border-color:rgba(255,180,84,.22);background:rgba(255,180,84,.045)}
+.bad{color:var(--red);border-color:rgba(255,100,124,.22);background:rgba(255,100,124,.045)}
+.alert{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid rgba(32,41,54,.7)}.alert:last-child{border-bottom:0}
+.alert-icon{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:rgba(255,100,124,.07);color:var(--red);border:1px solid rgba(255,100,124,.14)}
+.alert strong{font-size:11px}.alert p{margin:3px 0 0;color:#707c89;font-size:10px;line-height:1.45}
 .map-box{position:relative;height:250px}.map-box svg{width:100%;height:100%}
 .map-note{position:absolute;right:8px;bottom:4px;font-size:9px;color:#566271}
-.barrow{display:grid;grid-template-columns:130px 1fr 62px;gap:10px;align-items:center;font-size:10px;color:#8d99a7;margin-bottom:11px}
-.bar-track{height:6px;background:#202833;border-radius:6px;overflow:hidden}.bar-fill{display:block;height:100%;border-radius:6px;background:var(--cyan);box-shadow:0 0 9px rgba(73,231,255,.35)}
+.barrow{display:grid;grid-template-columns:128px 1fr 62px;gap:10px;align-items:center;font-size:10px;color:#8d99a7;margin-bottom:11px}
+.bar-track{height:6px;background:#202833;border-radius:6px;overflow:hidden}
+.bar-fill{display:block;height:100%;border-radius:6px;background:var(--va);box-shadow:0 0 9px rgba(73,231,255,.3)}
 .barrow b{text-align:right;color:#c3ccd6;font-size:10.5px}
-.sql-box{background:#05080c;border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-family:Consolas,monospace;font-size:11px;line-height:1.7;color:#c9d4df;overflow-x:auto;grid-column:span 12}
-.sql-box .kw{color:var(--cyan)}.sql-box .fn{color:var(--green)}
+.sql-box{background:#05080c;border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-family:Consolas,monospace;font-size:11px;line-height:1.7;color:#c9d4df;overflow-x:auto;grid-column:span 12}
+.sql-box .kw{color:var(--red)}.sql-box .fn{color:var(--orange)}
+.footer{display:flex;justify-content:space-between;color:#4e5a67;font-size:9px;margin-top:16px;padding:0 3px;max-width:1800px;margin-left:auto;margin-right:auto}
 .view{display:none}.view.active{display:block}
-@media(max-width:1100px){.app{grid-template-columns:72px 1fr}.sidebar{padding:18px 10px}.brand div:last-child,.nav-label,.nav a span,.side-foot{display:none}.brand{justify-content:center;padding-bottom:25px}.nav a{justify-content:center}.nav a.active:before{display:none}.main{padding:20px}.kpi{grid-column:span 6}.chart-main,.side-chart,.table-card,.alerts,.sql-box{grid-column:span 12}}
-@media(max-width:650px){.app{display:block}.sidebar{display:none}.main{padding:16px}.topbar{align-items:flex-start}.actions .btn:not(.primary){display:none}.kpi{grid-column:span 12}.grid{gap:10px}.chart{height:210px}}
+
+/* per-view accent */
+.theme-cyan{--va:#49e7ff;--va2:#65f5ad;--va-soft:rgba(73,231,255,.05)}
+.theme-blue{--va:#4a6ef0;--va2:#49e7ff;--va-soft:rgba(74,110,240,.06)}
+.theme-green{--va:#65f5ad;--va2:#49e7ff;--va-soft:rgba(101,245,173,.05)}
+.theme-red{--va:#ff647c;--va2:#ffb454;--va-soft:rgba(255,100,124,.05)}
+.view .eyebrow{color:var(--va)}
+.view .filter.active{color:var(--va);border-color:color-mix(in srgb,var(--va) 30%,transparent);background:var(--va-soft)}
+.view .table .group td{color:var(--va);background:var(--va-soft)}
+
+@media(max-width:1100px){.kpi{grid-column:span 4}.chart-main,.side-chart,.sql-box{grid-column:span 12}}
+@media(max-width:650px){.kpi{grid-column:span 6}.tab{padding:10px 12px}.tab .icon{display:none}.chart{height:200px}}
 </style>
 </head>
 <body>
-<div class="app">
-<aside class="sidebar">
-  <div class="brand"><div class="brand-mark">PE</div><div><strong>Prescrição</strong><span>Eletrônica CFM</span></div></div>
-  <div class="nav-label">Visões</div>
-  <nav class="nav">
-    <a class="active" data-view="documentos"><span class="icon">⌂</span><span>Documentos</span></a>
-    <a data-view="medicos"><span class="icon">◈</span><span>Médicos</span></a>
-    <a data-view="dispensacoes"><span class="icon">⌁</span><span>Dispensações</span></a>
-    <a data-view="auditoria"><span class="icon">△</span><span>Auditoria</span></a>
-  </nav>
-  <div class="nav-label">Sistema</div>
-  <nav class="nav">
-    <a><span class="icon">⚙</span><span>Configurações</span></a>
-    <a><span class="icon">?</span><span>Suporte</span></a>
-  </nav>
-  <div class="side-foot">
-    <div class="status"><i class="dot"></i> Carga concluída · 02:12</div>
-    <div style="font-size:9px;color:#55616e;margin-top:6px">mrichard@portalmedico.org.br</div>
-  </div>
-</aside>
 
-<main class="main">
+  <header class="top">
+    <div class="brand"><div class="brand-mark">PE</div><div><strong>Prescrição</strong><span>Eletrônica CFM</span></div></div>
+    <div class="top-right">
+      <span class="chip"><i class="dot"></i>Carga <b>concluída</b></span>
+      <span class="chip">Dados <b>21/09 2026 · 02:12</b></span>
+      <button class="btn">↻ Atualizar</button>
+      <button class="btn primary" id="btnRefresh">Atualizar dados</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <div class="tab active" data-view="documentos"><span class="icon">⌂</span>Documentos</div>
+    <div class="tab" data-view="medicos"><span class="icon">◈</span>Médicos</div>
+    <div class="tab" data-view="dispensacoes"><span class="icon">⌁</span>Dispensações</div>
+    <div class="tab" data-view="auditoria"><span class="icon">△</span>Auditoria</div>
+  </nav>
+
+  <main class="main">
 
   <!-- ================= DOCUMENTOS ================= -->
-  <section class="view active" id="view-documentos">
+  <section class="view theme-cyan active" id="view-documentos">
     <header class="topbar">
-      <div><div class="eyebrow">Painel operacional · PE</div><h1>Documentos médicos</h1><div class="subtitle">Emissões por período, UF, tipo e especialidade.</div></div>
-      <div class="actions"><button class="btn">↻ Atualizar</button><button class="btn primary" id="btnRefresh">Atualizar dados</button></div>
+      <div><div class="eyebrow">Painel operacional · PE</div><h1>Documentos médicos</h1><div class="subtitle">Emissões por período, UF, tipo de documento e especialidade — UF da unidade de atendimento.</div></div>
     </header>
 
     <div class="filters">
@@ -103,23 +147,25 @@ h1{font-size:26px;margin:6px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
       <div class="filter">Tipo <b>· Todos</b></div>
       <div class="filter">Especialidade <b>· Todas</b></div>
       <div class="filter">Assinatura <b>· Assinado</b></div>
-      <div style="margin-left:auto;color:#53606e;font-size:10px">22 SET 2026 · 07:55 BRT · última carga 21/09 02:12</div>
+      <div class="meta">22 SET 2026 · 07:55 BRT</div>
     </div>
 
     <section class="grid">
-      <article class="card kpi"><div class="label">Documentos emitidos</div><div class="value cyan">4.218.307</div><div class="meta"><span class="positive">↑ 3,2%</span> vs. período anterior</div><div class="spark"><svg viewBox="0 0 90 38"><polyline fill="none" stroke="#49e7ff" stroke-width="2" points="0,31 12,27 22,29 34,18 46,22 57,12 68,16 78,7 90,10"/></svg></div></article>
-      <article class="card kpi"><div class="label">Assinados</div><div class="value positive">4.054.876</div><div class="meta">96,1% das emissões</div><div class="spark"><svg viewBox="0 0 90 38"><polyline fill="none" stroke="#65f5ad" stroke-width="2" points="0,28 10,29 20,23 31,25 43,15 54,18 64,11 75,13 90,5"/></svg></div></article>
-      <article class="card kpi"><div class="label">Não assinados</div><div class="value violet">135.729</div><div class="meta"><span class="red">▼ 0,6 p.p.</span> no mês</div><div class="spark"><svg viewBox="0 0 90 38"><polyline fill="none" stroke="#9a7cff" stroke-width="2" points="0,30 14,28 27,29 38,19 50,22 61,13 73,15 82,8 90,7"/></svg></div></article>
-      <article class="card kpi"><div class="label">Cancelados</div><div class="value orange">27.702</div><div class="meta">0,66% das emissões · estável</div><div class="spark"><svg viewBox="0 0 90 38"><polyline fill="none" stroke="#ffb454" stroke-width="2" points="0,31 12,29 22,30 34,25 46,28 57,18 67,24 78,12 90,16"/></svg></div></article>
+      <article class="card kpi"><div class="label">Emitidos</div><div class="value">4.218.307</div><div class="meta"><span class="positive">↑ 3,2%</span> vs anterior</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,26 11,22 20,24 30,14 40,17 50,10 60,13 76,6"/></svg></div></article>
+      <article class="card kpi"><div class="label">Assinados</div><div class="value">4.054.876</div><div class="meta">96,1% das emissões</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,24 10,25 20,20 30,21 40,14 50,16 60,11 76,8"/></svg></div></article>
+      <article class="card kpi"><div class="label">Não assinados</div><div class="value">135.729</div><div class="meta"><span class="negative">▼ 0,6 p.p.</span> no mês</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,18 11,20 20,17 30,22 40,16 50,19 60,12 76,14"/></svg></div></article>
+      <article class="card kpi"><div class="label">% Assinatura</div><div class="value">96,1%</div><div class="meta"><span class="positive">↑ 0,3 p.p.</span></div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,22 11,21 20,22 30,17 40,18 50,13 60,14 76,9"/></svg></div></article>
+      <article class="card kpi"><div class="label">Cancelados</div><div class="value">27.702</div><div class="meta">0,66% das emissões</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,26 11,25 20,26 30,22 40,24 50,16 60,20 76,12"/></svg></div></article>
+      <article class="card kpi"><div class="label">Pacientes distintos</div><div class="value">1.932.411</div><div class="meta"><span class="positive">↑ 2,1%</span> vs anterior</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,25 11,22 20,23 30,15 40,18 50,11 60,14 76,7"/></svg></div></article>
 
       <article class="card chart-main">
-        <div class="section-title"><h2>Volume de emissões</h2><div class="legend"><span><i class="l-c"></i>Emitidos</span><span><i class="l-g"></i>Assinados</span></div></div>
+        <div class="section-title"><h2>Emissões por mês</h2><div class="legend"><span><i class="l1"></i>Emitidos</span><span><i class="l2"></i>Assinados</span></div></div>
         <div class="chart"><div class="gridlines"></div>
           <svg viewBox="0 0 800 220" preserveAspectRatio="none">
-            <defs><linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#49e7ff" stop-opacity=".22"/><stop offset="1" stop-color="#49e7ff" stop-opacity="0"/></linearGradient></defs>
-            <path d="M0 173 L55 160 L110 165 L165 128 L220 141 L275 100 L330 118 L385 82 L440 94 L495 62 L550 74 L605 48 L660 66 L715 38 L800 50 L800 220 L0 220 Z" fill="url(#area)"/>
-            <polyline fill="none" stroke="#49e7ff" stroke-width="3" points="0,173 55,160 110,165 165,128 220,141 275,100 330,118 385,82 440,94 495,62 550,74 605,48 660,66 715,38 800,50"/>
-            <polyline fill="none" stroke="#65f5ad" stroke-width="2" stroke-dasharray="5 5" points="0,186 55,176 110,178 165,145 220,155 275,117 330,132 385,99 440,108 495,77 550,89 605,64 660,81 715,53 800,66"/>
+            <defs><linearGradient id="gDoc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--va);stop-opacity:.2"/><stop offset="1" style="stop-color:var(--va);stop-opacity:0"/></linearGradient></defs>
+            <path d="M0 173 L55 160 L110 165 L165 128 L220 141 L275 100 L330 118 L385 82 L440 94 L495 62 L550 74 L605 48 L660 66 L715 38 L800 50 L800 220 L0 220 Z" fill="url(#gDoc)"/>
+            <polyline fill="none" style="stroke:var(--va)" stroke-width="3" points="0,173 55,160 110,165 165,128 220,141 275,100 330,118 385,82 440,94 495,62 550,74 605,48 660,66 715,38 800,50"/>
+            <polyline fill="none" style="stroke:var(--va2)" stroke-width="2" stroke-dasharray="5 5" points="0,186 55,176 110,178 165,145 220,155 275,117 330,132 385,99 440,108 495,77 550,89 605,64 660,81 715,53 800,66"/>
           </svg>
           <div class="axis"><span>24 AGO</span><span>31 AGO</span><span>07 SET</span><span>14 SET</span><span>21 SET</span></div>
         </div>
@@ -127,32 +173,31 @@ h1{font-size:26px;margin:6px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
 
       <article class="card side-chart">
         <div class="section-title"><h2>Distribuição por tipo</h2><span>últimos 30 dias</span></div>
-        <div class="donut-wrap"><div class="donut"></div><div class="donut-center"><strong>4,2M</strong><span>documentos</span></div></div>
+        <div class="donut-wrap"><div class="donut" style="background:conic-gradient(var(--va) 0 41%,var(--va2) 41% 62%,#394452 62% 79%,#2a3543 79%)"></div><div class="donut-center"><strong>4,2M</strong><span>documentos</span></div></div>
         <div class="breakdown">
-          <div class="row"><div>Receita simples<div class="bar"><i style="width:48%"></i></div></div><b>41%</b></div>
-          <div class="row"><div>Atestado médico<div class="bar"><i style="width:25%;background:var(--violet)"></i></div></div><b>21%</b></div>
-          <div class="row"><div>Solicitação de exame<div class="bar"><i style="width:16%;background:var(--green)"></i></div></div><b>17%</b></div>
-          <div class="row"><div>Demais tipos<div class="bar"><i style="width:21%;background:#394452"></i></div></div><b>21%</b></div>
+          <div class="row"><div>Receita simples<div class="bar"><i style="width:41%"></i></div></div><b>41%</b></div>
+          <div class="row"><div>Atestado médico<div class="bar"><i style="width:21%;background:var(--va2)"></i></div></div><b>21%</b></div>
+          <div class="row"><div>Solicitação de exame<div class="bar"><i style="width:17%;background:#394452"></i></div></div><b>17%</b></div>
+          <div class="row"><div>Demais tipos<div class="bar"><i style="width:21%;background:#2a3543"></i></div></div><b>21%</b></div>
         </div>
       </article>
 
-      <article class="card table-card">
-        <div class="section-title"><h2>Documentos por UF</h2><span>UF da unidade de atendimento</span></div>
+      <article class="card" style="grid-column:span 7">
+        <div class="section-title"><h2>Documentos emitidos por UF</h2><span>UF da unidade de atendimento</span></div>
         <div class="map-box">
           <svg viewBox="0 0 700 250" preserveAspectRatio="none">
-            <path d="M240 30 L300 18 L370 24 L430 40 L470 62 L505 88 L520 118 L505 150 L535 180 L560 200 L520 218 L470 226 L420 230 L370 222 L320 210 L280 190 L250 168 L230 140 L220 112 L222 86 L226 58 Z"
-                  fill="#0d121a" stroke="#202936" stroke-width="1.2"/>
-            <circle cx="330" cy="98" r="30" fill="#49e7ff" opacity=".55"/>
-            <circle cx="380" cy="112" r="24" fill="#49e7ff" opacity=".42"/>
-            <circle cx="360" cy="80" r="17" fill="#49e7ff" opacity=".34"/>
-            <circle cx="310" cy="122" r="12" fill="#49e7ff" opacity=".28"/>
-            <circle cx="290" cy="138" r="9" fill="#49e7ff" opacity=".24"/>
+            <path d="M240 30 L300 18 L370 24 L430 40 L470 62 L505 88 L520 118 L505 150 L535 180 L560 200 L520 218 L470 226 L420 230 L370 222 L320 210 L280 190 L250 168 L230 140 L220 112 L222 86 L226 58 Z" fill="#0d121a" stroke="#202936" stroke-width="1.2"/>
+            <circle cx="330" cy="98" r="30" style="fill:var(--va)" opacity=".5"/>
+            <circle cx="380" cy="112" r="24" style="fill:var(--va)" opacity=".38"/>
+            <circle cx="360" cy="80" r="17" style="fill:var(--va)" opacity=".3"/>
+            <circle cx="310" cy="122" r="12" style="fill:var(--va)" opacity=".25"/>
+            <circle cx="290" cy="138" r="9" style="fill:var(--va)" opacity=".22"/>
           </svg>
           <div class="map-note">SP 1,02M · RJ 0,61M · MG 0,48M · PR 0,39M</div>
         </div>
       </article>
 
-      <article class="card alerts">
+      <article class="card" style="grid-column:span 5">
         <div class="section-title"><h2>Documentos por especialidade</h2><span>ranking</span></div>
         <div class="barrow"><span>Clínica médica</span><span class="bar-track"><i class="bar-fill" style="width:100%"></i></span><b>612k</b></div>
         <div class="barrow"><span>Pediatria</span><span class="bar-track"><i class="bar-fill" style="width:80%"></i></span><b>489k</b></div>
@@ -161,14 +206,26 @@ h1{font-size:26px;margin:6px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
         <div class="barrow"><span>Ortopedia</span><span class="bar-track"><i class="bar-fill" style="width:37%"></i></span><b>228k</b></div>
         <div style="margin-top:14px;font-size:10px;color:#667381">Pré-agregado no ETL · sem drill nominal no MVP</div>
       </article>
+
+      <article class="card" style="grid-column:span 12">
+        <div class="section-title"><h2>Distribuição UF → tipo de documento</h2><span>tabela hierárquica · sem drill nominal no MVP</span></div>
+        <table class="table"><thead><tr><th>UF</th><th>Tipo de documento</th><th>Emitidos</th><th>Assinados</th><th>% Assin.</th><th>Cancelados</th></tr></thead>
+        <tbody>
+          <tr class="group"><td colspan="6">São Paulo</td></tr>
+          <tr><td></td><td>Receita Simples</td><td>418.930</td><td>403.112</td><td>96,2%</td><td>2.412</td></tr>
+          <tr><td></td><td>Atestado Médico</td><td>216.407</td><td>209.771</td><td>96,9%</td><td>1.208</td></tr>
+          <tr class="group"><td colspan="6">Rio de Janeiro</td></tr>
+          <tr><td></td><td>Receita Simples</td><td>251.208</td><td>240.871</td><td>95,9%</td><td>1.507</td></tr>
+          <tr><td></td><td>Atestado Médico</td><td>128.334</td><td>124.002</td><td>96,6%</td><td>712</td></tr>
+        </tbody></table>
+      </article>
     </section>
   </section>
 
   <!-- ================= MÉDICOS ================= -->
-  <section class="view" id="view-medicos">
+  <section class="view theme-blue" id="view-medicos">
     <header class="topbar">
-      <div><div class="eyebrow">Painel operacional · PE</div><h1>Médicos</h1><div class="subtitle">Cadastro, situação da inscrição e atividade de prescrição.</div></div>
-      <div class="actions"><button class="btn">↻ Atualizar</button><button class="btn primary">Atualizar dados</button></div>
+      <div><div class="eyebrow">Painel operacional · PE</div><h1>Médicos</h1><div class="subtitle">Cadastro, situação da inscrição e atividade de prescrição por UF e especialidade.</div></div>
     </header>
 
     <div class="filters">
@@ -176,30 +233,57 @@ h1{font-size:26px;margin:6px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
       <div class="filter">Especialidade <b>· Todas</b></div>
       <div class="filter">Situação <b>· Ativa (A)</b></div>
       <div class="filter">Tipo de inscrição <b>· Todos</b></div>
-      <div style="margin-left:auto;color:#53606e;font-size:10px">22 SET 2026 · 07:55 BRT</div>
+      <div class="meta">22 SET 2026 · 07:55 BRT · ativo = in_situacao 'A'</div>
     </div>
 
     <section class="grid">
-      <article class="card kpi"><div class="label">Inscrições cadastradas</div><div class="value cyan">605.518</div><div class="meta">registros CRM/UF</div><div class="spark"><svg viewBox="0 0 90 38"><polyline fill="none" stroke="#49e7ff" stroke-width="2" points="0,30 12,27 22,28 34,22 46,24 57,17 68,19 78,12 90,10"/></svg></div></article>
-      <article class="card kpi"><div class="label">Médicos cadastrados</div><div class="value positive">598.204</div><div class="meta"><span class="positive">↑ 0,4%</span> no mês</div><div class="spark"><svg viewBox="0 0 90 38"><polyline fill="none" stroke="#65f5ad" stroke-width="2" points="0,28 10,29 20,24 31,25 43,17 54,19 64,13 75,14 90,7"/></svg></div></article>
-      <article class="card kpi"><div class="label">Médicos ativos</div><div class="value violet">394.242</div><div class="meta">in_situacao = A · 65,1%</div><div class="spark"><svg viewBox="0 0 90 38"><polyline fill="none" stroke="#9a7cff" stroke-width="2" points="0,31 14,29 27,30 38,21 50,24 61,15 73,17 82,10 90,8"/></svg></div></article>
-      <article class="card kpi"><div class="label">Emissões no período</div><div class="value orange">312.877</div><div class="meta">médicos distintos</div><div class="spark"><svg viewBox="0 0 90 38"><polyline fill="none" stroke="#ffb454" stroke-width="2" points="0,30 12,27 22,29 34,20 46,23 57,14 67,18 78,9 90,12"/></svg></div></article>
+      <article class="card kpi"><div class="label">Inscrições cadastradas</div><div class="value">605.518</div><div class="meta">registros CRM/UF</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,25 11,22 20,23 30,17 40,19 50,13 60,15 76,7"/></svg></div></article>
+      <article class="card kpi"><div class="label">Médicos cadastrados</div><div class="value">598.204</div><div class="meta"><span class="positive">↑ 0,4%</span> no mês</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,24 10,25 20,21 30,22 40,15 50,17 60,12 76,7"/></svg></div></article>
+      <article class="card kpi"><div class="label">Médicos ativos</div><div class="value">394.242</div><div class="meta">in_situacao = A · 65,1%</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,26 13,24 25,25 37,18 49,20 60,13 68,15 76,8"/></svg></div></article>
+      <article class="card kpi"><div class="label">Inscrições ativas</div><div class="value">394.242</div><div class="meta">65,1% do cadastro</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,25 13,23 25,24 37,17 49,19 60,12 68,14 76,7"/></svg></div></article>
+      <article class="card kpi"><div class="label">Emissões no período</div><div class="value">312.877</div><div class="meta">médicos distintos</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,24 11,22 20,23 30,16 40,18 50,11 60,14 76,6"/></svg></div></article>
+      <article class="card kpi"><div class="label">Novos no mês</div><div class="value">5.482</div><div class="meta"><span class="positive">↑ 11,9%</span> vs anterior</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,25 11,23 20,24 30,18 40,20 50,13 60,15 76,8"/></svg></div></article>
 
       <article class="card chart-main">
-        <div class="section-title"><h2>Evolução do cadastro</h2><div class="legend"><span><i class="l-c"></i>Total acumulado</span><span><i class="l-g"></i>Novos no mês</span></div></div>
+        <div class="section-title"><h2>Total acumulado de médicos</h2><div class="legend"><span><i class="l1"></i>Acumulado</span></div></div>
         <div class="chart"><div class="gridlines"></div>
           <svg viewBox="0 0 800 220" preserveAspectRatio="none">
-            <defs><linearGradient id="area2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#49e7ff" stop-opacity=".22"/><stop offset="1" stop-color="#49e7ff" stop-opacity="0"/></linearGradient></defs>
-            <path d="M0 196 L55 186 L110 170 L165 152 L220 141 L275 122 L330 108 L385 92 L440 80 L495 66 L550 52 L605 44 L660 34 L715 24 L800 14 L800 220 L0 220 Z" fill="url(#area2)"/>
-            <polyline fill="none" stroke="#49e7ff" stroke-width="3" points="0,196 55,186 110,170 165,152 220,141 275,122 330,108 385,92 440,80 495,66 550,52 605,44 660,34 715,24 800,14"/>
-            <polyline fill="none" stroke="#65f5ad" stroke-width="2" points="0,200 55,192 110,186 165,176 220,170 275,160 330,150 385,142 440,132 495,124 550,112 605,106 660,96 715,86 800,80"/>
+            <defs><linearGradient id="gMed" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--va);stop-opacity:.2"/><stop offset="1" style="stop-color:var(--va);stop-opacity:0"/></linearGradient></defs>
+            <path d="M0 196 L55 186 L110 170 L165 152 L220 141 L275 122 L330 108 L385 92 L440 80 L495 66 L550 52 L605 44 L660 34 L715 24 L800 14 L800 220 L0 220 Z" fill="url(#gMed)"/>
+            <polyline fill="none" style="stroke:var(--va)" stroke-width="3" points="0,196 55,186 110,170 165,152 220,141 275,122 330,108 385,92 440,80 495,66 550,52 605,44 660,34 715,24 800,14"/>
           </svg>
           <div class="axis"><span>24 AGO</span><span>31 AGO</span><span>07 SET</span><span>14 SET</span><span>21 SET</span></div>
         </div>
       </article>
 
       <article class="card side-chart">
-        <div class="section-title"><h2>Médicos por UF</h2><span>ranking</span></div>
+        <div class="section-title"><h2>Novos médicos por mês</h2><span>proxy: dh_atualizacao</span></div>
+        <div class="chart" style="height:190px"><div class="gridlines"></div>
+          <svg viewBox="0 0 300 160" preserveAspectRatio="none">
+            <polyline fill="none" style="stroke:var(--va)" stroke-width="3" points="0,128 40,110 80,120 120,88 160,100 200,72 240,82 300,50"/>
+            <circle cx="40" cy="110" r="4" style="fill:var(--va)"/><circle cx="120" cy="88" r="4" style="fill:var(--va)"/><circle cx="200" cy="72" r="4" style="fill:var(--va)"/><circle cx="300" cy="50" r="4" style="fill:var(--va)"/>
+          </svg>
+          <div class="axis"><span>24 AGO</span><span>31 AGO</span><span>07 SET</span><span>14 SET</span><span>21 SET</span></div>
+        </div>
+        <div style="margin-top:12px;font-size:10px;color:#667381">Origem sem data de cadastro — aproximação por dh_atualizacao.</div>
+      </article>
+
+      <article class="card" style="grid-column:span 7">
+        <div class="section-title"><h2>Médicos ativos por UF</h2><span>mapa — snapshot da última carga</span></div>
+        <div class="map-box">
+          <svg viewBox="0 0 700 250" preserveAspectRatio="none">
+            <path d="M240 30 L300 18 L370 24 L430 40 L470 62 L505 88 L520 118 L505 150 L535 180 L560 200 L520 218 L470 226 L420 230 L370 222 L320 210 L280 190 L250 168 L230 140 L220 112 L222 86 L226 58 Z" fill="#0d121a" stroke="#202936" stroke-width="1.2"/>
+            <circle cx="330" cy="98" r="29" style="fill:var(--va)" opacity=".5"/>
+            <circle cx="380" cy="112" r="23" style="fill:var(--va)" opacity=".38"/>
+            <circle cx="360" cy="80" r="16" style="fill:var(--va)" opacity=".3"/>
+            <circle cx="310" cy="122" r="11" style="fill:var(--va)" opacity=".25"/>
+          </svg>
+          <div class="map-note">SP 93,3k · RJ 51,5k · MG 45,2k · PR 27,0k</div>
+        </div>
+      </article>
+
+      <article class="card" style="grid-column:span 5">
+        <div class="section-title"><h2>Ranking por UF</h2><span>inscrições cadastradas</span></div>
         <div class="barrow"><span>São Paulo</span><span class="bar-track"><i class="bar-fill" style="width:100%"></i></span><b>143k</b></div>
         <div class="barrow"><span>Rio de Janeiro</span><span class="bar-track"><i class="bar-fill" style="width:55%"></i></span><b>79k</b></div>
         <div class="barrow"><span>Minas Gerais</span><span class="bar-track"><i class="bar-fill" style="width:48%"></i></span><b>69k</b></div>
@@ -209,8 +293,8 @@ h1{font-size:26px;margin:6px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
         <div class="barrow"><span>Pernambuco</span><span class="bar-track"><i class="bar-fill" style="width:15%"></i></span><b>22k</b></div>
       </article>
 
-      <article class="card table-card">
-        <div class="section-title"><h2>Inatividade por faixa sem emissão</h2><span>30/60/90/120 dias</span></div>
+      <article class="card" style="grid-column:span 12">
+        <div class="section-title"><h2>Inatividade por faixa de dias sem emissão</h2><span>médicos ativos sem emissão no intervalo</span></div>
         <table class="table"><thead><tr><th>Faixa</th><th>Médicos</th><th>% dos ativos</th><th>Status</th></tr></thead>
         <tbody>
           <tr><td>30 – 60 dias</td><td>48.102</td><td>12,2%</td><td><span class="badge ok">Observar</span></td></tr>
@@ -219,120 +303,107 @@ h1{font-size:26px;margin:6px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
           <tr><td>Mais de 120 dias</td><td>94.339</td><td>23,9%</td><td><span class="badge bad">Crítico</span></td></tr>
         </tbody></table>
       </article>
-
-      <article class="card alerts">
-        <div class="section-title"><h2>Médicos ativos por UF</h2><span>mapa</span></div>
-        <div class="map-box" style="height:215px">
-          <svg viewBox="0 0 700 210" preserveAspectRatio="none">
-            <path d="M240 26 L300 16 L370 22 L430 38 L470 58 L505 84 L520 112 L505 142 L535 168 L520 192 L470 202 L420 206 L370 200 L320 190 L280 172 L250 152 L230 128 L220 104 L222 80 L226 54 Z"
-                  fill="#0d121a" stroke="#202936" stroke-width="1.2"/>
-            <circle cx="330" cy="90" r="28" fill="#9a7cff" opacity=".5"/>
-            <circle cx="380" cy="104" r="22" fill="#9a7cff" opacity=".38"/>
-            <circle cx="360" cy="74" r="15" fill="#9a7cff" opacity=".3"/>
-            <circle cx="310" cy="114" r="11" fill="#9a7cff" opacity=".26"/>
-          </svg>
-          <div class="map-note">SP 93,3k · RJ 51,5k · MG 45,2k</div>
-        </div>
-      </article>
     </section>
   </section>
 
   <!-- ================= DISPENSAÇÕES ================= -->
-  <section class="view" id="view-dispensacoes">
+  <section class="view theme-green" id="view-dispensacoes">
     <header class="topbar">
-      <div><div class="eyebrow">Painel operacional · PE</div><h1>Dispensações</h1><div class="subtitle">Dispensação de receitas por farmácia e farmacêutico (UF do CRF).</div></div>
-      <div class="actions"><button class="btn">↻ Atualizar</button><button class="btn primary">Atualizar dados</button></div>
+      <div><div class="eyebrow">Painel operacional · PE</div><h1>Dispensações</h1><div class="subtitle">Dispensação de receitas por farmácia e farmacêutico — UF do CRF do farmacêutico.</div></div>
     </header>
 
     <div class="filters">
       <div class="filter active">Período <b>· 30 dias</b></div>
       <div class="filter">UF <b>· Todas</b></div>
-      <div class="filter">Status <b>· Dispensada</b></div>
+      <div class="filter">Status <b>· Dispensada (D)</b></div>
       <div class="filter">Assinatura <b>· Todas</b></div>
-      <div style="margin-left:auto;color:#53606e;font-size:10px">22 SET 2026 · 07:55 BRT</div>
+      <div class="meta">22 SET 2026 · 07:55 BRT · assinatura única (sem AE/CD)</div>
     </div>
 
     <section class="grid">
-      <article class="card kpi"><div class="label">Dispensações</div><div class="value cyan">128.407</div><div class="meta"><span class="positive">↑ 4,1%</span> vs. período anterior</div><div class="spark"><svg viewBox="0 0 90 38"><polyline fill="none" stroke="#49e7ff" stroke-width="2" points="0,30 12,27 22,28 34,20 46,23 57,15 68,17 78,9 90,11"/></svg></div></article>
-      <article class="card kpi"><div class="label">Assinadas</div><div class="value positive">895</div><div class="meta">in_assinado = S · tipo único</div><div class="spark"><svg viewBox="0 0 90 38"><polyline fill="none" stroke="#65f5ad" stroke-width="2" points="0,32 12,31 22,32 34,29 46,30 57,27 68,28 78,25 90,26"/></svg></div></article>
-      <article class="card kpi"><div class="label">Farmacêuticos</div><div class="value violet">65.996</div><div class="meta">cadastrados (CRF/UF)</div><div class="spark"><svg viewBox="0 0 90 38"><polyline fill="none" stroke="#9a7cff" stroke-width="2" points="0,31 14,29 27,30 38,22 50,24 61,16 73,18 82,11 90,9"/></svg></div></article>
-      <article class="card kpi"><div class="label">Farmácias</div><div class="value orange">3.214.087</div><div class="meta">pessoas tipo F</div><div class="spark"><svg viewBox="0 0 90 38"><polyline fill="none" stroke="#ffb454" stroke-width="2" points="0,29 12,27 22,28 34,22 46,24 57,16 67,19 78,11 90,13"/></svg></div></article>
+      <article class="card kpi"><div class="label">Dispensações</div><div class="value">128.407</div><div class="meta"><span class="positive">↑ 4,1%</span> vs anterior</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,25 11,22 20,23 30,16 40,18 50,11 60,13 76,6"/></svg></div></article>
+      <article class="card kpi"><div class="label">Assinadas</div><div class="value">895</div><div class="meta">in_assinado = S</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,27 12,26 22,27 32,25 42,26 52,23 62,24 76,21"/></svg></div></article>
+      <article class="card kpi"><div class="label">Canceladas</div><div class="value">1.204</div><div class="meta">status C no histórico</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,24 12,22 22,23 32,20 42,21 52,17 62,18 76,15"/></svg></div></article>
+      <article class="card kpi"><div class="label">Farmacêuticos</div><div class="value">65.996</div><div class="meta">cadastrados (CRF/UF)</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,26 13,24 25,25 37,19 49,21 60,15 68,16 76,10"/></svg></div></article>
+      <article class="card kpi"><div class="label">Farmácias</div><div class="value">3.214.087</div><div class="meta">pessoas tipo F</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,24 12,22 22,23 32,18 42,20 52,13 62,15 76,9"/></svg></div></article>
+      <article class="card kpi"><div class="label">Pacientes distintos</div><div class="value">98.233</div><div class="meta"><span class="positive">↑ 1,8%</span> vs anterior</div><div class="spark"><svg viewBox="0 0 76 32"><polyline fill="none" style="stroke:var(--va)" stroke-width="2" points="0,25 11,22 20,23 30,17 40,18 50,12 60,14 76,7"/></svg></div></article>
 
       <article class="card chart-main">
-        <div class="section-title"><h2>Volume de dispensações</h2><div class="legend"><span><i class="l-c"></i>Acumuladas</span><span><i class="l-g"></i>Novas no mês</span></div></div>
+        <div class="section-title"><h2>Dispensações por mês</h2><div class="legend"><span><i class="l1"></i>Acumuladas</span><span><i class="l2"></i>Novas no mês</span></div></div>
         <div class="chart"><div class="gridlines"></div>
           <svg viewBox="0 0 800 220" preserveAspectRatio="none">
-            <defs><linearGradient id="area3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#49e7ff" stop-opacity=".22"/><stop offset="1" stop-color="#49e7ff" stop-opacity="0"/></linearGradient></defs>
-            <path d="M0 192 L55 182 L110 166 L165 150 L220 140 L275 124 L330 110 L385 96 L440 86 L495 70 L550 58 L605 48 L660 40 L715 30 L800 22 L800 220 L0 220 Z" fill="url(#area3)"/>
-            <polyline fill="none" stroke="#49e7ff" stroke-width="3" points="0,192 55,182 110,166 165,150 220,140 275,124 330,110 385,96 440,86 495,70 550,58 605,48 660,40 715,30 800,22"/>
-            <polyline fill="none" stroke="#65f5ad" stroke-width="2" points="0,196 55,188 110,178 165,168 220,160 275,148 330,138 385,128 440,116 495,106 550,94 605,86 660,76 715,66 800,60"/>
+            <defs><linearGradient id="gDis" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--va);stop-opacity:.2"/><stop offset="1" style="stop-color:var(--va);stop-opacity:0"/></linearGradient></defs>
+            <path d="M0 192 L55 182 L110 166 L165 150 L220 140 L275 124 L330 110 L385 96 L440 86 L495 70 L550 58 L605 48 L660 40 L715 30 L800 22 L800 220 L0 220 Z" fill="url(#gDis)"/>
+            <polyline fill="none" style="stroke:var(--va)" stroke-width="3" points="0,192 55,182 110,166 165,150 220,140 275,124 330,110 385,96 440,86 495,70 550,58 605,48 660,40 715,30 800,22"/>
+            <polyline fill="none" style="stroke:var(--va2)" stroke-width="2" points="0,196 55,188 110,178 165,168 220,160 275,148 330,138 385,128 440,116 495,106 550,94 605,86 660,76 715,66 800,60"/>
           </svg>
           <div class="axis"><span>24 AGO</span><span>31 AGO</span><span>07 SET</span><span>14 SET</span><span>21 SET</span></div>
         </div>
       </article>
 
       <article class="card side-chart">
-        <div class="section-title"><h2>Farmacêuticos ativos</h2><span>últimos 30 dias</span></div>
-        <div class="donut-wrap"><div class="donut" style="background:conic-gradient(var(--green) 0 62%,var(--cyan) 62% 84%,#394452 84%)"></div><div class="donut-center"><strong>12,4k</strong><span>ativos</span></div></div>
-        <div class="breakdown">
-          <div class="row"><div>Com dispensação no mês<div class="bar"><i style="width:62%;background:var(--green)"></i></div></div><b>62%</b></div>
-          <div class="row"><div>Novos no mês<div class="bar"><i style="width:22%"></i></div></div><b>22%</b></div>
-          <div class="row"><div>Sem atividade<div class="bar"><i style="width:16%;background:#394452"></i></div></div><b>16%</b></div>
-        </div>
-      </article>
-
-      <article class="card table-card">
-        <div class="section-title"><h2>Totais e assinadas por UF</h2><span>assinatura única — sem AE/CD</span></div>
-        <table class="table"><thead><tr><th>UF</th><th>Dispensações</th><th>Assinadas</th><th>% Assin.</th><th>Status</th></tr></thead>
-        <tbody>
-          <tr><td>SP</td><td>26.902</td><td>204</td><td>0,76%</td><td><span class="badge warn">Baixa</span></td></tr>
-          <tr><td>PR</td><td>22.518</td><td>131</td><td>0,58%</td><td><span class="badge warn">Baixa</span></td></tr>
-          <tr><td>MG</td><td>13.074</td><td>98</td><td>0,75%</td><td><span class="badge warn">Baixa</span></td></tr>
-          <tr><td>SC</td><td>11.416</td><td>77</td><td>0,67%</td><td><span class="badge warn">Baixa</span></td></tr>
-          <tr><td>RS</td><td>10.385</td><td>64</td><td>0,62%</td><td><span class="badge warn">Baixa</span></td></tr>
-        </tbody></table>
-      </article>
-
-      <article class="card alerts">
-        <div class="section-title"><h2>Dispensações por UF</h2><span>UF do CRF</span></div>
-        <div class="map-box" style="height:215px">
-          <svg viewBox="0 0 700 210" preserveAspectRatio="none">
-            <path d="M240 26 L300 16 L370 22 L430 38 L470 58 L505 84 L520 112 L505 142 L535 168 L520 192 L470 202 L420 206 L370 200 L320 190 L280 172 L250 152 L230 128 L220 104 L222 80 L226 54 Z"
-                  fill="#0d121a" stroke="#202936" stroke-width="1.2"/>
-            <circle cx="330" cy="90" r="28" fill="#65f5ad" opacity=".5"/>
-            <circle cx="372" cy="112" r="22" fill="#65f5ad" opacity=".38"/>
-            <circle cx="360" cy="74" r="15" fill="#65f5ad" opacity=".3"/>
+        <div class="section-title"><h2>Farmacêuticos</h2><div class="legend"><span><i class="l1"></i>Acumulados</span><span><i class="l2"></i>Novos</span></div></div>
+        <div class="chart" style="height:190px"><div class="gridlines"></div>
+          <svg viewBox="0 0 300 160" preserveAspectRatio="none">
+            <polyline fill="none" style="stroke:var(--va)" stroke-width="3" points="0,130 45,112 90,96 135,80 180,66 225,52 300,34"/>
+            <polyline fill="none" style="stroke:var(--va2)" stroke-width="2" stroke-dasharray="4 4" points="0,140 45,132 90,124 135,114 180,104 225,96 300,84"/>
           </svg>
-          <div class="map-note">SP 26,9k · PR 22,5k · MG 13,1k</div>
+          <div class="axis"><span>24 AGO</span><span>31 AGO</span><span>07 SET</span><span>14 SET</span><span>21 SET</span></div>
         </div>
+        <div style="margin-top:12px;font-size:10px;color:#667381">Novos = primeira atividade de dispensação no mês.</div>
+      </article>
+
+      <article class="card" style="grid-column:span 7">
+        <div class="section-title"><h2>Dispensações por UF</h2><span>UF do CRF do farmacêutico</span></div>
+        <div class="map-box">
+          <svg viewBox="0 0 700 250" preserveAspectRatio="none">
+            <path d="M240 30 L300 18 L370 24 L430 40 L470 62 L505 88 L520 118 L505 150 L535 180 L560 200 L520 218 L470 226 L420 230 L370 222 L320 210 L280 190 L250 168 L230 140 L220 112 L222 86 L226 58 Z" fill="#0d121a" stroke="#202936" stroke-width="1.2"/>
+            <circle cx="330" cy="98" r="29" style="fill:var(--va)" opacity=".5"/>
+            <circle cx="372" cy="116" r="23" style="fill:var(--va)" opacity=".38"/>
+            <circle cx="360" cy="80" r="16" style="fill:var(--va)" opacity=".3"/>
+          </svg>
+          <div class="map-note">SP 26,9k · PR 22,5k · MG 13,1k · SC 11,4k</div>
+        </div>
+      </article>
+
+      <article class="card" style="grid-column:span 5">
+        <div class="section-title"><h2>Totais e assinadas por UF</h2><span>assinatura única</span></div>
+        <table class="table"><thead><tr><th>UF</th><th>Dispensações</th><th>Assinadas</th><th>% Assin.</th></tr></thead>
+        <tbody>
+          <tr><td>SP</td><td>26.902</td><td>204</td><td>0,76%</td></tr>
+          <tr><td>PR</td><td>22.518</td><td>131</td><td>0,58%</td></tr>
+          <tr><td>MG</td><td>13.074</td><td>98</td><td>0,75%</td></tr>
+          <tr><td>SC</td><td>11.416</td><td>77</td><td>0,67%</td></tr>
+          <tr><td>RS</td><td>10.385</td><td>64</td><td>0,62%</td></tr>
+        </tbody></table>
+        <div style="margin-top:12px;font-size:10px;color:#667381">% de assinatura baixo — evento temporal em tb_historico_dispensacao.</div>
       </article>
     </section>
   </section>
 
   <!-- ================= AUDITORIA ================= -->
-  <section class="view" id="view-auditoria">
+  <section class="view theme-red" id="view-auditoria">
     <header class="topbar">
-      <div><div class="eyebrow">Painel operacional · PE</div><h1>Auditoria</h1><div class="subtitle">Anomalias agregadas do datamart — média de referência de todos os médicos.</div></div>
-      <div class="actions"><button class="btn">↻ Atualizar</button><button class="btn primary">Executar consulta</button></div>
+      <div><div class="eyebrow">Painel operacional · PE</div><h1>Auditoria</h1><div class="subtitle">Anomalias agregadas do datamart — média de referência de todos os médicos · somente agregados.</div></div>
     </header>
 
     <div class="filters">
-      <div class="filter active">Período <b>· 15–21 SET</b></div>
-      <div class="filter active">Tipo <b>· AN1</b> <span class="req">*</span></div>
-      <div class="filter">Dimensão <b>· Documentos</b></div>
+      <div class="filter active">Período <b>· 15–21 SET</b> <span class="req">*</span></div>
+      <div class="filter active">Tipo de anomalia <b>· AN1</b> <span class="req">*</span></div>
+      <div class="filter">Dimensão afetada <b>· Documentos</b></div>
       <div class="filter">Severidade <b>· Todas</b></div>
-      <div style="margin-left:auto;color:#53606e;font-size:10px">somente agregados · sem registros individuais</div>
+      <div class="meta">filtros obrigatórios · sem registros individuais</div>
     </div>
 
     <section class="grid">
       <article class="card chart-main">
-        <div class="section-title"><h2>Eventos por dia</h2><div class="legend"><span><i class="l-c"></i>Anomalias detectadas</span></div></div>
+        <div class="section-title"><h2>Eventos por dia</h2><div class="legend"><span><i class="l1"></i>Anomalias detectadas</span></div></div>
         <div class="chart"><div class="gridlines"></div>
           <svg viewBox="0 0 800 220" preserveAspectRatio="none">
-            <defs><linearGradient id="area4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff647c" stop-opacity=".2"/><stop offset="1" stop-color="#ff647c" stop-opacity="0"/></linearGradient></defs>
-            <path d="M0 190 L115 186 L230 176 L345 150 L460 62 L575 128 L690 168 L800 176 L800 220 L0 220 Z" fill="url(#area4)"/>
-            <polyline fill="none" stroke="#ff647c" stroke-width="3" points="0,190 115,186 230,176 345,150 460,62 575,128 690,168 800,176"/>
-            <circle cx="460" cy="62" r="5" fill="#ff647c"/>
+            <defs><linearGradient id="gAud" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--va);stop-opacity:.2"/><stop offset="1" style="stop-color:var(--va);stop-opacity:0"/></linearGradient></defs>
+            <path d="M0 190 L115 186 L230 176 L345 150 L460 62 L575 128 L690 168 L800 176 L800 220 L0 220 Z" fill="url(#gAud)"/>
+            <polyline fill="none" style="stroke:var(--va)" stroke-width="3" points="0,190 115,186 230,176 345,150 460,62 575,128 690,168 800,176"/>
+            <circle cx="460" cy="62" r="5" style="fill:var(--va)"/>
           </svg>
           <div class="axis"><span>15 SET</span><span>16 SET</span><span>17 SET</span><span>18 SET</span><span>19 SET</span><span>20 SET</span><span>21 SET</span></div>
         </div>
@@ -340,14 +411,14 @@ h1{font-size:26px;margin:6px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
 
       <article class="card side-chart">
         <div class="section-title"><h2>Tipos de anomalia</h2><span>ranking</span></div>
-        <div class="barrow"><span>AN1 · Documentos</span><span class="bar-track"><i class="bar-fill" style="width:100%;background:var(--red)"></i></span><b>81</b></div>
-        <div class="barrow"><span>AN2 · Pacientes</span><span class="bar-track"><i class="bar-fill" style="width:44%;background:var(--orange)"></i></span><b>36</b></div>
-        <div class="barrow"><span>AN4 · Local</span><span class="bar-track"><i class="bar-fill" style="width:31%;background:var(--violet)"></i></span><b>25</b></div>
-        <div class="barrow"><span>AN3 · Tempo emissões</span><span class="bar-track"><i class="bar-fill" style="width:17%;background:var(--cyan)"></i></span><b>14</b></div>
+        <div class="barrow"><span>AN1 · Documentos</span><span class="bar-track"><i class="bar-fill" style="width:100%"></i></span><b>81</b></div>
+        <div class="barrow"><span>AN2 · Pacientes</span><span class="bar-track"><i class="bar-fill" style="width:44%"></i></span><b>36</b></div>
+        <div class="barrow"><span>AN4 · Local</span><span class="bar-track"><i class="bar-fill" style="width:31%"></i></span><b>25</b></div>
+        <div class="barrow"><span>AN3 · Tempo emissões</span><span class="bar-track"><i class="bar-fill" style="width:17%"></i></span><b>14</b></div>
         <div style="margin-top:18px;font-size:10px;color:#667381">Média de referência: todos os médicos.<br>Severidade por desvio 2x / 3x / 5x.</div>
       </article>
 
-      <article class="card table-card">
+      <article class="card" style="grid-column:span 7">
         <div class="section-title"><h2>Detalhe agregado — dia × dimensão × tipo</h2><span>observado vs. média esperada</span></div>
         <table class="table"><thead><tr><th>Dia</th><th>Anomalia</th><th>Dimensão</th><th>Observado</th><th>Média esperada</th><th>Desvio</th><th>Severidade</th></tr></thead>
         <tbody>
@@ -358,11 +429,16 @@ h1{font-size:26px;margin:6px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
         </tbody></table>
       </article>
 
-      <article class="card alerts">
-        <div class="section-title"><h2>Alertas</h2><span>prioridade</span></div>
-        <div class="alert"><div class="alert-icon">!</div><div><strong>AN4 · Volume por local</strong><p>Unidade com 5,6x a média de documentos emitidos por todos os médicos no período.</p></div></div>
-        <div class="alert"><div class="alert-icon" style="color:var(--orange);border-color:rgba(255,180,84,.14);background:rgba(255,180,84,.06)">⌁</div><div><strong>AN3 · Tempo entre emissões</strong><p>Gap médio de emissão 8x acima da média geral dos médicos.</p></div></div>
-        <div class="alert"><div class="alert-icon" style="color:var(--cyan);border-color:rgba(73,231,255,.14);background:rgba(73,231,255,.05)">✓</div><div><strong>Período estável</strong><p>Demais dias dentro do padrão esperado de todos os médicos.</p></div></div>
+      <article class="card" style="grid-column:span 5">
+        <div class="section-title"><h2>Dimensões afetadas</h2><span>ranking</span></div>
+        <div class="barrow"><span>Documentos</span><span class="bar-track"><i class="bar-fill" style="width:100%"></i></span><b>95</b></div>
+        <div class="barrow"><span>Atendimentos</span><span class="bar-track"><i class="bar-fill" style="width:42%"></i></span><b>40</b></div>
+        <div class="barrow"><span>Local</span><span class="bar-track"><i class="bar-fill" style="width:26%"></i></span><b>25</b></div>
+        <div class="barrow"><span>Dispensações</span><span class="bar-track"><i class="bar-fill" style="width:11%"></i></span><b>10</b></div>
+        <div class="alert" style="border-bottom:0;padding-bottom:0">
+          <div class="alert-icon">!</div>
+          <div><strong>AN4 · Volume por local</strong><p>Unidade com 5,6x a média de documentos de todos os médicos no período.</p></div>
+        </div>
       </article>
 
       <article class="sql-box">
@@ -379,30 +455,27 @@ h1{font-size:26px;margin:6px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
   </section>
 
   <div class="footer"><span>PE Dashboard · CFM</span><span>Ambiente operacional · dados demonstrativos</span></div>
-</main>
-</div>
+  </main>
 
 <script>
 (function(){
-  var nav=document.querySelectorAll('.nav a[data-view]');
+  var tabs=document.querySelectorAll('.tab');
   var views={};
   document.querySelectorAll('.view').forEach(function(v){views[v.id.replace('view-','')]=v;});
-  nav.forEach(function(a){
-    a.addEventListener('click',function(){
-      nav.forEach(function(x){x.classList.remove('active')});
-      a.classList.add('active');
+  tabs.forEach(function(t){
+    t.addEventListener('click',function(){
+      tabs.forEach(function(x){x.classList.remove('active')});
+      t.classList.add('active');
       Object.keys(views).forEach(function(k){
-        views[k].classList.toggle('active', k===a.dataset.view);
+        views[k].classList.toggle('active', k===t.dataset.view);
       });
     });
   });
-  var btns=document.querySelectorAll('.btn.primary');
-  btns.forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var old=btn.textContent;btn.textContent='⟳ Em fila…';
-      setTimeout(function(){btn.textContent='⟳ Atualizando…';},600);
-      setTimeout(function(){btn.textContent=old;},2600);
-    });
+  var btn=document.getElementById('btnRefresh');
+  btn.addEventListener('click',function(){
+    var old=btn.textContent;btn.textContent='⟳ Em fila…';
+    setTimeout(function(){btn.textContent='⟳ Atualizando…';},600);
+    setTimeout(function(){btn.textContent=old;},2600);
   });
 })();
 </script>
