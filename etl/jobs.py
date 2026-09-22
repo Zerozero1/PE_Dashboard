@@ -1,3 +1,13 @@
+"""Orquestracao da carga via fila `dashboard_refresh_job` no DW.
+
+Uso:
+  python jobs.py worker                # consome jobs queued (FOR UPDATE SKIP LOCKED)
+  python jobs.py scheduler             # cria jobs scheduled conforme dashboard_refresh_config
+  python jobs.py enqueue-manual <e-mail>   # job manual (botao "Atualizar dados")
+  python jobs.py enqueue-scheduled     # forca um job scheduled (teste/CLI)
+
+A aplicacao web e este processo se comunicam exclusivamente pelo DW.
+"""
 import os
 import subprocess
 import sys

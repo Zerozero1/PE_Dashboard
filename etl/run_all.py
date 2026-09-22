@@ -1,3 +1,10 @@
+"""Pipeline completo do ETL (idempotente).
+
+Ordem: dimensoes -> fato docs -> especialidade -> unidade -> medico-dia
+       -> pacientes -> medicos (snapshot/novos) -> dispensacoes -> anomalias.
+
+Uso: python run_all.py   (requer variaveis de ambiente; ver README.md)
+"""
 import sys
 import time
 

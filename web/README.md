@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PE Dashboard — Aplicação Web
 
-## Getting Started
+Frontend/API do PE Dashboard: monolito Next.js 16 (App Router, TypeScript) que consome o datamart `prescricao_dw`.
 
-First, run the development server:
+## Executar em desenvolvimento
 
 ```bash
+npm install
+# preencher .env.local (ver abaixo)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrir http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Variáveis de ambiente (`.env.local` — nunca versionar)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variável | Descrição |
+|---|---|
+| `DW_DATABASE_URL` | Conexão com o datamart: `postgres://usr_prescricao_dw:SENHA@172.16.7.112:5432/prescricao_dw` |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Credenciais OAuth do Google (console.cloud.google.com; redirect URI `http://localhost:3000/api/auth/callback/google`) |
+| `NEXTAUTH_SECRET` | Segredo de sessão (`openssl rand -base64 32`) |
+| `NEXTAUTH_URL` | URL pública da aplicação |
 
-## Learn More
+Sem as credenciais do Google, o modo `development` usa sessão mock (`mrichard@portalmedico.org.br`) para permitir visualizar o shell.
 
-To learn more about Next.js, take a look at the following resources:
+## Autenticação
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- next-auth v4 + provider Google (escopos `openid email profile`)
+- Validação de domínio no callback `signIn`: somente `@portalmedico.org.br`
+- Perfil único: todos os usuários do domínio veem as quatro visões
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Endpoints
 
-## Deploy on Vercel
+| Rota | Descrição |
+|---|---|
+| `GET /api/health` | Status da carga (último job), config (horário) e última data dos dados |
+| `GET /api/filtros` | UFs e tipos de documento para os filtros |
+| `GET /api/dashboard/documentos` | KPIs, série mensal, por tipo, por UF, ranking de especialidades (`de`, `ate`, `uf`, `tipo`, `assinado`) |
+| `GET /api/dashboard/medicos` | KPIs snapshot, novos por mês, por UF, inatividade por faixa (`de`, `ate`, `uf`) |
+| `GET /api/dashboard/dispensacoes` | KPIs, série mensal, por UF (`de`, `ate`, `uf`) |
+| `GET /api/dashboard/auditoria` | Eventos por dia, tipos, dimensões, detalhe (`de`, `ate`, `tipo`) |
+| `POST /api/admin/refresh-jobs` | Enfileira job manual no `dashboard_refresh_job` (botão "Atualizar dados") |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Estrutura
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+  app/
+    api/...          # route handlers (dados e autenticação)
+    globals.css      # tema cyberpunk dark
+    layout.tsx       # shell raiz
+    page.tsx         # sessão + dashboard
+  components/
+    dashboard.tsx    # abas, filtros e visões (SVG/CSS, sem lib de gráficos)
+  lib/
+    auth.ts          # next-auth (Google + domínio)
+    db.ts            # pool pg do datamart
+public/
+  brazil.geojson     # mapa do Brasil por UF (simplificado)
+  cfm.png            # logo
+```
+
+## Deploy (servidor interno Windows)
+
+1. `npm run build` → `npm start` (ou serviço Windows/PM2)
+2. Configurar `.env.local` com credenciais reais do Google e `NEXTAUTH_URL` do host interno
+3. Remover o mock de dev (aplicação já cai no redirect do next-auth quando `GOOGLE_CLIENT_ID` existe)

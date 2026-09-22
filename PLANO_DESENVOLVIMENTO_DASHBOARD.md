@@ -701,6 +701,13 @@ Alternativa:
 Decisao para o MVP:
 - Priorizar simplicidade: monolito web com worker/job separado apenas se necessario pela infraestrutura.
 
+Status implementado (2026-09-22):
+- Frontend/backend: Next.js 16 (App Router, TypeScript) em `web/` — decisao registrada.
+- Graficos: SVG/CSS puros (sem biblioteca externa; mapa via GeoJSON local `public/brazil.geojson`).
+- Jobs: Python em `etl/` com fila `dashboard_refresh_job` no DW (`jobs.py` worker/scheduler).
+- Autenticacao: next-auth v4 + Google OAuth com validacao de dominio.
+- Documentacao operacional: `etl/README.md` e `web/README.md`.
+
 ## 11. Endpoints Iniciais
 
 Autenticacao:
@@ -726,7 +733,9 @@ Observabilidade:
 
 ## 12. Fases de Implementacao
 
-### Fase 0 - Confirmacoes
+> Status geral (2026-09-22): Fases 0–4 concluidas; Fase 5 em andamento (falta incremental, agendamento Windows e backup).
+
+### Fase 0 - Confirmacoes — CONCLUIDA
 
 Objetivo:
 - Fechar definicoes necessarias antes de codar.
@@ -744,35 +753,35 @@ Atividades:
 Entregavel:
 - Decisoes registradas no plano ou em ADRs.
 
-### Fase 1 - Fundacao
+### Fase 1 - Fundacao — CONCLUIDA (2026-09-22)
 
 Objetivo:
 - Colocar a aplicacao web no ar com login restrito e layout base.
 
-Atividades:
-- Criar projeto web.
-- Configurar autenticacao.
-- Implementar validacao de dominio.
-- Criar shell do dashboard com quatro visões.
-- Criar status basico de usuario e permissao.
+Atividades (status):
+- Criar projeto web. (FEITO: Next.js 16 em `web/`)
+- Configurar autenticacao. (FEITO: next-auth v4 + Google OAuth; pendente so criar credenciais Google e remover mock de dev)
+- Implementar validacao de dominio. (FEITO: signIn callback `@portalmedico.org.br`)
+- Criar shell do dashboard com quatro visões. (FEITO: padrao cyberpunk dark, abas horizontais)
+- Criar status basico de usuario e permissao. (FEITO: perfil unico; mock em dev)
 
 Validacao:
 - Usuario permitido acessa.
 - Usuario fora do dominio e bloqueado.
 - Rotas de API tambem bloqueiam acesso indevido.
 
-### Fase 2 - Camada de dados
+### Fase 2 - Camada de dados — CONCLUIDA (2026-09-22)
 
 Objetivo:
 - Criar estrutura de agregados para alimentar os dashboards.
 
-Atividades:
-- Criar schema/tabelas do dashboard.
-- Criar usuarios/permissoes: origem somente leitura e dashboard com gravacao restrita.
-- Criar carga historica inicial.
-- Criar carga incremental.
-- Criar tabela de controle de jobs.
-- Criar validacoes de contagem por periodo.
+Atividades (status):
+- Criar schema/tabelas do dashboard. (FEITO: 22 tabelas no schema `prescricao` do `prescricao_dw`; ver `etl/README.md`)
+- Criar usuarios/permissoes. (FEITO: `usr_select` RO na origem; `usr_prescricao_dw` RW no DW)
+- Criar carga historica inicial. (FEITO: desde 2021-10; 61,84M docs)
+- Criar carga incremental. (PENDENTE: job diario roda o run_all completo)
+- Criar tabela de controle de jobs. (FEITO: `dashboard_refresh_config` + `dashboard_refresh_job` + `jobs.py`)
+- Criar validacoes de contagem por periodo. (FEITO: `validate.py`, `status_dw.py`, `audit_counts.py`)
 
 Validacao:
 - Carga executa em lote.
@@ -780,47 +789,47 @@ Validacao:
 - Dashboard nao consulta tabelas brutas grandes em tempo de tela.
 - Nenhum job ou rota da aplicacao possui permissao de escrita na base `bd_cfm`.
 
-### Fase 3 - Visões Documentos, Medicos e Dispensacoes
+### Fase 3 - Visões Documentos, Medicos e Dispensacoes — CONCLUIDA (2026-09-22)
 
 Objetivo:
 - Implementar as tres visões com base nas imagens de referencia.
 
-Atividades:
-- Construir filtros.
-- Criar cards de KPIs.
-- Criar mapas.
-- Criar rankings e series temporais.
-- Criar estados de loading, vazio e erro.
+Atividades (status):
+- Construir filtros. (FEITO: periodo (default "Todos"), UF, tipo, assinatura)
+- Criar cards de KPIs. (FEITO)
+- Criar mapas. (FEITO: GeoJSON local do Brasil, choropleth + bolhas)
+- Criar rankings e series temporais. (FEITO: SVG puro, eixo duplo)
+- Criar estados de loading, vazio e erro. (FEITO: "Processando…" animado)
 
 Validacao:
 - Filtros alteram todos os paineis corretamente.
 - KPIs sao consistentes com os graficos.
 - Tempo de resposta aceitavel em dados agregados.
 
-### Fase 4 - Visao Auditoria
+### Fase 4 - Visao Auditoria — CONCLUIDA (2026-09-22)
 
 Objetivo:
 - Implementar auditoria com seguranca e filtros restritivos.
 
-Atividades:
-- Criar fatos agregadas de auditoria (anomalias).
-- Criar tela com filtros obrigatorios.
+Atividades (status):
+- Criar fatos agregadas de auditoria (anomalias). (FEITO: AN1–AN4 com severidade 2x/3x/5x)
+- Criar tela com filtros obrigatorios. (FEITO: periodo + tipo de anomalia)
 
 Validacao:
 - Auditoria mostra apenas agregados, sem registros individuais.
 - Auditoria exige periodo/filtros.
 
-### Fase 5 - Operacao
+### Fase 5 - Operacao — EM ANDAMENTO
 
 Objetivo:
 - Preparar para uso continuo.
 
-Atividades:
-- Configurar agendamento diario.
-- Implementar botao de atualizacao manual.
-- Criar monitoramento de falhas.
-- Criar documentacao de instalacao e operacao.
-- Definir rotina de backup do banco do dashboard.
+Atividades (status):
+- Configurar agendamento diario. (FEITO no codigo: `jobs.py scheduler`; falta agendar no Windows Task Scheduler)
+- Implementar botao de atualizacao manual. (FEITO: `POST /api/admin/refresh-jobs` + worker)
+- Criar monitoramento de falhas. (FEITO: status/mensagem em `dashboard_refresh_job`; visivel no cabecalho)
+- Criar documentacao de instalacao e operacao. (FEITO 2026-09-22: `etl/README.md` e `web/README.md`)
+- Definir rotina de backup do banco do dashboard. (PENDENTE)
 
 Validacao:
 - Job programado roda sozinho.
