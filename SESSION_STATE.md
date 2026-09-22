@@ -23,6 +23,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 
 ## 🔧 Em Progresso / Próximos Passos
 - [ ] etl/jobs.py — scheduler/worker com `dashboard_refresh_job` (Fase 5) e carga incremental diária (reprocessar janela D-1..hoje via faixas de id recentes).
+  - FEITO (2026-09-22): jobs.py criado e testado (worker com claim FOR UPDATE SKIP LOCKED + recover_stale; scheduler lendo dashboard_refresh_config; enqueue-manual). Falta apenas: carga incremental (hoje o job roda o run_all completo, ~40 min) e agendamento no Windows (Task Scheduler).
 - [ ] Testar run_all.py completo em uma execução.
 - [ ] Fase 1 — Fundacao: projeto web, Google OAuth, validacao de dominio, shell com 4 visões (padrão cyberpunk dark aprovado).
 - [ ] Fase 3 — Visões Documentos, Medicos e Dispensacoes consumindo as fatos do DW.
