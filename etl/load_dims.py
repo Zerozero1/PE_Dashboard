@@ -10,10 +10,10 @@ def load_dim_data(dw):
     rows = []
     d = start
     while d <= end:
-        rows.append((d, d.year, d.month, f"{d.year}-{d.month:02d}", d.isoweekday()))
+        rows.append((d, d.year, d.month, f"{d.year}-{d.month:02d}"))
         d += timedelta(days=1)
     upsert_rows(dw, "prescricao.dim_data",
-                ["data", "ano", "mes", "ano_mes", "dia_semana"], rows, ["data"])
+                ["data", "ano", "mes", "ano_mes"], rows, ["data"])
     log(f"dim_data: {len(rows)} linhas")
 
 

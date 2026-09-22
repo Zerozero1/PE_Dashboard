@@ -19,6 +19,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 - Ponto de atenção: origem está em produção ativa (cresceu ~1M docs durante as cargas); contagens do DW acompanham a origem no momento de cada varredura. Cargas são idempotentes (upsert).
 - BUG corrigido (2026-09-22): `ON CONFLICT DO UPDATE` por lote sobrescrevia chaves que aparecem em mais de um lote (~970k docs perdidos). Correção: tabelas `stg_documento_*` acumulam os lotes e a fato é reconstruída com `SUM` a cada carga (rebuild_fact). DW final: 61,84M documentos (consistente com a origem).
 - Debug: debug_batch.py / debug2.py / debug3.py (regressão do problema de sobrescrita).
+- Limpeza de colunas sem uso (2026-09-22): removidas `dim_data.dia_semana` e `fato_medico_dia.inscricoes_cadastradas/inscricoes_ativas/medicos_ativos` (sempre vazias; valores correntes vivem em `fato_medico_snapshot`). Demais colunas "redundantes" mantidas por custo baixo.
 
 ## 🔧 Em Progresso / Próximos Passos
 - [ ] etl/jobs.py — scheduler/worker com `dashboard_refresh_job` (Fase 5) e carga incremental diária (reprocessar janela D-1..hoje via faixas de id recentes).

@@ -5,8 +5,7 @@ CREATE TABLE IF NOT EXISTS prescricao.dim_data (
     data DATE PRIMARY KEY,
     ano SMALLINT NOT NULL,
     mes SMALLINT NOT NULL,
-    ano_mes CHAR(7) NOT NULL,
-    dia_semana SMALLINT NOT NULL
+    ano_mes CHAR(7) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS prescricao.dim_uf (
@@ -76,9 +75,6 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_documento_paciente_dia (
 CREATE TABLE IF NOT EXISTS prescricao.fato_medico_dia (
     dia DATE NOT NULL,
     sg_uf CHAR(2) NOT NULL,
-    inscricoes_cadastradas BIGINT NOT NULL DEFAULT 0,
-    inscricoes_ativas BIGINT NOT NULL DEFAULT 0,
-    medicos_ativos BIGINT NOT NULL DEFAULT 0,
     novos_por_dh_atualizacao BIGINT NOT NULL DEFAULT 0,
     medicos_com_emissao BIGINT NOT NULL DEFAULT 0,
     PRIMARY KEY (dia, sg_uf)

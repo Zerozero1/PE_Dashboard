@@ -173,7 +173,6 @@ Trade-off:
 - `ano`
 - `mes`
 - `ano_mes`
-- `dia_semana`
 
 `dim_uf` (origem: `td_uf`)
 - `sg_uf`
@@ -230,11 +229,9 @@ Trade-off:
 `fato_medico_dia`
 - grao: dia + UF + especialidade + situacao
 - metricas:
-  - medicos_cadastrados
-  - medicos_ativos
-  - inscricoes_ativas
-  - medicos_com_documento_emitido
-  - medicos_inativos_por_faixa_sem_uso
+  - novos_por_dh_atualizacao (proxy de cadastro)
+  - medicos_com_emissao (distintos por dia)
+- Contagens correntes de cadastro (inscricoes cadastradas/ativas, medicos ativos) ficam em `fato_medico_snapshot` (a origem nao guarda historico de cadastro).
 
 `fato_dispensacao_dia`
 - grao: dia + UF + farmacia + farmaceutico
