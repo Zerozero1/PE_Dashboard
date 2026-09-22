@@ -106,6 +106,9 @@ h1{font-size:24px;margin:5px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
 .theme-red{--va:#ff647c;--va2:#ffb454;--va-soft:rgba(255,100,124,.05)}
 .view .eyebrow{color:var(--va)}
 .placeholder{color:#4e5a67;font-family:Consolas,monospace}
+.processing{display:inline-flex;gap:8px;align-items:center;color:#9fb0c1;font-size:12px;padding:2px 4px}
+.processing .spinner{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--va);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 
 @media(max-width:1100px){.kpi{grid-column:span 4}.chart-main,.side-chart,.sql-box{grid-column:span 12}}
 @media(max-width:650px){.kpi{grid-column:span 6}.tab{padding:10px 12px}.chart{height:200px}}
