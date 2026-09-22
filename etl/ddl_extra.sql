@@ -53,3 +53,16 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_medico_snapshot (
     medicos_ativos BIGINT NOT NULL,
     atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Indices para os padroes de consulta do dashboard
+CREATE INDEX IF NOT EXISTS idx_fato_medico_dia_medico
+    ON prescricao.fato_documento_medico_dia (id_medico, dia);
+
+CREATE INDEX IF NOT EXISTS idx_fato_especialidade_esp
+    ON prescricao.fato_documento_especialidade_dia (id_medico_especialidade, dia);
+
+CREATE INDEX IF NOT EXISTS idx_fato_unidade_un
+    ON prescricao.fato_documento_unidade_dia (id_unidade_atendimento, dia);
+
+CREATE INDEX IF NOT EXISTS idx_dim_medico_uf
+    ON prescricao.dim_medico (sg_uf);
