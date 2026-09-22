@@ -32,10 +32,8 @@ LEFT JOIN prescricao.rl_medico_unidade_atendimento mu
        ON mu.id_medico_unidade_atendimento = c.id_medico_unidade_atendimento
 LEFT JOIN prescricao.tb_unidade_atendimento ua
        ON ua.id_unidade_atendimento = mu.id_unidade_atendimento
-LEFT JOIN prescricao.rl_med_especialidade_consulta rec
-       ON rec.id_consulta = c.id_consulta
 LEFT JOIN prescricao.tb_medico_especialidade me
-       ON me.id_medico_especialidade = rec.id_medico_especialidade
+       ON me.id_medico = mu.id_medico AND me.in_ativo = 'S'
 WHERE d.id_consulta_documento BETWEEN %s AND %s
   AND me.id_medico_especialidade IS NOT NULL
 GROUP BY 1, 2, 3

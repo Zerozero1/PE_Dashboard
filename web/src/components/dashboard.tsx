@@ -359,7 +359,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       </article>
 
       <article className="card" style={{ gridColumn: "span 5" }}>
-        <div className="section-title"><h2>Documentos por especialidade</h2><span>ranking</span></div>
+        <div className="section-title"><h2>Documentos por especialidade</h2><span>cadastro do médico que assina · % dos docs com especialidade</span></div>
         <RankRows showPct rows={data.ranking_especialidade.map((e) => ({ name: e.especialidade, v: Number(e.docs) }))} />
       </article>
     </section>
