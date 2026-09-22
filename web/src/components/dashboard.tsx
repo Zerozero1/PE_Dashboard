@@ -189,10 +189,16 @@ function BarChart({ rows, bars, w = 800, h = 220 }: { rows: { x: string; v: numb
       {ticks.map((f) => {
         const y = h - f * (h - 26);
         return (
-          <g key={f}>
+          <g key={`l${f}`}>
             <line x1={pad} x2={w} y1={y} y2={y} stroke="rgba(255,255,255,.07)" />
             <text x={pad - 8} y={y + 3} fontSize="9" fill="#9fb0c1" textAnchor="end">{nfc.format(maxLine * f)}</text>
           </g>
+        );
+      })}
+      {bars && ticks.map((f) => {
+        const y = h - f * (h - 26);
+        return (
+          <text key={`r${f}`} x={w - 8} y={y + 3} fontSize="9" fill="var(--va)" opacity=".75" textAnchor="end">{nfc.format(maxBars * f)}</text>
         );
       })}
       {bars && bars.map((b, i) => {
