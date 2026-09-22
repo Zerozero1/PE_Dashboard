@@ -50,6 +50,8 @@ h1{font-size:24px;margin:5px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
 .filter b{color:#e6edf3;font-weight:600}
 .filter.active{color:var(--va);background:var(--va-soft);border-color:color-mix(in srgb,var(--va) 30%,transparent)}
 .filter .req{color:var(--red)}
+.filter select{background:#0c1118;color:#e6edf3;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:11px;cursor:pointer}
+.filter select:focus{outline:none;border-color:var(--va)}
 .filters .meta{margin-left:auto;color:#53606e;font-size:10px}
 
 .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}

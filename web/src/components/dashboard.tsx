@@ -49,6 +49,29 @@ type AudData = {
   detalhe: { dia: string; tipo_anomalia: string; dimensao_afetada: string; valor_observado: string; valor_esperado: string; desvio: string; severidade: number }[];
 };
 
+type FiltrosData = { ufs: string[]; tipos: { id: number; nome: string }[] };
+
+function periodo(dias: number) {
+  const ate = new Date().toISOString().slice(0, 10);
+  const de = new Date(Date.now() - dias * 864e5).toISOString().slice(0, 10);
+  return { de, ate };
+}
+
+function Sel({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: [string, string][] }) {
+  return (
+    <label className="filter">
+      {label}{" "}
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map(([v, t]) => (
+          <option key={v} value={v}>{t}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+const PERIODOS: [string, string][] = [["30", "30 dias"], ["7", "7 dias"], ["90", "90 dias"], ["365", "12 meses"]];
+
 const VIEWS = ["documentos", "medicos", "dispensacoes", "auditoria"] as const;
 type ViewId = (typeof VIEWS)[number];
 
@@ -187,13 +210,26 @@ function KpiCard({ label, value, meta }: { label: string; value: string; meta: s
   );
 }
 
-function DocumentsView({ active }: { active: boolean }) {
-  const { data, erro } = useApi<DocsData>("/api/dashboard/documentos", active);
+function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosData | null }) {
+  const [dias, setDias] = useState("30");
+  const [uf, setUf] = useState("");
+  const [tipo, setTipo] = useState("");
+  const [assinado, setAssinado] = useState("");
+  const { de, ate } = periodo(Number(dias));
+  const qs = `de=${de}&ate=${ate}&uf=${uf}&tipo=${tipo}&assinado=${assinado}`;
+  const { data, erro } = useApi<DocsData>(`/api/dashboard/documentos?${qs}`, active);
   if (erro) return <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>;
   if (!data) return <div className="card" style={{ gridColumn: "span 12", color: "#566271" }}>Carregando…</div>;
   const k = data.kpis;
   return (
     <section className="grid">
+      <div className="filters" style={{ gridColumn: "span 12" }}>
+        <Sel label="Período" value={dias} onChange={setDias} options={PERIODOS} />
+        <Sel label="UF" value={uf} onChange={setUf} options={[["", "Todas"], ...(filtros?.ufs.map((u) => [u, u] as [string, string]) ?? [])]} />
+        <Sel label="Tipo" value={tipo} onChange={setTipo} options={[["", "Todos"], ...(filtros?.tipos.map((t) => [String(t.id), t.nome] as [string, string]) ?? [])]} />
+        <Sel label="Assinatura" value={assinado} onChange={setAssinado} options={[["", "Todas"], ["S", "Assinado"], ["N", "Não assinado"]]} />
+        <div className="meta">{de} → {ate}</div>
+      </div>
       <KpiCard label="Emitidos" value={nf.format(k.emitidos)} meta="no período" />
       <KpiCard label="Assinados" value={nf.format(k.assinados)} meta="no período" />
       <KpiCard label="Não assinados" value={nf.format(k.nao_assinados)} meta="no período" />
@@ -243,14 +279,23 @@ function DocumentsView({ active }: { active: boolean }) {
   );
 }
 
-function MedicosView({ active }: { active: boolean }) {
-  const { data, erro } = useApi<MedData>("/api/dashboard/medicos", active);
+function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosData | null }) {
+  const [dias, setDias] = useState("30");
+  const [uf, setUf] = useState("");
+  const { de, ate } = periodo(Number(dias));
+  const qs = `de=${de}&ate=${ate}&uf=${uf}`;
+  const { data, erro } = useApi<MedData>(`/api/dashboard/medicos?${qs}`, active);
   if (erro) return <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>;
   if (!data) return <div className="card" style={{ gridColumn: "span 12", color: "#566271" }}>Carregando…</div>;
   const k = data.kpis;
   const faixas = ["0-30", "31-60", "61-90", "91-120", "120+"];
   return (
     <section className="grid">
+      <div className="filters" style={{ gridColumn: "span 12" }}>
+        <Sel label="Período" value={dias} onChange={setDias} options={PERIODOS} />
+        <Sel label="UF" value={uf} onChange={setUf} options={[["", "Todas"], ...(filtros?.ufs.map((u) => [u, u] as [string, string]) ?? [])]} />
+        <div className="meta">snapshot na última carga · {de} → {ate}</div>
+      </div>
       <KpiCard label="Inscrições cadastradas" value={nf.format(k.inscricoes)} meta="CRM/UF (snapshot)" />
       <KpiCard label="Médicos ativos" value={nf.format(k.ativos)} meta="in_situacao = A" />
       <KpiCard label="Inscrições ativas" value={nf.format(k.inscricoes_ativas)} meta="snapshot" />
@@ -296,13 +341,22 @@ function MedicosView({ active }: { active: boolean }) {
   );
 }
 
-function DispensacoesView({ active }: { active: boolean }) {
-  const { data, erro } = useApi<DispData>("/api/dashboard/dispensacoes", active);
+function DispensacoesView({ active, filtros }: { active: boolean; filtros: FiltrosData | null }) {
+  const [dias, setDias] = useState("30");
+  const [uf, setUf] = useState("");
+  const { de, ate } = periodo(Number(dias));
+  const qs = `de=${de}&ate=${ate}&uf=${uf}`;
+  const { data, erro } = useApi<DispData>(`/api/dashboard/dispensacoes?${qs}`, active);
   if (erro) return <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>;
   if (!data) return <div className="card" style={{ gridColumn: "span 12", color: "#566271" }}>Carregando…</div>;
   const k = data.kpis;
   return (
     <section className="grid">
+      <div className="filters" style={{ gridColumn: "span 12" }}>
+        <Sel label="Período" value={dias} onChange={setDias} options={PERIODOS} />
+        <Sel label="UF" value={uf} onChange={setUf} options={[["", "Todas"], ...(filtros?.ufs.map((u) => [u, u] as [string, string]) ?? [])]} />
+        <div className="meta">{de} → {ate}</div>
+      </div>
       <KpiCard label="Dispensações" value={nf.format(k.dispensacoes)} meta="status D (histórico)" />
       <KpiCard label="Assinadas" value={nf.format(k.assinadas)} meta="in_assinado = S" />
       <KpiCard label="Canceladas" value={nf.format(k.canceladas)} meta="status C" />
@@ -346,11 +400,20 @@ function DispensacoesView({ active }: { active: boolean }) {
 }
 
 function AuditoriaView({ active }: { active: boolean }) {
-  const { data, erro } = useApi<AudData>("/api/dashboard/auditoria", active);
+  const [dias, setDias] = useState("7");
+  const [tipo, setTipo] = useState("");
+  const { de, ate } = periodo(Number(dias));
+  const qs = `de=${de}&ate=${ate}&tipo=${tipo}`;
+  const { data, erro } = useApi<AudData>(`/api/dashboard/auditoria?${qs}`, active);
   if (erro) return <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>;
   if (!data) return <div className="card" style={{ gridColumn: "span 12", color: "#566271" }}>Carregando…</div>;
   return (
     <section className="grid">
+      <div className="filters" style={{ gridColumn: "span 12" }}>
+        <Sel label="Período" value={dias} onChange={setDias} options={[["7", "7 dias"], ["30", "30 dias"], ["90", "90 dias"]]} />
+        <Sel label="Tipo de anomalia" value={tipo} onChange={setTipo} options={[["", "Todas"], ["AN1", "AN1 · Documentos"], ["AN2", "AN2 · Pacientes"], ["AN3", "AN3 · Tempo emissões"], ["AN4", "AN4 · Local"]]} />
+        <div className="meta">{de} → {ate} · somente agregados</div>
+      </div>
       <article className="card chart-main">
         <div className="section-title"><h2>Eventos por dia</h2><div className="legend"><span><i className="l1" />Anomalias detectadas</span></div></div>
         <div className="chart">
@@ -395,6 +458,14 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
   const [view, setView] = useState<ViewId>("documentos");
   const [health, setHealth] = useState<Health | null>(null);
   const [btn, setBtn] = useState("Atualizar dados");
+  const [filtros, setFiltros] = useState<FiltrosData | null>(null);
+
+  useEffect(() => {
+    fetch("/api/filtros")
+      .then((r) => r.json())
+      .then(setFiltros)
+      .catch(() => setFiltros(null));
+  }, []);
 
   const loadHealth = useCallback(async () => {
     try {
@@ -465,9 +536,9 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
                 <div className="subtitle">{VIEW_META[v].subtitle}</div>
               </div>
             </header>
-            {v === "documentos" && <DocumentsView active={view === v} />}
-            {v === "medicos" && <MedicosView active={view === v} />}
-            {v === "dispensacoes" && <DispensacoesView active={view === v} />}
+            {v === "documentos" && <DocumentsView active={view === v} filtros={filtros} />}
+            {v === "medicos" && <MedicosView active={view === v} filtros={filtros} />}
+            {v === "dispensacoes" && <DispensacoesView active={view === v} filtros={filtros} />}
             {v === "auditoria" && <AuditoriaView active={view === v} />}
           </section>
         ))}
