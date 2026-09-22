@@ -1,5 +1,35 @@
 -- DDL complementar (executar uma unica vez)
 
+CREATE TABLE IF NOT EXISTS prescricao.stg_documento_dia (
+    dia DATE NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_tipo_documento INTEGER NOT NULL,
+    in_assinado CHAR(1) NOT NULL,
+    documentos BIGINT NOT NULL,
+    cancelados BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS prescricao.stg_documento_especialidade_dia (
+    dia DATE NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_medico_especialidade INTEGER NOT NULL,
+    documentos BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS prescricao.stg_documento_unidade_dia (
+    dia DATE NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_unidade_atendimento INTEGER NOT NULL,
+    documentos BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS prescricao.stg_documento_medico_dia (
+    dia DATE NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_medico INTEGER NOT NULL,
+    documentos BIGINT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS prescricao.fato_documento_unidade_dia (
     dia DATE NOT NULL,
     sg_uf CHAR(2) NOT NULL,

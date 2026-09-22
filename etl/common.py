@@ -42,3 +42,26 @@ def append_rows(conn, table, columns, rows):
     psycopg2.extras.execute_values(cur, sql, rows, page_size=1000)
     conn.commit()
     cur.close()
+
+
+def truncate_table(conn, table):
+    cur = conn.cursor()
+    cur.execute(f"TRUNCATE {table}")
+    conn.commit()
+    cur.close()
+
+
+def rebuild_fact(conn, fact, columns, stg, conflict_cols):
+    cols = ", ".join(columns)
+    agg = ", ".join(
+        c if c in conflict_cols else f"sum({c}) AS {c}" for c in columns)
+    sql = (
+        f"INSERT INTO {fact} ({cols}) "
+        f"SELECT {agg} FROM {stg} GROUP BY {', '.join(conflict_cols)} "
+        f"ON CONFLICT ({', '.join(conflict_cols)}) DO UPDATE SET "
+        + ", ".join(f"{c} = EXCLUDED.{c}" for c in columns if c not in conflict_cols)
+    )
+    cur = conn.cursor()
+    cur.execute(sql)
+    conn.commit()
+    cur.close()

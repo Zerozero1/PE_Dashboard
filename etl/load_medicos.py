@@ -31,6 +31,17 @@ def main():
                 ["dia", "sg_uf"])
     log(f"fato_medico_dia.novos_por_dh_atualizacao: {len(rows):,} linhas")
 
+    cur = dw.cursor()
+    cur.execute(
+        "UPDATE prescricao.fato_medico_dia f SET medicos_com_emissao = s.n "
+        "FROM (SELECT dia, sg_uf, count(DISTINCT id_medico) AS n "
+        "      FROM prescricao.fato_documento_medico_dia "
+        "      GROUP BY dia, sg_uf) s "
+        "WHERE s.dia = f.dia AND s.sg_uf = f.sg_uf")
+    dw.commit()
+    cur.close()
+    log("fato_medico_dia.medicos_com_emissao: atualizado a partir do DW")
+
     origin.close()
     dw.close()
     log("medicos: concluido")

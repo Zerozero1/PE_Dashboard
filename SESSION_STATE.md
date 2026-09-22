@@ -1,5 +1,5 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-22 10:05 BRT_
+_Atualizado em: 2026-09-22 11:58 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python em Windows (maquina separada da aplicacao) e 4 visões: Documentos, Medicos, Dispensacoes, Auditoria.
@@ -17,6 +17,8 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
   - fato_auditoria_dia: AN1=56, AN2=59, AN3=1, AN4=1.790 registros (severidade 2x/3x/5x).
 - Estratégia de extração validada: lotes por faixa de id_consulta_documento (2M por lote, ~5min a carga completa de docs; MCP estourava timeout em filtro temporal direto). Varreduras completas para distinct (pacientes) rodaram em 70-90s via psycopg2.
 - Ponto de atenção: origem está em produção ativa (cresceu ~1M docs durante as cargas); contagens do DW acompanham a origem no momento de cada varredura. Cargas são idempotentes (upsert).
+- BUG corrigido (2026-09-22): `ON CONFLICT DO UPDATE` por lote sobrescrevia chaves que aparecem em mais de um lote (~970k docs perdidos). Correção: tabelas `stg_documento_*` acumulam os lotes e a fato é reconstruída com `SUM` a cada carga (rebuild_fact). DW final: 61,84M documentos (consistente com a origem).
+- Debug: debug_batch.py / debug2.py / debug3.py (regressão do problema de sobrescrita).
 
 ## 🔧 Em Progresso / Próximos Passos
 - [ ] etl/jobs.py — scheduler/worker com `dashboard_refresh_job` (Fase 5) e carga incremental diária (reprocessar janela D-1..hoje via faixas de id recentes).

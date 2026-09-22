@@ -102,7 +102,9 @@ GROUP BY 1, 2
 """
 
 
-def batch_loop(origin, dw, sql, table, columns, conflict, metric_idx):
+def batch_loop(origin, dw, sql, stg, columns, conflict, fact, metric_idx):
+    from common import append_rows, rebuild_fact, truncate_table
+    truncate_table(dw, stg)
     cur = origin.cursor()
     cur.execute("SELECT max(id_consulta_documento) FROM prescricao.tb_consulta_documento")
     max_id = cur.fetchone()[0]
@@ -115,14 +117,15 @@ def batch_loop(origin, dw, sql, table, columns, conflict, metric_idx):
         cur.execute(sql, (start, end))
         rows = cur.fetchall()
         if rows:
-            upsert_rows(dw, table, columns, rows, conflict)
+            append_rows(dw, stg, columns, rows)
             total += sum(r[metric_idx] for r in rows)
         n_batch += 1
         elapsed = time.time() - t0
-        log(f"{table}: lote {n_batch} ids {start}-{end} "
+        log(f"{stg}: lote {n_batch} ids {start}-{end} "
             f"(metric acum: {total:,} · {elapsed:.0f}s)")
         start = end + 1
     cur.close()
+    rebuild_fact(dw, fact, columns, stg, conflict)
     return total
 
 
@@ -148,27 +151,30 @@ def main():
     if mode == "docs":
         log("fato_documento_dia: iniciando")
         total = batch_loop(
-            origin, dw, SQL_DOCS, "prescricao.fato_documento_dia",
+            origin, dw, SQL_DOCS, "prescricao.stg_documento_dia",
             ["dia", "sg_uf", "id_tipo_documento", "in_assinado",
              "documentos", "cancelados"],
-            ["dia", "sg_uf", "id_tipo_documento", "in_assinado"], 4)
+            ["dia", "sg_uf", "id_tipo_documento", "in_assinado"],
+            "prescricao.fato_documento_dia", 4)
         log(f"fato_documento_dia: concluido — {total:,} documentos")
 
     elif mode == "especialidade":
         log("fato_documento_especialidade_dia: iniciando")
         total = batch_loop(
             origin, dw, SQL_ESPECIALIDADE,
-            "prescricao.fato_documento_especialidade_dia",
+            "prescricao.stg_documento_especialidade_dia",
             ["dia", "sg_uf", "id_medico_especialidade", "documentos"],
-            ["dia", "sg_uf", "id_medico_especialidade"], 3)
+            ["dia", "sg_uf", "id_medico_especialidade"],
+            "prescricao.fato_documento_especialidade_dia", 3)
         log(f"fato_documento_especialidade_dia: concluido — {total:,} registros")
 
     elif mode == "unidade":
         log("fato_documento_unidade_dia: iniciando")
         total = batch_loop(
-            origin, dw, SQL_UNIDADE, "prescricao.fato_documento_unidade_dia",
+            origin, dw, SQL_UNIDADE, "prescricao.stg_documento_unidade_dia",
             ["dia", "sg_uf", "id_unidade_atendimento", "documentos"],
-            ["dia", "sg_uf", "id_unidade_atendimento"], 3)
+            ["dia", "sg_uf", "id_unidade_atendimento"],
+            "prescricao.fato_documento_unidade_dia", 3)
         log(f"fato_documento_unidade_dia: concluido — {total:,} documentos")
 
     elif mode == "pacientes":
@@ -179,9 +185,10 @@ def main():
     elif mode == "medico":
         log("fato_documento_medico_dia: iniciando")
         total = batch_loop(
-            origin, dw, SQL_MEDICO_DOCS, "prescricao.fato_documento_medico_dia",
+            origin, dw, SQL_MEDICO_DOCS, "prescricao.stg_documento_medico_dia",
             ["dia", "sg_uf", "id_medico", "documentos"],
-            ["dia", "sg_uf", "id_medico"], 3)
+            ["dia", "sg_uf", "id_medico"],
+            "prescricao.fato_documento_medico_dia", 3)
         log(f"fato_documento_medico_dia: concluido — {total:,} documentos")
 
     origin.close()
