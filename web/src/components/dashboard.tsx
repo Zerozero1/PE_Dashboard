@@ -185,7 +185,7 @@ function BarChart({ rows, bars, w = 800, h = 220 }: { rows: { x: string; v: numb
   const xStep = Math.max(Math.ceil((n - 1) / 8), 1);
   const xIdx = Array.from(new Set([0, ...Array.from({ length: n }, (_, i) => i).filter((i) => i % xStep === 0), n - 1]));
   return (
-    <svg viewBox={`0 0 ${w} ${h + 48}`} style={{ width: "100%", height: "auto" }}>
+    <svg viewBox={`0 0 ${w + 52} ${h + 48}`} style={{ width: "100%", height: "auto" }}>
       {ticks.map((f) => {
         const y = h - f * (h - 26);
         return (
@@ -198,13 +198,13 @@ function BarChart({ rows, bars, w = 800, h = 220 }: { rows: { x: string; v: numb
       {bars && ticks.map((f) => {
         const y = h - f * (h - 26);
         return (
-          <text key={`r${f}`} x={w - 8} y={y + 3} fontSize="9" fill="var(--va)" opacity=".75" textAnchor="end">{nfc.format(maxBars * f)}</text>
+          <text key={`r${f}`} x={w + 14} y={y + 3} fontSize="9" fill="var(--va2)" textAnchor="start">{nfc.format(maxBars * f)}</text>
         );
       })}
       {bars && bars.map((b, i) => {
         const bh = (b / maxBars) * (h - 26);
         return (
-          <rect key={i} x={pad + i * step - bw / 2} y={h - bh} width={bw} height={bh} fill="var(--va)" opacity=".42" rx="2" stroke="var(--va)" strokeOpacity=".15" strokeWidth="1">
+          <rect key={i} x={pad + i * step - bw / 2} y={h - bh} width={bw} height={bh} fill="var(--va2)" opacity=".55" rx="2" stroke="var(--va2)" strokeOpacity=".25" strokeWidth="1">
             <title>{`${rows[i].x} · mês: ${nf.format(b)}`}</title>
           </rect>
         );
@@ -336,7 +336,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       <article className="card chart-main">
         <div className="section-title">
           <h2>Emissões por mês</h2>
-          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l1" style={{ opacity: .4 }} />Mês (escala própria)</span></div>
+          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês (escala própria)</span></div>
         </div>
         <div className="chart">
           <BarChart rows={serieAcumulada} bars={mensal} />
