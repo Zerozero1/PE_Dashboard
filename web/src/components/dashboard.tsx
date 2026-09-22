@@ -276,13 +276,17 @@ function Donut({ rows }: { rows: { label: string; v: number }[] }) {
   );
 }
 
-function RankRows({ rows }: { rows: { name: string; v: number }[] }) {
+function RankRows({ rows, showPct }: { rows: { name: string; v: number }[]; showPct?: boolean }) {
   const max = Math.max(...rows.map((r) => r.v), 1);
+  const total = rows.reduce((a, b) => a + b.v, 0);
   return rows.map((r) => (
     <div className="barrow" key={r.name}>
       <span>{r.name}</span>
       <span className="bar-track"><i className="bar-fill" style={{ width: `${(r.v / max) * 100}%` }} /></span>
-      <b>{nf.format(r.v)}</b>
+      <b>
+        {nf.format(r.v)}
+        {showPct && total > 0 && <span style={{ color: "#667381", fontWeight: 400 }}> · {Math.round((r.v / total) * 1000) / 10}%</span>}
+      </b>
     </div>
   ));
 }
@@ -356,7 +360,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
 
       <article className="card" style={{ gridColumn: "span 5" }}>
         <div className="section-title"><h2>Documentos por especialidade</h2><span>ranking</span></div>
-        <RankRows rows={data.ranking_especialidade.map((e) => ({ name: e.especialidade, v: Number(e.docs) }))} />
+        <RankRows showPct rows={data.ranking_especialidade.map((e) => ({ name: e.especialidade, v: Number(e.docs) }))} />
       </article>
     </section>
   );
