@@ -6,35 +6,31 @@ function filtro(url: URL) {
   const de = url.searchParams.get("de") ?? new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
   const uf = url.searchParams.get("uf") || null;
   const tipo = url.searchParams.get("tipo") || null;
-  const assinado = url.searchParams.get("assinado") || null;
-  return { de, ate, uf, tipo, assinado };
+  return { de, ate, uf, tipo };
 }
 
 const WHERE_DOC = `
   WHERE f.dia BETWEEN $1 AND $2
     AND ($3::text IS NULL OR f.sg_uf = $3)
     AND ($4::int IS NULL OR f.id_tipo_documento = $4)
-    AND ($5::text IS NULL OR f.in_assinado = $5)
 `;
 
 export async function GET(req: NextRequest) {
-  const { de, ate, uf, tipo, assinado } = filtro(req.nextUrl);
-  const p = [de, ate, uf, tipo, assinado];
+  const { de, ate, uf, tipo } = filtro(req.nextUrl);
+  const p = [de, ate, uf, tipo];
 
   try {
     const [kpis, serie, porTipo, porUf, esp, pacientes] = await Promise.all([
       query(
         `SELECT coalesce(sum(f.documentos),0) AS emitidos,
-                coalesce(sum(f.documentos) FILTER (WHERE f.in_assinado='S'),0) AS assinados,
-                coalesce(sum(f.documentos) FILTER (WHERE f.in_assinado='N'),0) AS nao_assinados,
+                coalesce(sum(f.assinados),0) AS assinados,
                 coalesce(sum(f.cancelados),0) AS cancelados
            FROM prescricao.fato_documento_dia f ${WHERE_DOC}`,
         p
       ),
       query(
         `SELECT to_char(f.dia,'YYYY-MM') AS mes,
-                sum(f.documentos) AS emitidos,
-                sum(f.documentos) FILTER (WHERE f.in_assinado='S') AS assinados
+                sum(f.documentos) AS emitidos
            FROM prescricao.fato_documento_dia f ${WHERE_DOC}
           GROUP BY 1 ORDER BY 1`,
         p
@@ -71,14 +67,16 @@ export async function GET(req: NextRequest) {
     ]);
 
     const k = kpis.rows[0];
+    const emitidos = Number(k.emitidos);
+    const assinados = Number(k.assinados);
     return NextResponse.json({
       de,
       ate,
       kpis: {
-        emitidos: Number(k.emitidos),
-        assinados: Number(k.assinados),
-        nao_assinados: Number(k.nao_assinados),
-        pct_assinatura: k.emitidos > 0 ? Math.round((Number(k.assinados) / Number(k.emitidos)) * 1000) / 10 : 0,
+        emitidos,
+        assinados,
+        nao_assinados: emitidos - assinados,
+        pct_assinatura: emitidos > 0 ? Math.round((assinados / emitidos) * 1000) / 10 : 0,
         cancelados: Number(k.cancelados),
         pacientes: Number(pacientes.rows[0]?.pacientes ?? 0),
       },

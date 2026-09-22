@@ -49,10 +49,10 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_documento_dia (
     dia DATE NOT NULL,
     sg_uf CHAR(2) NOT NULL,
     id_tipo_documento INTEGER NOT NULL,
-    in_assinado CHAR(1) NOT NULL,
     documentos BIGINT NOT NULL,
+    assinados BIGINT NOT NULL,
     cancelados BIGINT NOT NULL,
-    PRIMARY KEY (dia, sg_uf, id_tipo_documento, in_assinado)
+    PRIMARY KEY (dia, sg_uf, id_tipo_documento)
 );
 
 CREATE INDEX IF NOT EXISTS idx_fato_documento_dia_uf ON prescricao.fato_documento_dia (sg_uf, dia);

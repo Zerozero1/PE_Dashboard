@@ -65,7 +65,7 @@ python jobs.py enqueue-manual <email>  # cria job manual (botão "Atualizar dado
 Dimensões: `dim_data`, `dim_uf`, `dim_tipo_documento`, `dim_medico`, `dim_especialidade`, `dim_unidade`, `dim_farmaceutico`.
 
 Fatos:
-- `fato_documento_dia` (dia, sg_uf, id_tipo_documento, in_assinado, documentos, cancelados)
+- `fato_documento_dia` (dia, sg_uf, id_tipo_documento, documentos, assinados, cancelados)
 - `fato_documento_especialidade_dia` (dia, sg_uf, id_medico_especialidade, documentos)
 - `fato_documento_unidade_dia` (dia, sg_uf, id_unidade_atendimento, documentos)
 - `fato_documento_medico_dia` (dia, sg_uf, id_medico, documentos)
@@ -86,7 +86,7 @@ Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 | Métrica | Regra |
 |---|---|
 | UF dos documentos | UF da unidade de atendimento (`tb_unidade_atendimento.sg_uf`); NULL e `BR` → `--` |
-| Assinado / cancelado | `tb_consulta_documento.in_assinado` / `in_cancelado` (S/N) |
+| Assinados / cancelados | colunas agregadas: `assinados` = `in_assinado='S'`, `cancelados` = `in_cancelado='S'`; `nao_assinados` = `documentos - assinados` (sem filtro por assinatura — grão sem `in_assinado`) |
 | Médico ativo | `tb_medico.in_situacao = 'A'` (snapshot) |
 | Novos médicos | `tb_medico.dh_atualizacao::date` (proxy — origem sem data de cadastro) |
 | Dispensação | `tb_historico_dispensacao` com `in_status='D'`; cancelada `'C'`; assinada `tb_dispensacao.in_assinado='S'` |

@@ -8,8 +8,8 @@ SQL_DOCS = """
 SELECT d.dh_documento::date AS dia,
        CASE WHEN ua.sg_uf = 'BR' THEN '--' ELSE COALESCE(ua.sg_uf, '--') END AS sg_uf,
        d.id_tipo_documento,
-       COALESCE(d.in_assinado, 'N') AS in_assinado,
        count(*) AS documentos,
+       count(*) FILTER (WHERE d.in_assinado = 'S') AS assinados,
        count(*) FILTER (WHERE d.in_cancelado = 'S') AS cancelados
 FROM prescricao.tb_consulta_documento d
 LEFT JOIN prescricao.tb_consulta c ON c.id_consulta = d.id_consulta
@@ -18,7 +18,7 @@ LEFT JOIN prescricao.rl_medico_unidade_atendimento mu
 LEFT JOIN prescricao.tb_unidade_atendimento ua
        ON ua.id_unidade_atendimento = mu.id_unidade_atendimento
 WHERE d.id_consulta_documento BETWEEN %s AND %s
-GROUP BY 1, 2, 3, 4
+GROUP BY 1, 2, 3
 """
 
 SQL_ESPECIALIDADE = """
@@ -150,10 +150,10 @@ def main():
         log("fato_documento_dia: iniciando")
         total = batch_loop(
             origin, dw, SQL_DOCS, "prescricao.stg_documento_dia",
-            ["dia", "sg_uf", "id_tipo_documento", "in_assinado",
-             "documentos", "cancelados"],
-            ["dia", "sg_uf", "id_tipo_documento", "in_assinado"],
-            "prescricao.fato_documento_dia", 4)
+            ["dia", "sg_uf", "id_tipo_documento",
+             "documentos", "assinados", "cancelados"],
+            ["dia", "sg_uf", "id_tipo_documento"],
+            "prescricao.fato_documento_dia", 3)
         log(f"fato_documento_dia: concluido — {total:,} documentos")
 
     elif mode == "especialidade":

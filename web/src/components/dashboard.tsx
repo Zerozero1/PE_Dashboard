@@ -21,7 +21,7 @@ type DocsData = {
     emitidos: number; assinados: number; nao_assinados: number;
     pct_assinatura: number; cancelados: number; pacientes: number;
   };
-  serie_mensal: { mes: string; emitidos: string; assinados: string }[];
+  serie_mensal: { mes: string; emitidos: string }[];
   por_tipo: { tipo: string; docs: string }[];
   por_uf: { uf: string; docs: string }[];
   ranking_especialidade: { especialidade: string; docs: string }[];
@@ -316,9 +316,8 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
   const [dias, setDias] = useState<"todos" | string>("todos");
   const [uf, setUf] = useState("");
   const [tipo, setTipo] = useState("");
-  const [assinado, setAssinado] = useState("");
   const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
-  const qs = `de=${de}&ate=${ate}&uf=${uf}&tipo=${tipo}&assinado=${assinado}`;
+  const qs = `de=${de}&ate=${ate}&uf=${uf}&tipo=${tipo}`;
   const { data, erro, carregando } = useApi<DocsData>(`/api/dashboard/documentos?${qs}`, active);
   if (erro) return <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>;
   if (!data) return <div className="card" style={{ gridColumn: "span 12", color: "#566271" }}>Carregando…</div>;
@@ -338,7 +337,6 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
         <Sel label="Período" value={dias} onChange={setDias} options={PERIODOS} />
         <Sel label="UF" value={uf} onChange={setUf} options={[["", "Todas"], ...(filtros?.ufs.map((u) => [u, u] as [string, string]) ?? [])]} />
         <Sel label="Tipo" value={tipo} onChange={setTipo} options={[["", "Todos"], ...(filtros?.tipos.map((t) => [String(t.id), t.nome] as [string, string]) ?? [])]} />
-        <Sel label="Assinatura" value={assinado} onChange={setAssinado} options={[["", "Todas"], ["S", "Assinado"], ["N", "Não assinado"]]} />
         <div className="meta">{de} → {ate}</div>
       </div>
       {carregando && <Processando />}
@@ -632,7 +630,7 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
           <section key={v} className={`view ${VIEW_META[v].theme} ${view === v ? "active" : ""}`}>
             <header className="topbar">
               <div>
-                <div className="eyebrow">Painel operacional · PE</div>
+                <div className="eyebrow">VISÃO</div>
                 <h1>{VIEW_META[v].title}</h1>
                 <div className="subtitle">{VIEW_META[v].subtitle}</div>
               </div>
