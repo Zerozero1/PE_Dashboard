@@ -229,7 +229,7 @@ function BarChart({ rows, bars, w = 800, h = 220 }: { rows: { x: string; v: numb
         </circle>
       ))}
       {n > 0 && (
-        <text x={pad + (n - 1) * step + 8} y={h - (rows[n - 1].v / maxLine) * (h - 26) + 3} fontSize="9" fill="#9fb0c1" textAnchor="start">{nf.format(rows[n - 1].v)}</text>
+        <text x={pad + (n - 1) * step - 12} y={h - (rows[n - 1].v / maxLine) * (h - 26) - 9} fontSize="9" fill="#9fb0c1" textAnchor="end">{nf.format(rows[n - 1].v)}</text>
       )}
       {xIdx.map((i) => {
         const [y, m] = String(rows[i].x).split("-");
