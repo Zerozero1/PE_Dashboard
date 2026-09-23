@@ -121,7 +121,7 @@ function loadGeo(): Promise<GeoFeat[]> {
   return geoCache;
 }
 
-function MapBr({ rows }: { rows: { uf: string; v: number }[] }) {
+function MapBr({ rows, note = true }: { rows: { uf: string; v: number }[]; note?: boolean }) {
   const [geo, setGeo] = useState<GeoFeat[] | null>(null);
   useEffect(() => {
     let ok = true;
@@ -151,7 +151,7 @@ function MapBr({ rows }: { rows: { uf: string; v: number }[] }) {
           return <circle key={`b${g.sigla}`} cx={g.cx} cy={g.cy} r={radius} fill="var(--va)" opacity=".55" />;
         })}
       </svg>
-      <div className="map-note">{rows.slice(0, 4).map((r) => `${r.uf} ${nf.format(r.v)}`).join(" · ")}</div>
+      {note && <div className="map-note">{rows.slice(0, 4).map((r) => `${r.uf} ${nf.format(r.v)}`).join(" · ")}</div>}
     </div>
   );
 }
@@ -401,6 +401,8 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       }),
     }))
     .filter((s) => s.valores.some((v) => (v ?? 0) > 0));
+  const totalUf = data.por_uf.reduce((a, u) => a + Number(u.docs), 0);
+  const pctUf = (v: number, t: number) => `${(t > 0 ? ((v / t) * 100).toFixed(1) : "0.0").replace(".", ",")}%`;
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
@@ -445,7 +447,26 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
 
       <article className="card" style={{ gridColumn: "span 7" }}>
         <div className="section-title"><h2>Documentos emitidos por UF</h2></div>
-        <MapBr rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.docs) }))} />
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <div style={{ flex: 1.1, minWidth: 0 }}>
+            <MapBr note={false} rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.docs) }))} />
+          </div>
+          <div style={{ flex: 1, maxHeight: 292, overflowY: "auto", paddingRight: 4 }}>
+            <table className="table" style={{ fontSize: 10 }}>
+              <thead><tr><th>UF</th><th style={{ textAlign: "right" }}>% total</th></tr></thead>
+              <tbody>
+                {data.por_uf.map((u) => (
+                  <tr key={u.uf}>
+                    <td>{u.uf}</td>
+                    <td style={{ textAlign: "right" }}>
+                      {pctUf(Number(u.docs), totalUf)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 5" }}>
