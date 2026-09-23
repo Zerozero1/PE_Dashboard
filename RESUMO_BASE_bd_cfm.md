@@ -195,13 +195,13 @@ Os numeros abaixo sao estimativas do catalogo PostgreSQL (`pg_class.reltuples`) 
 
 | Tabela | Linhas estimadas | Papel |
 |---|---:|---|
-| `tb_pessoa` | 22.864.146 | Entidade central de pessoa. Guarda nome, tipo, CPF, CNPJ, nome fantasia/social, CNS e passaporte. |
+| `tb_pessoa` | 22.864.146 | Entidade central de pessoa. Guarda nome, tipo, CPF, CNPJ, nome fantasia/social, CNS e passaporte. `nu_cpf` e 1:1 com `id_pessoa` entre medicos (423.220 pessoas = 423.220 CPFs). |
 | `tb_paciente` | 17.778.008 | Dados de paciente; PK tambem referencia `tb_pessoa.id_pessoa`; contem nascimento, sexo, mae, responsavel legal e integracao externa. |
-| `tb_medico` | 605.518 | Registro de medico por CRM/UF, situacao, tipo de inscricao, pessoa e foto. Nao possui data de cadastro (somente `dh_atualizacao`). `ds_foto` e `bytea` e domina o tamanho (~15 GB). |
+| `tb_medico` | 605.518 | Registro de medico por CRM/UF, situacao, tipo de inscricao, pessoa e foto. Nao possui data de cadastro (somente `dh_atualizacao` — INVALIDADO como proxy em 2026-09-23 por atualizacoes em massa; pico de 278k em set/2026). "Novos medicos" usa `tb_usuario.dh_aceite_termo`. `ds_foto` e `bytea` e domina o tamanho (~15 GB). |
 | `tb_medico_especialidade` | 310.516 | Especialidades/areas de atuacao do medico, RQE e flags. |
 | `tb_farmaceutico` | 65.996 | Farmaceutico por CRF/UF, ligado a pessoa. |
 | `tb_unidade_atendimento` | 565.325 | Unidade/local de atendimento; PK referencia `tb_pessoa.id_pessoa`; guarda CRM/UF, CNES, logomarca e origem externa. |
-| `tb_usuario` | 483.239 | Conta de usuario vinculada a pessoa e termo aceito; contem hash de senha. |
+| `tb_usuario` | 490.670 | Conta de usuario vinculada a pessoa e termo aceito; contem hash de senha. 1:1 com `id_pessoa`. `dh_aceite_termo` (date): 94% preenchido (463.127), janela 2021-10-07 a hoje — e a data de primeiro uso do sistema (proxy oficial de "novos medicos" desde 2026-09-23). |
 | `tb_endereco` | 19.077.152 | Enderecos de pessoas, incluindo municipio e indicador principal. |
 | `tb_telefone` | 4.338.575 | Telefones de pessoas. |
 | `tb_email` | 3.807.300 | Emails de pessoas. |
