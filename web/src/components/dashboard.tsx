@@ -634,6 +634,14 @@ function AuditoriaView({ active }: { active: boolean }) {
   );
 }
 
+const ADMIN_EMAIL = "mrichard@portalmedico.org.br";
+const STATUS_PT: Record<string, string> = {
+  queued: "na fila",
+  running: "em execução",
+  success: "concluída",
+  failed: "falhou",
+};
+
 export default function Dashboard({ email, mock }: { email: string; mock?: boolean }) {
   const [view, setView] = useState<ViewId>("documentos");
   const [health, setHealth] = useState<Health | null>(null);
@@ -689,10 +697,12 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
         <div className="top-right">
           <span className={`chip ${chipCls}`}>
             <i className={`dot ${job?.status === "failed" ? "bad" : ""}`} />
-            Carga <b>{job ? job.status : "—"}</b>
+            Carga <b>{job ? STATUS_PT[job.status] ?? job.status : "—"}</b>
           </span>
           <span className="chip">Dados <b>{dadosDia ? new Date(dadosDia).toLocaleDateString("pt-BR") : "—"}</b></span>
-          <button className="btn primary" onClick={refresh} disabled={btn !== "Atualizar dados"}>{btn}</button>
+          {email === ADMIN_EMAIL && (
+            <button className="btn primary" onClick={refresh} disabled={btn !== "Atualizar dados"}>{btn}</button>
+          )}
           <span className="chip">{mock ? "DEV" : email}</span>
         </div>
       </header>
