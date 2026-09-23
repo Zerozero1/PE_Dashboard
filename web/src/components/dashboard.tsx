@@ -435,7 +435,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
         <Donut rows={data.por_tipo.map((t) => ({ label: t.tipo, v: Number(t.docs) }))} />
       </article>
 
-      <article className="card" style={{ gridColumn: "span 6" }}>
+      <article className="card" style={{ gridColumn: "span 8" }}>
         <div className="section-title">
           <h2>Origem de criação por mês</h2>
           <div className="legend">{seriesOrigem.map((s) => <span key={s.nome}><i style={{ background: s.cor, width: 18, height: 4, borderRadius: 2, alignSelf: "center" }} />{s.nome}</span>)}</div>
@@ -445,7 +445,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
         </div>
       </article>
 
-      <article className="card" style={{ gridColumn: "span 6" }}>
+      <article className="card side-chart">
         <div className="section-title">
           <h2>Participação por origem</h2>
           <span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}</span>
