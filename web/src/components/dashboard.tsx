@@ -525,12 +525,10 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
         <div className="meta">snapshot na última carga · {de} → {ate}</div>
       </div>
       {carregando && <Processando />}
-      <div style={{ gridColumn: "span 3", display: "flex", flexDirection: "column", gap: 12 }}>
-        <KpiCard label="Inscrições cadastradas" value={nf.format(k.inscricoes)} meta="CRM/UF" />
-        <KpiCard label="MÉDICOS CADASTRADOS" value={nf.format(k.ativos)} meta="CPF" />
-      </div>
+      <KpiCard label="Inscrições cadastradas" value={nf.format(k.inscricoes)} meta="CRM/UF" />
+      <KpiCard label="MÉDICOS CADASTRADOS" value={nf.format(k.ativos)} meta="CPF" />
 
-      <article className="card chart-main" style={{ gridColumn: "span 9" }}>
+      <article className="card chart-main">
         <div className="section-title">
           <h2>Novos médicos por mês</h2>
           <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês</span></div>
