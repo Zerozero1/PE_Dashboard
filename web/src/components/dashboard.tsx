@@ -403,6 +403,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
     .filter((s) => s.valores.some((v) => (v ?? 0) > 0));
   const totalUf = data.por_uf.reduce((a, u) => a + Number(u.docs), 0);
   const pctUf = (v: number, t: number) => `${(t > 0 ? ((v / t) * 100).toFixed(1) : "0.0").replace(".", ",")}%`;
+  const milUf = (v: number) => Math.round(v / 1000).toLocaleString("pt-BR");
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
@@ -451,13 +452,14 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
           <div style={{ flex: 1.1, minWidth: 0 }}>
             <MapBr note={false} rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.docs) }))} />
           </div>
-          <div style={{ flex: 1, maxHeight: 292, overflowY: "auto", paddingRight: 4 }}>
+          <div className="uf-scroll" style={{ flex: 1, maxHeight: 292, overflowY: "auto", paddingRight: 4 }}>
             <table className="table" style={{ fontSize: 10 }}>
-              <thead><tr><th>UF</th><th style={{ textAlign: "right" }}>% total</th></tr></thead>
+              <thead><tr><th>UF</th><th style={{ textAlign: "right" }}>Mil</th><th style={{ textAlign: "right" }}>% total</th></tr></thead>
               <tbody>
                 {data.por_uf.map((u) => (
                   <tr key={u.uf}>
                     <td>{u.uf}</td>
+                    <td style={{ textAlign: "right" }}>{milUf(Number(u.docs))}</td>
                     <td style={{ textAlign: "right" }}>
                       {pctUf(Number(u.docs), totalUf)}
                     </td>

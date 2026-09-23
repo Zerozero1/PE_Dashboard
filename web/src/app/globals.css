@@ -67,6 +67,11 @@ h1{font-size:24px;margin:5px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
 .section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.section-title h2{font-size:13px;margin:0;font-weight:650}.section-title span{font-size:10px;color:#667381}
 .chart-main{grid-column:span 8;min-height:320px}.side-chart{grid-column:span 4;min-height:320px}
 .chart{height:230px;position:relative;margin-top:6px}
+.uf-scroll{scrollbar-width:thin;scrollbar-color:#232d39 transparent}
+.uf-scroll::-webkit-scrollbar{width:5px}
+.uf-scroll::-webkit-scrollbar-track{background:transparent}
+.uf-scroll::-webkit-scrollbar-thumb{background:#232d39;border-radius:3px}
+.uf-scroll::-webkit-scrollbar-thumb:hover{background:#2d3947}
 .chart svg{position:static;width:100%;height:auto;max-height:264px}
 .axis{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;color:#566271;font-size:9px}
 .legend{display:flex;gap:16px;font-size:10.5px;color:#9fb0c1;font-weight:600}.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
