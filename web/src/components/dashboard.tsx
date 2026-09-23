@@ -377,10 +377,10 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
   const [uy, um] = ultimo ? ultimo.mes.split("-") : ["", ""];
   const ultimoLabel = um ? `${MESES[Number(um) - 1]}/${String(uy).slice(2)}` : "—";
   const ORIGENS: { key: string; nome: string; cor: string; dash?: string }[] = [
-    { key: "WEB", nome: "Web", cor: "#60a5fa" },
-    { key: "WEB-MOBILE", nome: "Web mobile", cor: "#fbbf24" },
+    { key: "WEB", nome: "Web", cor: "#49e7ff" },
+    { key: "WEB-MOBILE", nome: "Web mobile", cor: "#ffb454" },
     { key: "IOS", nome: "iOS", cor: "#f472b6", dash: "2 4" },
-    { key: "ANDROID", nome: "Android", cor: "#4ade80", dash: "10 4 2 4" },
+    { key: "ANDROID", nome: "Android", cor: "#34d399", dash: "10 4 2 4" },
   ];
   const mesesOrigem = Array.from(new Set(data.serie_origem.map((s) => s.mes))).sort();
   const mapOrigem = new Map(data.serie_origem.map((s) => [`${s.mes}|${s.origem}`, Number(s.documentos)]));
