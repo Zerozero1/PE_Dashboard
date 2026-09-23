@@ -204,15 +204,7 @@ Trade-off:
 - `sg_uf`
 - `cnes`, se necessario
 
-`dim_farmaceutico`
-- `id_farmaceutico`
-- `sg_uf`
-- situacao/cadastro minimizado
-
-`dim_farmacia`
-- `id_farmacia`
-- `sg_uf`
-- identificador tecnico ou nome fantasia apenas se permitido
+(dimensoes de dispensacao — `dim_farmaceutico`, `dim_farmacia` — REMOVIDAS com a descontinuacao da visao Dispensacoes em 2026-09-23)
 
 ### 5.2 Fatos recomendadas
 
@@ -232,17 +224,7 @@ Trade-off:
   - medicos_com_emissao (distintos por dia)
 - Contagens correntes de cadastro (inscricoes cadastradas/ativas, medicos ativos) ficam em `fato_medico_snapshot` (a origem nao guarda historico de cadastro).
 
-`fato_dispensacao_dia`
-- grao: dia + UF + farmacia + farmaceutico
-- FONTE CORRETA: `tb_historico_dispensacao.dh_historico_dispensacao` (status D = dispensada), via `rl_dispensacao_receita`.
-  `tb_dispensacao.dh_documento` e ~99,97% NULL (apenas 895 de 3,37M linhas) e nao serve como evento temporal.
-- metricas:
-  - dispensacoes
-  - dispensacoes_assinadas (assinada = `tb_dispensacao.in_assinado = 'S'`; um unico tipo de assinatura, sem distincao AE/CD)
-  - pacientes_distintos (via receita -> documento -> consulta -> paciente; join caro, avaliar no ETL)
-  - farmacias_distintas
-  - farmaceuticos_distintos
-  - dispensacoes_canceladas (status C no historico ou `in_cancelado='S'`)
+`fato_dispensacao_dia` — REMOVIDA (2026-09-23): a visao Dispensacoes foi descontinuada; a fato e as dimensoes de dispensacao foram excluidas do datamart e do pipeline. Nota historica: a fonte temporal correta era `tb_historico_dispensacao.dh_historico_dispensacao` (status D), nao `tb_dispensacao.dh_documento` (~99,97% NULL).
 
 `fato_auditoria_dia` (redefinida - ver secao 6.4)
 - Decisao: NAO usar `tl_prescricao_auditoria` (sem SELECT para `usr_select`) nem a tabela antiga (2,1B linhas, consulta inviavel por timeout).
@@ -388,44 +370,10 @@ Cuidados:
 - "Novos medicos por mes" (DECISAO): usar `tb_medico.dh_atualizacao` como proxy de cadastro (na origem nao ha data de cadastro).
 - "Inativo" por regra operacional, por exemplo 30/60/90/120 dias sem emissao.
 
-### 6.3 Visao Dispensacoes
+### 6.3 Visao Dispensacoes — REMOVIDA (2026-09-23)
 
-Referencia visual:
-- Filtros por periodo e estado.
-- Totais de farmaceuticos, farmacias, dispensacoes, assinadas e pacientes.
-- Status por UF.
-- Dispensacoes assinadas com certificado digital.
-- Mapa de dispensacoes por UF.
-- Series mensais de dispensacoes e farmaceuticos.
-
-Filtros:
-- Periodo.
-- UF.
-- Status da dispensacao.
-- Assinatura.
-- Farmacia, se permitido.
-- Farmaceutico, se permitido.
-
-KPIs:
-- Dispensacoes.
-- Dispensacoes assinadas (`in_assinado='S'`; tipo unico de assinatura, sem AE/CD).
-- Farmaceuticos.
-- Farmacias.
-- Pacientes distintos.
-
-Graficos:
-- Tabela por UF com dispensacoes, com certificado digital e sem certificado.
-- Mapa por UF.
-- Barras mensais de dispensacoes acumuladas.
-- Barras mensais de novas dispensacoes.
-- Total de farmaceuticos acumulado.
-- Novos farmaceuticos por mes.
-
-Cuidados:
-- Assinatura de dispensacao e unica; nao ha distincao AE/CD na origem.
-- Ocultar informacoes pessoais de pacientes.
-- Usar agregados por UF/farmacia/farmaceutico somente quando houver base legal e necessidade operacional.
-- Lembrar que o evento temporal de dispensacao vem de `tb_historico_dispensacao` (status D), nao de `tb_dispensacao.dh_documento` (~100% NULL).
+Visao descontinuada: aba, endpoint, fato e dimensoes de dispensacao removidos do sistema.
+Nota historica (fonte temporal): o evento real de dispensacao vinha de `tb_historico_dispensacao.dh_historico_dispensacao` (status D), nao de `tb_dispensacao.dh_documento` (~99,97% NULL).
 
 ### 6.4 Visao Auditoria
 
@@ -466,16 +414,14 @@ Cuidados:
 
 ### 6.5 Catalogo de Consultas por Visao
 
-Legenda de filtros: P=periodo, U=UF, T=tipo documento, E=especialidade, ST=status, A=assinatura, TD=tipo anomalia, DIM=dimensao afetada.
+Legenda de filtros: P=periodo, U=UF, T=tipo documento, E=especialidade, TD=tipo anomalia, DIM=dimensao afetada.
 
 | Codigo | Filtro | Descricao | Valores/Dominio | Onde se aplica |
 |---|---|---|---|---|
 | P | Periodo | Data inicio/fim | Datas; padrao ultimos 30 dias | Todas as abas; na Auditoria janela curta com limite maximo configuravel |
-| U | UF | Unidade federativa | 27 UFs (dim_uf) | Documentos (UF da unidade de atendimento), Medicos (UF do CRM), Dispensacoes (UF do CRF do farmaceutico) |
+| U | UF | Unidade federativa | 27 UFs (dim_uf) | Documentos (UF da unidade de atendimento), Medicos (UF do CRM) |
 | T | Tipo de documento | Tipo do documento medico | 17 tipos de `td_tipo_documento` (atestado, receita simples, laudo...) | Documentos |
 | E | Especialidade | Especialidade/area de atuacao do medico | dim_especialidade | Documentos, Medicos |
-| ST | Status da dispensacao | Situacao do evento | Dispensada (D), Cancelada (C) | Dispensacoes |
-| A | Assinatura da dispensacao | Assinada / nao assinada | `in_assinado` S/N (tipo unico, sem AE/CD) | Dispensacoes |
 | TD | Tipo de anomalia | Qual anomalia investigar | Documentos por periodo, pacientes unicos por periodo, tempo entre emissoes, documentos por local | Auditoria |
 | DIM | Dimensao afetada | Qual face do datamart a anomalia envolve | Documentos, atendimentos, dispensacoes, local | Auditoria |
 
@@ -499,13 +445,7 @@ Notas:
 | 10 | Medicos | Linha | Total acumulado de medicos por mes | fato_medico_dia, dim_data | Soma acumulada por ano_mes | P,U | |
 | 11 | Medicos | Linha | Novos medicos por mes | fato_medico_dia, dim_data | Novos por mes (dh_atualizacao) | P,U | Proxy: primeira dh_atualizacao observada (decisao 14) |
 | 12 | Medicos | Matriz/tabela | Inatividade por faixa de dias sem emissao (30/60/90/120) | fato_medico_dia, fato_documento_dia, dim_medico | Contagem por faixa | U | Regra operacional: ultima emissao |
-| 13 | Dispensacoes | Cards KPI | Dispensacoes, assinadas, farmaceuticos, farmacias, pacientes distintos | fato_dispensacao_dia, dim_farmaceutico, dim_farmacia | Soma/distinct no periodo | P,U,ST,A | Assinada = in_assinado 'S' (decisao 14) |
-| 14 | Dispensacoes | Mapa Brasil | Dispensacoes por UF | fato_dispensacao_dia, dim_uf | Soma por UF | P | UF = CRF do farmaceutico |
-| 15 | Dispensacoes | Tabela por UF | Dispensacoes e assinadas por UF | fato_dispensacao_dia, dim_uf | Soma por UF | P | Substitui "com/sem certificado" (assinatura unica) |
-| 16 | Dispensacoes | Barras | Dispensacoes acumuladas por mes | fato_dispensacao_dia, dim_data | Soma acumulada por ano_mes | P,U | |
-| 17 | Dispensacoes | Barras | Novas dispensacoes por mes | fato_dispensacao_dia, dim_data | Soma por ano_mes | P,U | |
-| 18 | Dispensacoes | Linha | Farmaceuticos acumulados | fato_dispensacao_dia, dim_farmaceutico | Distinct acumulado por mes | P,U | |
-| 19 | Dispensacoes | Linha | Novos farmaceuticos por mes | fato_dispensacao_dia, dim_farmaceutico | Primeira atividade no mes | P,U | |
+| 13–19 | Dispensacoes | — | REMOVIDAS (2026-09-23): visao Dispensacoes descontinuada | — | — | — | — |
 | 20 | Auditoria | Linha/barras | Anomalias detectadas por dia | fato_auditoria_dia | Contagem por dia | P(curto),TD,DIM | Sem registros individuais; exige filtros obrigatorios |
 | 21 | Auditoria | Ranking (barras) | Tipos de anomalia mais frequentes, com severidade | fato_auditoria_dia | Contagem por tipo_anomalia | P,TD | Severidade por desvio (2x/3x/5x) |
 | 22 | Auditoria | Ranking (barras) | Dimensoes afetadas mais frequentes | fato_auditoria_dia | Contagem por dimensao_afetada | P,DIM | |
@@ -538,7 +478,7 @@ Fluxo da aba:
 Observacoes gerais:
 - Todas as consultas de tela leem apenas o datamart `prescricao_dw`; nenhuma consulta direta na origem `bd_cfm`.
 - Consultas agregadas sempre filtradas por periodo; limites de linhas em tabelas paginadas.
-- `dim_medico` e `dim_farmaceutico` guardam apenas identificadores tecnicos e atributos agregaveis, sem dados pessoais.
+- `dim_medico` guarda apenas identificadores tecnicos e atributos agregaveis, sem dados pessoais.
 - A visao Auditoria nao expoe registros individuais nem dados da tabela de auditoria relacional (decisao 14).
 
 ## 7. Experiencia e Interface
@@ -722,7 +662,6 @@ Atualizacao (disparo manual disponivel a todos os usuarios do dominio; rotas de 
 Dashboards:
 - `GET /api/dashboard/documentos`
 - `GET /api/dashboard/medicos`
-- `GET /api/dashboard/dispensacoes`
 - `GET /api/dashboard/auditoria`
 
 Observabilidade:
@@ -889,8 +828,8 @@ Fase 0 concluida: todas as confirmacoes previstas foram respondidas.
 ## 15. Criterios de Sucesso do MVP
 
 - Login restrito a e-mails `@portalmedico.org.br` (Google OAuth).
-- Quatro visões acessiveis por menu.
-- Documentos, medicos e dispensacoes com KPIs, filtros, mapa, rankings e series temporais.
+- Tres visões acessiveis por menu (Dispensacoes descontinuada em 2026-09-23).
+- Documentos e medicos com KPIs, filtros, mapa, rankings e series temporais.
 - Auditoria somente agregada, com filtros obrigatorios e consultas registradas.
 - Atualizacao diaria programavel (padrao 02:00 BRT, configuravel por `mrichard@portalmedico.org.br`).
 - Atualizacao manual por botao com status visivel.

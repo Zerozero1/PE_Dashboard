@@ -1,10 +1,12 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-22 11:58 BRT_
+_Atualizado em: 2026-09-23 09:05 BRT_
 
 ## 🎯 Objetivo Atual
-Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python em Windows (maquina separada da aplicacao) e 4 visões: Documentos, Medicos, Dispensacoes, Auditoria.
+Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python em Windows (maquina separada da aplicacao) e 3 visões: Documentos, Medicos, Auditoria.
 
 ## ✅ Última Sessão (Resumo)
+- Visao Dispensacoes REMOVIDA (2026-09-23): aba, componente, endpoint `/api/dashboard/dispensacoes`, tema `theme-green`, `load_dispensacoes.py`, `fato_dispensacao_dia` (7,9 MB) e `dim_farmaceutico` (11 MB) excluidos. Pipeline ganha ~25s por carga; docs sincronizadas (PLANO 5.1/5.2/6.3/6.5, consultas 13-19, endpoints, criterios de sucesso; etl/web READMEs).
+- Ajustes visao Documentos: rosca por tipo com todas as faixas >= 2% e "Outros" para o resto; tabela UF/Mil/% ao lado do mapa com scrollbar discreta; label do acumulado reposicionado; rodape do grafico de origem removido; paleta de alto contraste com tracos distintos no LinesChart; botao "Atualizar dados" so para admin; status de carga em PT-BR.
 - Grafico "Origem de criacao por mes" na visao Documentos (2026-09-23): nova fato `fato_documento_origem_dia` (dia+UF+`ds_origem_criacao`) alimenta serie `serie_origem` do endpoint; componente LinesChart (multi-linha SVG com legenda) responde a periodo/UF. Confirmado `ds_origem_criacao` na origem (WEB, WEB-MOBILE, IOS, ANDROID; ~70% NULL historico — serie so comparavel de meados de 2025 em diante).
 - Serie NAO_INFORMADO suprimida do grafico (filtro no endpoint; grupo mantido no datamart — tabela so tem 7,7 MB, sem ganho relevante).
 - Documentacao atualizada (2026-09-22): `etl/README.md` criado (env vars, scripts, orquestracao, estrategia de extracao, modelo fisico, definicoes de negocio, ressalvas) e `web/README.md` reescrito (execucao, env, auth, endpoints, estrutura, deploy). Plano: fases 0-4 marcadas CONCLUIDAS e Fase 5 EM ANDAMENTO; secao 10 com status implementado. Docstrings em run_all.py/jobs.py.
@@ -34,10 +36,10 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
   - FEITO (2026-09-22): jobs.py criado e testado (worker com claim FOR UPDATE SKIP LOCKED + recover_stale; scheduler lendo dashboard_refresh_config; enqueue-manual). Falta apenas: carga incremental (hoje o job roda o run_all completo, ~40 min) e agendamento no Windows (Task Scheduler).
 - [ ] Testar run_all.py completo em uma execução.
 - [ ] Fase 1 — Fundacao: projeto web, Google OAuth, validacao de dominio, shell com 4 visões (padrão cyberpunk dark aprovado).
-- [ ] Fase 3 — Visões Documentos, Medicos e Dispensacoes consumindo as fatos do DW.
-  - CONCLUIDA (2026-09-22): endpoints /api/dashboard/{documentos,medicos,dispensacoes,auditoria} com SQL real; KPIs, series (SVG, eixo duplo), donut, mapa real do Brasil (GeoJSON local), rankings, tabelas; filtros por periodo (default "Todos")/UF/tipo.
+- [ ] Fase 3 — Visões Documentos e Medicos consumindo as fatos do DW (Dispensacoes descontinuada 2026-09-23).
+  - CONCLUIDA (2026-09-22): endpoints /api/dashboard/{documentos,medicos,auditoria} com SQL real; KPIs, series (SVG, eixo duplo), donut, mapa real do Brasil (GeoJSON local), rankings, tabelas; filtros por periodo (default "Todos")/UF/tipo.
   - Refinamentos 2026-09-22: filtro de assinatura removido e fato_documento_dia reestruturada (grão dia×UF×tipo; 536k→337k linhas, −37%); nao_assinados derivado; eyebrow "VISÃO"; logo CFM; "Processando…" animado; tabela UF→tipo removida (sem carga dedicada).
-- [ ] Solicitar ao DBA indices em `tb_consulta_documento.dh_documento`, `tb_consulta.dt_consulta`, `tb_historico_dispensacao.dh_historico_dispensacao` e FKs de dispensacao.
+- [ ] Solicitar ao DBA indices em `tb_consulta_documento.dh_documento` e `tb_consulta.dt_consulta`.
 
 ## ⚠️ Pontos de Atencao
 - `usr_select` em `bd_cfm` e somente leitura; nenhuma gravacao na origem.
@@ -53,12 +55,12 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 - Origem: PostgreSQL `bd_cfm` 13.8 (172.16.2.177:5432), leitura via `usr_select`.
 - Datamart: PostgreSQL `prescricao_dw` 13.7 (172.16.7.112:5432), escrita via `usr_prescricao_dw`, schemas `prescricao`/`staging`.
 - ETL: aplicacao Python (pasta `etl/`, psycopg2, sem pandas) em ambiente Windows (scheduler + worker com fila de jobs em `dashboard_refresh_job`), em MAQUINA SEPARADA da aplicacao web.
-  - Scripts: `run_all.py` (pipeline), `load_dims.py`, `load_fatos.py <docs|especialidade|unidade|medico|pacientes>`, `load_medicos.py`, `load_dispensacoes.py`, `load_anomalias.py`, `setup.py`, `validate.py`.
+  - Scripts: `run_all.py` (pipeline), `load_dims.py`, `load_fatos.py <docs|origem|especialidade|unidade|medico|pacientes>`, `load_medicos.py`, `load_anomalias.py`, `setup.py`, `validate.py`.
   - Extração em lotes por faixa de `id_consulta_documento` (2M/lote); varreduras completas para distinct.
 - Comunicacao app <-> ETL: exclusivamente via `prescricao_dw` (fila de jobs + status + fatos; `FOR UPDATE SKIP LOCKED`); sem chamadas HTTP entre maquinas.
 - Web: monolito (Next.js ou equivalente) em servidor interno Windows; graficos ECharts/Recharts/Nivo/Tremor; mapa GeoJSON local.
 - Auth: Google OAuth com validacao server-side de dominio `@portalmedico.org.br`; perfil unico.
-- Modelo: estrela — dim_data, dim_uf, dim_tipo_documento, dim_medico, dim_especialidade, dim_unidade, dim_farmaceutico, dim_farmacia + fato_documento_dia, fato_medico_dia, fato_dispensacao_dia, fato_auditoria_dia (anomalias) + tabelas operacionais (refresh_config, refresh_job).
+- Modelo: estrela — dim_data, dim_uf, dim_tipo_documento, dim_medico, dim_especialidade, dim_unidade + fato_documento_dia, fato_documento_origem_dia, fato_documento_{especialidade,unidade,medico,paciente}_dia, fato_medico_dia, fato_medico_snapshot, fato_auditoria_dia (anomalias) + tabelas operacionais (refresh_config, refresh_job). Dispensacoes removidas (2026-09-23).
 
 ## 🔑 Credenciais & Config (sem valores)
 - `bd_cfm`: usuario `usr_select` (somente leitura) — configurado no MCP e em variaveis de ambiente do ETL (`BDCFM_*`).

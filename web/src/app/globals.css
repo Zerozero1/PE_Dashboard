@@ -107,7 +107,6 @@ h1{font-size:24px;margin:5px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
 
 .theme-cyan{--va:#49e7ff;--va2:#65f5ad;--va-soft:rgba(73,231,255,.05)}
 .theme-blue{--va:#4a6ef0;--va2:#49e7ff;--va-soft:rgba(74,110,240,.06)}
-.theme-green{--va:#65f5ad;--va2:#49e7ff;--va-soft:rgba(101,245,173,.05)}
 .theme-red{--va:#ff647c;--va2:#ffb454;--va-soft:rgba(255,100,124,.05)}
 .view .eyebrow{color:var(--va)}
 .placeholder{color:#4e5a67;font-family:Consolas,monospace}

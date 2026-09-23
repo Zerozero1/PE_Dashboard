@@ -40,11 +40,6 @@ CREATE TABLE IF NOT EXISTS prescricao.dim_unidade (
     sg_uf CHAR(2)
 );
 
-CREATE TABLE IF NOT EXISTS prescricao.dim_farmaceutico (
-    id_farmaceutico INTEGER PRIMARY KEY,
-    sg_uf CHAR(2)
-);
-
 CREATE TABLE IF NOT EXISTS prescricao.fato_documento_dia (
     dia DATE NOT NULL,
     sg_uf CHAR(2) NOT NULL,
@@ -90,21 +85,6 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_medico_dia (
     medicos_com_emissao BIGINT NOT NULL DEFAULT 0,
     PRIMARY KEY (dia, sg_uf)
 );
-
-CREATE TABLE IF NOT EXISTS prescricao.fato_dispensacao_dia (
-    dia DATE NOT NULL,
-    sg_uf CHAR(2) NOT NULL,
-    dispensacoes BIGINT NOT NULL,
-    assinadas BIGINT NOT NULL,
-    canceladas BIGINT NOT NULL,
-    farmaceuticos_distintos BIGINT NOT NULL,
-    farmacias_distintas BIGINT NOT NULL,
-    pacientes_distintos BIGINT NOT NULL DEFAULT 0,
-    PRIMARY KEY (dia, sg_uf)
-);
-
-ALTER TABLE prescricao.fato_dispensacao_dia
-    ADD COLUMN IF NOT EXISTS pacientes_distintos BIGINT NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS prescricao.fato_auditoria_dia (
     dia DATE NOT NULL,

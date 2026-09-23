@@ -77,16 +77,6 @@ def main():
     cur.close()
     log("dim_unidade: carregada")
 
-    cur = origin.cursor()
-    cur.execute(
-        "SELECT id_farmaceutico, sg_uf FROM prescricao.tb_farmaceutico")
-    for batch in iter(lambda: cur.fetchmany(20000), []):
-        upsert_rows(dw, "prescricao.dim_farmaceutico",
-                    ["id_farmaceutico", "sg_uf"], batch,
-                    ["id_farmaceutico"])
-    cur.close()
-    log("dim_farmaceutico: carregada")
-
     origin.close()
     dw.close()
     log("dimensoes: concluido")

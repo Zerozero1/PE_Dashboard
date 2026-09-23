@@ -29,10 +29,9 @@ $env:DW_HOST='172.16.7.112'; $env:DW_DB='prescricao_dw'; $env:DW_USER='usr_presc
 | Script | Função |
 |---|---|
 | `setup.py` | Aplica `schema.sql` + `ddl_extra.sql` (idempotente). Criar/atualizar estrutura no DW. |
-| `load_dims.py` | Carrega dimensões: dim_data, dim_uf, dim_tipo_documento, dim_medico, dim_especialidade, dim_unidade, dim_farmaceutico. |
-| `load_fatos.py <modo>` | Fatos de documentos, em modos: `docs`, `especialidade`, `unidade`, `medico`, `pacientes`. |
+| `load_dims.py` | Carrega dimensões: dim_data, dim_uf, dim_tipo_documento, dim_medico, dim_especialidade, dim_unidade. |
+| `load_fatos.py <modo>` | Fatos de documentos, em modos: `docs`, `origem`, `especialidade`, `unidade`, `medico`, `pacientes`. |
 | `load_medicos.py` | `fato_medico_snapshot` (contagens correntes por UF) + `fato_medico_dia.novos_por_dh_atualizacao` + `medicos_com_emissao` (derivado do DW). |
-| `load_dispensacoes.py` | `fato_dispensacao_dia` a partir de `tb_historico_dispensacao` (cadeia até paciente). |
 | `load_anomalias.py` | `fato_auditoria_dia`: anomalias AN1–AN4 calculadas no DW (média de referência = todos os médicos). |
 | `run_all.py` | Pipeline completo e idempotente (dims → fatos → anomalias). ~30–40 min. |
 | `jobs.py` | Orquestração via fila `dashboard_refresh_job` (ver abaixo). |
@@ -57,12 +56,12 @@ python jobs.py enqueue-manual <email>  # cria job manual (botão "Atualizar dado
 
 - **Lotes por faixa de `id_consulta_documento`** (2M ids por lote): a origem não tem índice em `dh_documento`; filtros temporais diretos varrem 43 GB e estouram qualquer timeout. A PK permite varrer por faixas com pausa/retomada.
 - **Staging + rebuild**: cada lote agrega no SQL da origem e grava em `stg_documento_*`; ao final, a fato é reconstruída com `SUM ... GROUP BY` (rebuild_fact). Necessário porque uma chave (dia×UF×tipo) aparece em vários lotes — upsert direto por lote sobrescrevia e perdia dados (~970k docs; corrigido em 2026-09-22).
-- **Varreduras completas** (`single_pass`, sem lote) apenas para distinct: pacientes por dia×UF (~55 s) e dispensações (~25 s), com `statement_timeout=0` e `work_mem=256MB`.
+- **Varreduras completas** (`single_pass`, sem lote) apenas para distinct: pacientes por dia×UF (~55 s), com `statement_timeout=0` e `work_mem=256MB`.
 - **Especialidade**: deriva do cadastro do médico que assina (`tb_medico_especialidade` via `rl_medico_unidade_atendimento.id_medico`, `in_ativo='S'`) — não de `rl_med_especialidade_consulta` (vínculo da consulta, com outliers de até 104 especialidades).
 
 ## Modelo físico (schema `prescricao` do DW)
 
-Dimensões: `dim_data`, `dim_uf`, `dim_tipo_documento`, `dim_medico`, `dim_especialidade`, `dim_unidade`, `dim_farmaceutico`.
+Dimensões: `dim_data`, `dim_uf`, `dim_tipo_documento`, `dim_medico`, `dim_especialidade`, `dim_unidade`.
 
 Fatos:
 - `fato_documento_dia` (dia, sg_uf, id_tipo_documento, documentos, assinados, cancelados)
@@ -73,7 +72,6 @@ Fatos:
 - `fato_documento_paciente_dia` (dia, sg_uf, pacientes_distintos)
 - `fato_medico_dia` (dia, sg_uf, novos_por_dh_atualizacao, medicos_com_emissao)
 - `fato_medico_snapshot` (sg_uf, inscricoes_cadastradas, inscricoes_ativas, medicos_ativos, atualizado_em)
-- `fato_dispensacao_dia` (dia, sg_uf, dispensacoes, assinadas, canceladas, farmaceuticos_distintos, farmacias_distintas, pacientes_distintos)
 - `fato_auditoria_dia` (dia, tipo_anomalia, dimensao_afetada, valor_observado, valor_esperado, desvio, severidade)
 
 Staging: `stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_especialidade_dia`, `stg_documento_unidade_dia`, `stg_documento_medico_dia`.
@@ -91,8 +89,6 @@ Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 | Origem de criação | `ds_origem_criacao` (NULL ou vazio → `NAO_INFORMADO`); histórica incompleta (ver ressalvas) |
 | Médico ativo | `tb_medico.in_situacao = 'A'` (snapshot) |
 | Novos médicos | `tb_medico.dh_atualizacao::date` (proxy — origem sem data de cadastro) |
-| Dispensação | `tb_historico_dispensacao` com `in_status='D'`; cancelada `'C'`; assinada `tb_dispensacao.in_assinado='S'` |
-| UF da dispensação | CRF do farmacêutico (`tb_farmaceutico.sg_uf`) |
 | Anomalias AN1–AN4 | observado vs média móvel 30 dias de **todos os médicos**; severidade 2x/3x/5x |
 
 ## Ressalvas conhecidas

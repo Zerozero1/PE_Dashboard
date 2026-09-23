@@ -35,14 +35,6 @@ type MedData = {
   inatividade: { faixa: string; medicos: string }[];
 };
 
-type DispData = {
-  de: string;
-  ate: string;
-  kpis: { dispensacoes: number; assinadas: number; canceladas: number; pacientes: number };
-  serie_mensal: { mes: string; dispensacoes: string; assinadas: string; canceladas: string }[];
-  por_uf: { uf: string; dispensacoes: string; assinadas: string; pct: number }[];
-};
-
 type AudData = {
   de: string;
   ate: string;
@@ -75,13 +67,12 @@ function Sel({ label, value, onChange, options }: { label: string; value: string
 
 const PERIODOS: [string, string][] = [["todos", "Todos"], ["30", "30 dias"], ["7", "7 dias"], ["90", "90 dias"], ["365", "12 meses"]];
 
-const VIEWS = ["documentos", "medicos", "dispensacoes", "auditoria"] as const;
+const VIEWS = ["documentos", "medicos", "auditoria"] as const;
 type ViewId = (typeof VIEWS)[number];
 
 const VIEW_META: Record<ViewId, { title: string; subtitle: string; theme: string }> = {
   documentos: { title: "Documentos médicos", subtitle: "Emissões por período, UF, tipo e especialidade — UF da unidade de atendimento.", theme: "theme-cyan" },
   medicos: { title: "Médicos", subtitle: "Cadastro, situação da inscrição e atividade de prescrição por UF.", theme: "theme-blue" },
-  dispensacoes: { title: "Dispensações", subtitle: "Dispensação de receitas por farmácia e farmacêutico — UF do CRF.", theme: "theme-green" },
   auditoria: { title: "Auditoria", subtitle: "Anomalias agregadas — média de referência de todos os médicos · somente agregados.", theme: "theme-red" },
 };
 
@@ -542,65 +533,6 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
   );
 }
 
-function DispensacoesView({ active, filtros }: { active: boolean; filtros: FiltrosData | null }) {
-  const [dias, setDias] = useState<"todos" | string>("todos");
-  const [uf, setUf] = useState("");
-  const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
-  const qs = `de=${de}&ate=${ate}&uf=${uf}`;
-  const { data, erro, carregando } = useApi<DispData>(`/api/dashboard/dispensacoes?${qs}`, active);
-  if (erro) return <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>;
-  if (!data) return <div className="card" style={{ gridColumn: "span 12", color: "#566271" }}>Carregando…</div>;
-  const k = data.kpis;
-  return (
-    <section className="grid">
-      <div className="filters" style={{ gridColumn: "span 12" }}>
-        <Sel label="Período" value={dias} onChange={setDias} options={PERIODOS} />
-        <Sel label="UF" value={uf} onChange={setUf} options={[["", "Todas"], ...(filtros?.ufs.map((u) => [u, u] as [string, string]) ?? [])]} />
-        <div className="meta">{de} → {ate}</div>
-      </div>
-      {carregando && <Processando />}
-      <KpiCard label="Dispensações" value={nf.format(k.dispensacoes)} meta="status D (histórico)" />
-      <KpiCard label="Assinadas" value={nf.format(k.assinadas)} meta="in_assinado = S" />
-      <KpiCard label="Canceladas" value={nf.format(k.canceladas)} meta="status C" />
-      <KpiCard label="Pacientes distintos" value={nf.format(k.pacientes)} meta="no período" />
-
-      <article className="card chart-main">
-        <div className="section-title"><h2>Dispensações por mês</h2><div className="legend"><span><i className="l1" />Dispensadas</span><span><i className="l2" />Canceladas</span></div></div>
-        <div className="chart">
-          <BarChart rows={data.serie_mensal.map((s) => ({ x: s.mes, v: Number(s.dispensacoes), v2: Number(s.canceladas) }))} />
-        </div>
-      </article>
-
-      <article className="card side-chart">
-        <div className="section-title"><h2>Dispensações por UF</h2><span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}</span></div>
-        <RankRows rows={data.por_uf.slice(0, 8).map((u) => ({ name: u.uf, v: Number(u.dispensacoes) }))} />
-      </article>
-
-      <article className="card" style={{ gridColumn: "span 7" }}>
-        <div className="section-title"><h2>Mapa por UF</h2><span>UF do CRF do farmacêutico</span></div>
-        <MapBr rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.dispensacoes) }))} />
-      </article>
-
-      <article className="card" style={{ gridColumn: "span 5" }}>
-        <div className="section-title"><h2>Totais e assinadas por UF</h2><span>assinatura única</span></div>
-        <table className="table">
-          <thead><tr><th>UF</th><th>Dispensações</th><th>Assinadas</th><th>% Assin.</th></tr></thead>
-          <tbody>
-            {data.por_uf.slice(0, 10).map((r) => (
-              <tr key={r.uf}>
-                <td>{r.uf}</td>
-                <td>{nf.format(Number(r.dispensacoes))}</td>
-                <td>{nf.format(Number(r.assinadas))}</td>
-                <td>{r.pct}%</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </article>
-    </section>
-  );
-}
-
 function AuditoriaView({ active }: { active: boolean }) {
   const [dias, setDias] = useState<"todos" | string>("todos");
   const [tipo, setTipo] = useState("");
@@ -750,7 +682,6 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
             </header>
             {v === "documentos" && <DocumentsView active={view === v} filtros={filtros} />}
             {v === "medicos" && <MedicosView active={view === v} filtros={filtros} />}
-            {v === "dispensacoes" && <DispensacoesView active={view === v} filtros={filtros} />}
             {v === "auditoria" && <AuditoriaView active={view === v} />}
           </section>
         ))}
