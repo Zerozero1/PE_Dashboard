@@ -34,6 +34,7 @@ type MedData = {
   por_uf: { uf: string; inscricoes_cadastradas: string; medicos_ativos: string }[];
   inatividade: { faixa: string; medicos: string }[];
   emissores_mensal: { mes: string; emissao: string }[];
+  emissores_30d: number;
 };
 
 type AudData = {
@@ -175,7 +176,7 @@ function Processando() {
   );
 }
 
-function BarChart({ rows, bars, w = 800, h = 220 }: { rows: { x: string; v: number; v2?: number }[]; bars?: number[]; w?: number; h?: number }) {
+function BarChart({ rows, bars, w = 800, h = 220, tick = 9 }: { rows: { x: string; v: number; v2?: number }[]; bars?: number[]; w?: number; h?: number; tick?: number }) {
   const maxLine = Math.max(...rows.map((r) => Math.max(r.v, r.v2 ?? 0)), 1);
   const maxBars = Math.max(...(bars ?? []), 1);
   const pad = 40;
@@ -195,14 +196,14 @@ function BarChart({ rows, bars, w = 800, h = 220 }: { rows: { x: string; v: numb
         return (
           <g key={`l${f}`}>
             <line x1={pad} x2={w} y1={y} y2={y} stroke="rgba(255,255,255,.07)" />
-            <text x={pad - 8} y={y + 3} fontSize="9" fill="#9fb0c1" textAnchor="end">{nfc.format(maxLine * f)}</text>
+            <text x={pad - 8} y={y + 3} fontSize={tick} fill="#9fb0c1" textAnchor="end">{nfc.format(maxLine * f)}</text>
           </g>
         );
       })}
       {bars && ticks.map((f) => {
         const y = h - f * (h - 26);
         return (
-          <text key={`r${f}`} x={w + 14} y={y + 3} fontSize="9" fill="var(--va2)" textAnchor="start">{nfc.format(maxBars * f)}</text>
+          <text key={`r${f}`} x={w + 14} y={y + 3} fontSize={tick} fill="var(--va2)" textAnchor="start">{nfc.format(maxBars * f)}</text>
         );
       })}
       {bars && bars.map((b, i) => {
@@ -227,7 +228,7 @@ function BarChart({ rows, bars, w = 800, h = 220 }: { rows: { x: string; v: numb
         const [y, m] = String(rows[i].x).split("-");
         const label = m ? `${MESES[Number(m) - 1]}/${String(y).slice(2)}` : String(rows[i].x);
         return (
-          <text key={i} x={pad + i * step} y={h + 18} fontSize="9" fill="#9fb0c1" textAnchor="middle">{label}</text>
+          <text key={i} x={pad + i * step} y={h + 18} fontSize={tick} fill="#9fb0c1" textAnchor="middle">{label}</text>
         );
       })}
     </svg>
@@ -535,7 +536,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
           <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês</span></div>
         </div>
         <div className="chart">
-          <BarChart rows={novosAcumulados} bars={novosMensal} />
+          <BarChart rows={novosAcumulados} bars={novosMensal} tick={10} />
         </div>
         <div className="sub" style={{ marginTop: 4 }}>Novos médicos por mês · Acumulado: <b style={{ color: "var(--va)" }}>{nf.format(acumuladoNovos)}</b></div>
       </article>
@@ -546,8 +547,9 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
           <div className="legend"><span><i className="l1" />CPF distintos no mês</span></div>
         </div>
         <div className="chart">
-          <BarChart rows={data.emissores_mensal.map((s) => ({ x: s.mes, v: Number(s.emissao) }))} />
+          <BarChart rows={data.emissores_mensal.map((s) => ({ x: s.mes, v: Number(s.emissao) }))} tick={10} />
         </div>
+        <div className="sub" style={{ marginTop: 4 }}>Quantidade de médicos que emitiram pelo menos um documento nos últimos 30 dias: <b style={{ color: "var(--va)" }}>{nf.format(data.emissores_30d)}</b></div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 7" }}>

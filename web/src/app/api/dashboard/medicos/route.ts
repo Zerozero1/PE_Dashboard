@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const uf = url.searchParams.get("uf") || null;
 
   try {
-    const [snapshot, novos, porUf, inatividade, emissoresMensal] = await Promise.all([
+    const [snapshot, novos, porUf, inatividade, emissoresMensal, emissores30d] = await Promise.all([
       query(
         `SELECT inscricoes_cadastradas AS inscricoes,
                 medicos_ativos AS ativos
@@ -51,6 +51,14 @@ export async function GET(req: NextRequest) {
           ORDER BY 1`,
         [uf, de, ate]
       ),
+      query(
+        `SELECT count(*) AS n
+           FROM prescricao.fato_medico_extremos_emissao
+          WHERE sg_uf = COALESCE($1::text, '--')
+            AND ultimo_dia >= (SELECT max(dia) - interval '30 days'
+                                 FROM prescricao.fato_documento_medico_dia)`,
+        [uf]
+      ),
     ]);
 
     const s = snapshot.rows[0];
@@ -65,6 +73,7 @@ export async function GET(req: NextRequest) {
       por_uf: porUf.rows,
       inatividade: inatividade.rows,
       emissores_mensal: emissoresMensal.rows,
+      emissores_30d: Number(emissores30d.rows[0]?.n ?? 0),
     });
   } catch (e) {
     return NextResponse.json({ erro: String(e) }, { status: 500 });
