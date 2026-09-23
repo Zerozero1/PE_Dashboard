@@ -304,10 +304,10 @@ function Bars({ rows }: { rows: { x: string; v: number }[] }) {
 function Donut({ rows }: { rows: { label: string; v: number }[] }) {
   const total = rows.reduce((a, b) => a + b.v, 0);
   const sorted = [...rows].sort((a, b) => b.v - a.v);
-  const top = sorted.slice(0, 5);
-  const resto = sorted.slice(5);
-  const data = resto.length > 0 ? [...top, { label: "Outros", v: resto.reduce((a, b) => a + b.v, 0) }] : top;
-  const cores = ["var(--va)", "var(--va2)", "#9a7cff", "#ffb454", "#ff647c", "#7db9e8", "#f2c94c"];
+  const principais = total > 0 ? sorted.filter((r) => (r.v / total) * 100 >= 2) : sorted;
+  const resto = total > 0 ? sorted.filter((r) => (r.v / total) * 100 < 2) : [];
+  const data = resto.length > 0 ? [...principais, { label: "Outros", v: resto.reduce((a, b) => a + b.v, 0) }] : principais;
+  const cores = ["var(--va)", "var(--va2)", "#9a7cff", "#ffb454", "#ff647c", "#7db9e8", "#f2c94c", "#34d399", "#f472b6", "#a3e635", "#c084fc", "#fdba74"];
   let acc = 0;
   const stops = data.map((r, i) => {
     const start = (acc / total) * 100;
