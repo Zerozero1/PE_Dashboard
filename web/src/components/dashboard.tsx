@@ -515,8 +515,8 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
       </div>
       {carregando && <Processando />}
       <div style={{ gridColumn: "span 3", display: "flex", flexDirection: "column", gap: 12 }}>
-        <KpiCard label="Inscrições cadastradas" value={nf.format(k.inscricoes)} meta="CRM/UF (snapshot)" />
-        <KpiCard label="Médicos ativos" value={nf.format(k.ativos)} meta="CPF únicos · aceite do termo" />
+        <KpiCard label="Inscrições cadastradas" value={nf.format(k.inscricoes)} meta="CRM/UF" />
+        <KpiCard label="MÉDICOS CADASTRADOS" value={nf.format(k.ativos)} meta="CPF" />
       </div>
 
       <article className="card chart-main" style={{ gridColumn: "span 9" }}>
@@ -534,7 +534,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
         <div className="section-title"><h2>Médicos por UF</h2><span>inscrições cadastradas (CRM/UF)</span></div>
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ flex: 1.1, minWidth: 0 }}>
-            <MapBr rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.inscricoes_cadastradas) }))} />
+            <MapBr note={false} rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.inscricoes_cadastradas) }))} />
           </div>
           <div className="uf-scroll" style={{ flex: 1, maxHeight: 292, overflowY: "auto", paddingRight: 4 }}>
             <table className="table" style={{ fontSize: 10 }}>
