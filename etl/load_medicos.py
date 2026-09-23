@@ -61,6 +61,40 @@ def main():
     cur.close()
     log("fato_medico_dia.medicos_com_emissao: atualizado a partir do DW")
 
+    cur = dw.cursor()
+    cur.execute("TRUNCATE prescricao.fato_medico_emissao_mes")
+    cur.execute(
+        "INSERT INTO prescricao.fato_medico_emissao_mes (mes, sg_uf, cpfs_distintos) "
+        "SELECT to_char(f.dia,'YYYY-MM'), '--', count(DISTINCT dm.id_pessoa) "
+        "FROM prescricao.fato_documento_medico_dia f "
+        "JOIN prescricao.dim_medico dm ON dm.id_medico = f.id_medico "
+        "GROUP BY 1 "
+        "UNION ALL "
+        "SELECT to_char(f.dia,'YYYY-MM'), f.sg_uf, count(DISTINCT dm.id_pessoa) "
+        "FROM prescricao.fato_documento_medico_dia f "
+        "JOIN prescricao.dim_medico dm ON dm.id_medico = f.id_medico "
+        "WHERE f.sg_uf <> '--' "
+        "GROUP BY 1, 2")
+    dw.commit()
+    log("fato_medico_emissao_mes: reconstruida (por mes x UF + global '--')")
+
+    cur.execute("TRUNCATE prescricao.fato_medico_extremos_emissao")
+    cur.execute(
+        "INSERT INTO prescricao.fato_medico_extremos_emissao "
+        "(sg_uf, id_pessoa, primeiro_dia, ultimo_dia) "
+        "SELECT '--', dm.id_pessoa, min(f.dia), max(f.dia) "
+        "FROM prescricao.fato_documento_medico_dia f "
+        "JOIN prescricao.dim_medico dm ON dm.id_medico = f.id_medico "
+        "GROUP BY 2 "
+        "UNION ALL "
+        "SELECT f.sg_uf, dm.id_pessoa, min(f.dia), max(f.dia) "
+        "FROM prescricao.fato_documento_medico_dia f "
+        "JOIN prescricao.dim_medico dm ON dm.id_medico = f.id_medico "
+        "WHERE f.sg_uf <> '--' "
+        "GROUP BY 1, 2")
+    dw.commit()
+    log("fato_medico_extremos_emissao: reconstruida")
+
     origin.close()
     dw.close()
     log("medicos: concluido")

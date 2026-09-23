@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const uf = url.searchParams.get("uf") || null;
 
   try {
-    const [snapshot, novos, porUf, inatividade] = await Promise.all([
+    const [snapshot, novos, porUf, inatividade, emissoresMensal, emissores3m] = await Promise.all([
       query(
         `SELECT inscricoes_cadastradas AS inscricoes,
                 medicos_ativos AS ativos
@@ -30,23 +30,34 @@ export async function GET(req: NextRequest) {
           ORDER BY inscricoes_cadastradas DESC`
       ),
       query(
-        `WITH ult AS (
-           SELECT dm.id_pessoa, max(f.dia) AS ultimo
-             FROM prescricao.fato_documento_medico_dia f
-             JOIN prescricao.dim_medico dm ON dm.id_medico = f.id_medico
-            WHERE ($1::text IS NULL OR f.sg_uf = $1)
-            GROUP BY dm.id_pessoa
-         ), ref AS (SELECT max(dia) AS hoje FROM prescricao.fato_documento_medico_dia)
+        `WITH ref AS (SELECT max(dia) AS hoje FROM prescricao.fato_documento_medico_dia)
          SELECT CASE
-                  WHEN (ref.hoje - u.ultimo) <= 30 THEN '0-30'
-                  WHEN (ref.hoje - u.ultimo) <= 60 THEN '31-60'
-                  WHEN (ref.hoje - u.ultimo) <= 90 THEN '61-90'
-                  WHEN (ref.hoje - u.ultimo) <= 120 THEN '91-120'
+                  WHEN (ref.hoje - e.ultimo_dia) <= 30 THEN '0-30'
+                  WHEN (ref.hoje - e.ultimo_dia) <= 60 THEN '31-60'
+                  WHEN (ref.hoje - e.ultimo_dia) <= 90 THEN '61-90'
+                  WHEN (ref.hoje - e.ultimo_dia) <= 120 THEN '91-120'
                   ELSE '120+' END AS faixa,
                 count(*) AS medicos
-           FROM ult u CROSS JOIN ref
+           FROM prescricao.fato_medico_extremos_emissao e CROSS JOIN ref
+          WHERE e.sg_uf = COALESCE($1::text, '--')
           GROUP BY 1 ORDER BY 1`,
         [uf]
+      ),
+      query(
+        `SELECT mes, cpfs_distintos AS emissao
+           FROM prescricao.fato_medico_emissao_mes
+          WHERE sg_uf = COALESCE($1::text, '--')
+            AND mes BETWEEN to_char($2::date, 'YYYY-MM') AND to_char($3::date, 'YYYY-MM')
+          ORDER BY 1`,
+        [uf, de, ate]
+      ),
+      query(
+        `SELECT count(*) AS n
+           FROM prescricao.fato_medico_extremos_emissao
+          WHERE sg_uf = COALESCE($1::text, '--')
+            AND primeiro_dia <= $3::date
+            AND ultimo_dia >= $2::date`,
+        [uf, de, ate]
       ),
     ]);
 
@@ -61,6 +72,8 @@ export async function GET(req: NextRequest) {
       novos_mensal: novos.rows,
       por_uf: porUf.rows,
       inatividade: inatividade.rows,
+      emissores_mensal: emissoresMensal.rows,
+      emissores_periodo: Number(emissores3m.rows[0]?.n ?? 0),
     });
   } catch (e) {
     return NextResponse.json({ erro: String(e) }, { status: 500 });

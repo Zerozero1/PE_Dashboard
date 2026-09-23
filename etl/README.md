@@ -72,6 +72,8 @@ Fatos:
 - `fato_documento_paciente_dia` (dia, sg_uf, pacientes_distintos)
 - `fato_medico_dia` (dia, sg_uf, novos_aceite_termo, medicos_com_emissao; inclui linhas `sg_uf='--'` com distinct global por dia)
 - `fato_medico_snapshot` (sg_uf, inscricoes_cadastradas, medicos_ativos, atualizado_em; inclui `sg_uf='--'` com totais globais)
+- `fato_medico_emissao_mes` (mes, sg_uf, cpfs_distintos) — CPFs distintos com emissão por mês (por UF + global `--`); alimenta o gráfico "Médicos com emissão por mês"
+- `fato_medico_extremos_emissao` (sg_uf, id_pessoa, primeiro_dia, ultimo_dia) — extremos de emissão por pessoa; alimenta inatividade e o total de emissores no período sem varrer a fato
 - `fato_auditoria_dia` (dia, tipo_anomalia, dimensao_afetada, valor_observado, valor_esperado, desvio, severidade)
 
 Staging: `stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_especialidade_dia`, `stg_documento_unidade_dia`, `stg_documento_medico_dia`.
@@ -89,7 +91,7 @@ Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 | Origem de criação | `ds_origem_criacao` (NULL ou vazio → `NAO_INFORMADO`); histórica incompleta (ver ressalvas) |
 | Médico ativo | CPF único (`tb_pessoa.nu_cpf`) de médicos com aceite do termo (`tb_usuario.dh_aceite_termo`); sem relação com `in_situacao` (definição alterada 2026-09-23) |
 | Inscrições cadastradas | linhas de `tb_medico` (1 por CRM/UF) |
-| Inatividade | última emissão por **pessoa** (`dim_medico.id_pessoa`, = CPF), em faixas de 30/60/90/120 dias sem emissão; só quem emitiu entra |
+| Inatividade | última emissão por **pessoa** (`fato_medico_extremos_emissao.ultimo_dia`), em faixas de 30/60/90/120 dias sem emissão; só quem emitiu entra |
 | Novos médicos | `tb_usuario.dh_aceite_termo` (aceite do termo = primeiro uso; ~94% preenchido, janela completa do sistema); join `tb_usuario.id_pessoa = tb_medico.id_pessoa`; `count(DISTINCT id_pessoa)` por dia×UF + linha global `'--'` (distinct entre todas as UFs — pessoa multi-UF conta uma vez no total) |
 | Anomalias AN1–AN4 | observado vs média móvel 30 dias de **todos os médicos**; severidade 2x/3x/5x |
 

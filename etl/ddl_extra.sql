@@ -84,3 +84,18 @@ CREATE INDEX IF NOT EXISTS idx_fato_documento_medico_dia_uf
 
 CREATE INDEX IF NOT EXISTS idx_fato_medico_dia_uf
     ON prescricao.fato_medico_dia (sg_uf, dia);
+
+CREATE TABLE IF NOT EXISTS prescricao.fato_medico_emissao_mes (
+    mes CHAR(7) NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    cpfs_distintos BIGINT NOT NULL,
+    PRIMARY KEY (mes, sg_uf)
+);
+
+CREATE TABLE IF NOT EXISTS prescricao.fato_medico_extremos_emissao (
+    sg_uf CHAR(2) NOT NULL,
+    id_pessoa INTEGER NOT NULL,
+    primeiro_dia DATE NOT NULL,
+    ultimo_dia DATE NOT NULL,
+    PRIMARY KEY (sg_uf, id_pessoa)
+);

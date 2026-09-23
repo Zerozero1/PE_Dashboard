@@ -33,6 +33,8 @@ type MedData = {
   novos_mensal: { mes: string; novos: string }[];
   por_uf: { uf: string; inscricoes_cadastradas: string; medicos_ativos: string }[];
   inatividade: { faixa: string; medicos: string }[];
+  emissores_mensal: { mes: string; emissao: string }[];
+  emissores_periodo: number;
 };
 
 type AudData = {
@@ -537,6 +539,17 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
           <BarChart rows={novosAcumulados} bars={novosMensal} />
         </div>
         <div className="sub" style={{ marginTop: 4 }}>Novos médicos por mês · Acumulado: <b style={{ color: "var(--va)" }}>{nf.format(acumuladoNovos)}</b></div>
+      </article>
+
+      <article className="card" style={{ gridColumn: "span 12" }}>
+        <div className="section-title">
+          <h2>Médicos com emissão por mês</h2>
+          <div className="legend"><span><i className="l1" />CPF distintos no mês</span></div>
+        </div>
+        <div className="chart">
+          <BarChart rows={data.emissores_mensal.map((s) => ({ x: s.mes, v: Number(s.emissao) }))} />
+        </div>
+        <div className="sub" style={{ marginTop: 4 }}>No período: <b style={{ color: "var(--va)" }}>{nf.format(data.emissores_periodo)}</b> CPFs com ao menos 1 emissão</div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 7" }}>
