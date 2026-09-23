@@ -5,6 +5,7 @@ _Atualizado em: 2026-09-23 09:05 BRT_
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python em Windows (maquina separada da aplicacao) e 3 visões: Documentos, Medicos, Auditoria.
 
 ## ✅ Última Sessão (Resumo)
+- Documento `DEPLOY_PRODUCAO.md` criado (2026-09-23): guia para o arquiteto — topologia (web Node/Next.js no servidor, ETL Python em máquina separada, fila via DW), rede/firewall, OAuth com redirect URI, serviço Windows (PM2/NSSM), Task Scheduler, backup, monitoramento, rollback e checklist de go-live.
 - Otimizacao de indices no DW (2026-09-23): criados `fato_documento_medico_dia(sg_uf,dia)` (inatividade com filtro de UF deixava de varrer 61M linhas por request — endpoint medicos com UF=SP caiu para ~2,3s) e `fato_medico_dia(sg_uf,dia)`. Documentacao atualizada.
 - Inatividade por faixa passou de inscrição para **pessoa (CPF)** (2026-09-23): `dim_medico` ganhou `id_pessoa` (backfill via load_dims); consulta agrupa última emissão por pessoa. Totais: 279.738 pessoas com emissão (Todas) / 68.295 (SP). Visual: barras horizontais com cores de severidade e %.
 - Novos médicos: acumulado do gráfico fechado com o KPI "Médicos ativos" (412.916) — `fato_medico_dia` ganhou linhas globais `sg_uf='--'` (distinct por dia sem agrupar por UF); endpoint usa `'--'` quando não há filtro de UF e as linhas da UF quando há. Com filtro UF o valor bate (SP: 140.808 = KPI).
