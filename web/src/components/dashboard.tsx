@@ -504,6 +504,8 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
     return { x: s.mes, v: acumuladoNovos };
   });
   const novosMensal = data.novos_mensal.map((s) => Number(s.novos));
+  const totalInsc = data.por_uf.reduce((a, u) => a + Number(u.inscricoes_cadastradas), 0);
+  const pctInsc = (v: number) => `${(totalInsc > 0 ? ((v / totalInsc) * 100).toFixed(1) : "0.0").replace(".", ",")}%`;
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
@@ -517,7 +519,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
       <KpiCard label="Inscrições ativas" value={nf.format(k.inscricoes_ativas)} meta="snapshot" />
       <KpiCard label="Emissões no período" value={nf.format(k.medicos_com_emissao)} meta="médicos distintos" />
 
-      <article className="card chart-main">
+      <article className="card chart-main" style={{ gridColumn: "span 12" }}>
         <div className="section-title">
           <h2>Novos médicos por mês</h2>
           <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês (escala própria)</span></div>
@@ -528,16 +530,27 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
         <div className="sub" style={{ marginTop: 4 }}>Aceite do termo (<code>tb_usuario</code>) · Acumulado: <b style={{ color: "var(--va)" }}>{nf.format(acumuladoNovos)}</b></div>
       </article>
 
-      <article className="card side-chart">
-        <div className="section-title"><h2>Médicos por UF</h2><span>inscrições cadastradas</span></div>
-        <div className="uf-scroll" style={{ maxHeight: 240, overflowY: "auto", paddingRight: 4 }}>
-          <RankRows showPct rows={data.por_uf.map((u) => ({ name: u.uf, v: Number(u.inscricoes_cadastradas) }))} />
-        </div>
-      </article>
-
       <article className="card" style={{ gridColumn: "span 7" }}>
-        <div className="section-title"><h2>Médicos ativos por UF</h2><span>mapa — snapshot</span></div>
-        <MapBr rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.medicos_ativos) }))} />
+        <div className="section-title"><h2>Médicos por UF</h2><span>mapa — ativos · tabela — inscrições</span></div>
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <div style={{ flex: 1.1, minWidth: 0 }}>
+            <MapBr rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.medicos_ativos) }))} />
+          </div>
+          <div className="uf-scroll" style={{ flex: 1, maxHeight: 292, overflowY: "auto", paddingRight: 4 }}>
+            <table className="table" style={{ fontSize: 10 }}>
+              <thead><tr><th>UF</th><th style={{ textAlign: "right" }}>Inscrições</th><th style={{ textAlign: "right" }}>%</th></tr></thead>
+              <tbody>
+                {data.por_uf.map((u) => (
+                  <tr key={u.uf}>
+                    <td>{u.uf}</td>
+                    <td style={{ textAlign: "right" }}>{nf.format(Number(u.inscricoes_cadastradas))}</td>
+                    <td style={{ textAlign: "right" }}>{pctInsc(Number(u.inscricoes_cadastradas))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 5" }}>
