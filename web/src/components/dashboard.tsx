@@ -29,7 +29,7 @@ type DocsData = {
 };
 
 type MedData = {
-  kpis: { inscricoes: number; inscricoes_ativas: number; ativos: number; medicos_com_emissao: number };
+  kpis: { inscricoes: number; ativos: number };
   novos_mensal: { mes: string; novos: string }[];
   por_uf: { uf: string; inscricoes_cadastradas: string; medicos_ativos: string }[];
   inatividade: { faixa: string; medicos: string }[];
@@ -514,20 +514,20 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
         <div className="meta">snapshot na última carga · {de} → {ate}</div>
       </div>
       {carregando && <Processando />}
-      <KpiCard label="Inscrições cadastradas" value={nf.format(k.inscricoes)} meta="CRM/UF (snapshot)" />
-      <KpiCard label="Médicos ativos" value={nf.format(k.ativos)} meta="in_situacao = A" />
-      <KpiCard label="Inscrições ativas" value={nf.format(k.inscricoes_ativas)} meta="snapshot" />
-      <KpiCard label="Emissões no período" value={nf.format(k.medicos_com_emissao)} meta="médicos distintos" />
+      <div style={{ gridColumn: "span 3", display: "flex", flexDirection: "column", gap: 12 }}>
+        <KpiCard label="Inscrições cadastradas" value={nf.format(k.inscricoes)} meta="CRM/UF (snapshot)" />
+        <KpiCard label="Médicos ativos" value={nf.format(k.ativos)} meta="CPF únicos · aceite do termo" />
+      </div>
 
-      <article className="card chart-main" style={{ gridColumn: "span 12" }}>
+      <article className="card chart-main" style={{ gridColumn: "span 9" }}>
         <div className="section-title">
           <h2>Novos médicos por mês</h2>
-          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês (escala própria)</span></div>
+          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês</span></div>
         </div>
         <div className="chart">
           <BarChart rows={novosAcumulados} bars={novosMensal} />
         </div>
-        <div className="sub" style={{ marginTop: 4 }}>Aceite do termo (<code>tb_usuario</code>) · Acumulado: <b style={{ color: "var(--va)" }}>{nf.format(acumuladoNovos)}</b></div>
+        <div className="sub" style={{ marginTop: 4 }}>Novos médicos por mês · Acumulado: <b style={{ color: "var(--va)" }}>{nf.format(acumuladoNovos)}</b></div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 7" }}>

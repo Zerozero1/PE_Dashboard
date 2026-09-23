@@ -8,20 +8,13 @@ export async function GET(req: NextRequest) {
   const uf = url.searchParams.get("uf") || null;
 
   try {
-    const [snapshot, emissores, novos, porUf, inatividade] = await Promise.all([
+    const [snapshot, novos, porUf, inatividade] = await Promise.all([
       query(
-        `SELECT sum(inscricoes_cadastradas) AS inscricoes,
-                sum(inscricoes_ativas) AS inscricoes_ativas,
-                sum(medicos_ativos) AS ativos
+        `SELECT inscricoes_cadastradas AS inscricoes,
+                medicos_ativos AS ativos
            FROM prescricao.fato_medico_snapshot
-          WHERE ($1::text IS NULL OR sg_uf = $1)`,
+          WHERE sg_uf = COALESCE($1::text, '--')`,
         [uf]
-      ),
-      query(
-        `SELECT count(DISTINCT id_medico) AS medicos_com_emissao
-           FROM prescricao.fato_documento_medico_dia
-          WHERE dia BETWEEN $1 AND $2 AND ($3::text IS NULL OR sg_uf = $3)`,
-        [de, ate, uf]
       ),
       query(
         `SELECT to_char(dia,'YYYY-MM') AS mes, sum(novos_aceite_termo) AS novos
@@ -33,6 +26,7 @@ export async function GET(req: NextRequest) {
       query(
         `SELECT sg_uf AS uf, inscricoes_cadastradas, medicos_ativos
            FROM prescricao.fato_medico_snapshot
+          WHERE sg_uf <> '--'
           ORDER BY inscricoes_cadastradas DESC`
       ),
       query(
@@ -61,9 +55,7 @@ export async function GET(req: NextRequest) {
       ate,
       kpis: {
         inscricoes: Number(s?.inscricoes ?? 0),
-        inscricoes_ativas: Number(s?.inscricoes_ativas ?? 0),
         ativos: Number(s?.ativos ?? 0),
-        medicos_com_emissao: Number(emissores.rows[0]?.medicos_com_emissao ?? 0),
       },
       novos_mensal: novos.rows,
       por_uf: porUf.rows,

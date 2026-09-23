@@ -10,14 +10,25 @@ def main():
 
     cur = origin.cursor()
     cur.execute(
-        "SELECT sg_uf, count(*) AS inscricoes, "
-        "count(*) FILTER (WHERE in_situacao = 'A') AS ativos "
-        "FROM prescricao.tb_medico GROUP BY sg_uf")
-    rows = [(uf, tot, atv, atv) for uf, tot, atv in cur.fetchall()]
+        "SELECT m.sg_uf, count(*) AS inscricoes, "
+        "count(DISTINCT p.nu_cpf) FILTER (WHERE u.dh_aceite_termo IS NOT NULL) AS ativos "
+        "FROM prescricao.tb_medico m "
+        "LEFT JOIN prescricao.tb_usuario u ON u.id_pessoa = m.id_pessoa "
+        "LEFT JOIN prescricao.tb_pessoa p ON p.id_pessoa = m.id_pessoa "
+        "GROUP BY m.sg_uf")
+    rows = [(uf, tot, atv) for uf, tot, atv in cur.fetchall()]
+    cur.execute(
+        "SELECT count(*) AS inscricoes, "
+        "count(DISTINCT p.nu_cpf) FILTER (WHERE u.dh_aceite_termo IS NOT NULL) AS ativos "
+        "FROM prescricao.tb_medico m "
+        "LEFT JOIN prescricao.tb_usuario u ON u.id_pessoa = m.id_pessoa "
+        "LEFT JOIN prescricao.tb_pessoa p ON p.id_pessoa = m.id_pessoa")
+    tot, atv = cur.fetchone()
+    rows.append(("--", tot, atv))
     upsert_rows(dw, "prescricao.fato_medico_snapshot",
-                ["sg_uf", "inscricoes_cadastradas", "inscricoes_ativas",
-                 "medicos_ativos"], rows, ["sg_uf"])
-    log(f"fato_medico_snapshot: {len(rows)} UFs")
+                ["sg_uf", "inscricoes_cadastradas", "medicos_ativos"],
+                rows, ["sg_uf"])
+    log(f"fato_medico_snapshot: {len(rows)} UFs + total global ('--')")
 
     cur.execute(
         "SELECT u.dh_aceite_termo AS dia, m.sg_uf, count(DISTINCT m.id_pessoa) "

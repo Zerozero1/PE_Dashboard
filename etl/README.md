@@ -31,7 +31,7 @@ $env:DW_HOST='172.16.7.112'; $env:DW_DB='prescricao_dw'; $env:DW_USER='usr_presc
 | `setup.py` | Aplica `schema.sql` + `ddl_extra.sql` (idempotente). Criar/atualizar estrutura no DW. |
 | `load_dims.py` | Carrega dimensões: dim_data, dim_uf, dim_tipo_documento, dim_medico, dim_especialidade, dim_unidade. |
 | `load_fatos.py <modo>` | Fatos de documentos, em modos: `docs`, `origem`, `especialidade`, `unidade`, `medico`, `pacientes`. |
-| `load_medicos.py` | `fato_medico_snapshot` (contagens correntes por UF) + `fato_medico_dia.novos_aceite_termo` + `medicos_com_emissao` (derivado do DW). |
+| `load_medicos.py` | `fato_medico_snapshot` (inscrições CRM/UF e CPFs únicos com aceite, por UF + total global `--`) + `fato_medico_dia.novos_aceite_termo` + `medicos_com_emissao` (derivado do DW). |
 | `load_anomalias.py` | `fato_auditoria_dia`: anomalias AN1–AN4 calculadas no DW (média de referência = todos os médicos). |
 | `run_all.py` | Pipeline completo e idempotente (dims → fatos → anomalias). ~30–40 min. |
 | `jobs.py` | Orquestração via fila `dashboard_refresh_job` (ver abaixo). |
@@ -71,7 +71,7 @@ Fatos:
 - `fato_documento_medico_dia` (dia, sg_uf, id_medico, documentos)
 - `fato_documento_paciente_dia` (dia, sg_uf, pacientes_distintos)
 - `fato_medico_dia` (dia, sg_uf, novos_aceite_termo, medicos_com_emissao)
-- `fato_medico_snapshot` (sg_uf, inscricoes_cadastradas, inscricoes_ativas, medicos_ativos, atualizado_em)
+- `fato_medico_snapshot` (sg_uf, inscricoes_cadastradas, medicos_ativos, atualizado_em; inclui `sg_uf='--'` com totais globais)
 - `fato_auditoria_dia` (dia, tipo_anomalia, dimensao_afetada, valor_observado, valor_esperado, desvio, severidade)
 
 Staging: `stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_especialidade_dia`, `stg_documento_unidade_dia`, `stg_documento_medico_dia`.
@@ -87,7 +87,8 @@ Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 | UF dos documentos | UF da unidade de atendimento (`tb_unidade_atendimento.sg_uf`); NULL e `BR` → `--` |
 | Assinados / cancelados | colunas agregadas: `assinados` = `in_assinado='S'`, `cancelados` = `in_cancelado='S'`; `nao_assinados` = `documentos - assinados` (sem filtro por assinatura — grão sem `in_assinado`) |
 | Origem de criação | `ds_origem_criacao` (NULL ou vazio → `NAO_INFORMADO`); histórica incompleta (ver ressalvas) |
-| Médico ativo | `tb_medico.in_situacao = 'A'` (snapshot) |
+| Médico ativo | CPF único (`tb_pessoa.nu_cpf`) de médicos com aceite do termo (`tb_usuario.dh_aceite_termo`); sem relação com `in_situacao` (definição alterada 2026-09-23) |
+| Inscrições cadastradas | linhas de `tb_medico` (1 por CRM/UF) |
 | Novos médicos | `tb_usuario.dh_aceite_termo` (aceite do termo = primeiro uso; ~94% preenchido, janela completa do sistema); join `tb_usuario.id_pessoa = tb_medico.id_pessoa`; `count(DISTINCT id_pessoa)` por dia×UF — pessoa com inscrições em mais de uma UF conta em cada uma |
 | Anomalias AN1–AN4 | observado vs média móvel 30 dias de **todos os médicos**; severidade 2x/3x/5x |
 

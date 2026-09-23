@@ -222,7 +222,7 @@ Trade-off:
 - metricas:
   - novos_aceite_termo (aceite do termo em `tb_usuario` = primeiro uso; substituiu `dh_atualizacao` em 2026-09-23 — proxy invalidado por atualizacao em massa da origem)
   - medicos_com_emissao (distintos por dia)
-- Contagens correntes de cadastro (inscricoes cadastradas/ativas, medicos ativos) ficam em `fato_medico_snapshot` (a origem nao guarda historico de cadastro).
+- Contagens correntes ficam em `fato_medico_snapshot`: `inscricoes_cadastradas` (linhas CRM/UF) e `medicos_ativos` (CPF unicos com aceite do termo); inclui linha `sg_uf='--'` com totais globais.
 
 `fato_dispensacao_dia` — REMOVIDA (2026-09-23): a visao Dispensacoes foi descontinuada; a fato e as dimensoes de dispensacao foram excluidas do datamart e do pipeline. Nota historica: a fonte temporal correta era `tb_historico_dispensacao.dh_historico_dispensacao` (status D), nao `tb_dispensacao.dh_documento` (~99,97% NULL).
 
@@ -276,7 +276,7 @@ Validado via MCP PostgreSQL (`usr_select`, `bd_cfm` 13.8). Verdict por requisito
 
 `fato_medico_dia` — PARCIALMENTE VIAVEL, com decisoes registradas:
 - "Novos medicos por mes": DECISAO 2026-09-23 — usar `tb_usuario.dh_aceite_termo` (aceite do termo = primeiro uso do sistema; join via `id_pessoa`; ~94% preenchido, janela completa desde 2021-10). O proxy anterior (`tb_medico.dh_atualizacao`) foi invalidado por atualizacao em massa do cadastro (59k registros tocados em um unico dia de set/2026).
-- "Medico ativo": DECISAO — `in_situacao = 'A'` (65,1%). NULL (19,4%) e demais valores tratados como nao ativos; expor NULL como categoria propria nos relatorios.
+- "Medico ativo": DECISAO 2026-09-23 (revoga decisao 2026-09-21 de `in_situacao='A'`) — CPF unico (`tb_pessoa.nu_cpf`) de medicos com aceite do termo (`tb_usuario.dh_aceite_termo` not null). Sem relacao com `in_situacao`.
 - `in_tipo_inscricao`: P=70,6%, S=9,9%, V=0,1%, NULL=19,4%.
 
 `fato_dispensacao_dia` — FONTE CORRIGIDA:
@@ -366,7 +366,7 @@ Graficos:
 - Matriz de inatividade por faixa de dias sem uso.
 
 Cuidados:
-- "Medico ativo" (DECISAO 2026-09-21): `tb_medico.in_situacao = 'A'`. NULL e demais valores sao nao ativos; exibir NULL como categoria propria.
+- "Medico ativo" (DECISAO 2026-09-23): CPF unico de medicos com aceite do termo. (A definicao anterior por `in_situacao='A'` foi revogada.)
 - "Novos medicos por mes" (DECISAO 2026-09-23): usar `tb_usuario.dh_aceite_termo` (aceite do termo) via `id_pessoa`; contagem distinta de pessoa por dia×UF.
 - "Inativo" por regra operacional, por exemplo 30/60/90/120 dias sem emissao.
 
@@ -439,7 +439,7 @@ Notas:
 | 4 | Documentos | Donut | Distribuicao por tipo de documento | fato_documento_dia, dim_tipo_documento | Soma por tipo | P,U,E,S | Nome oficial via dim_tipo_documento |
 | 5 | Documentos | Tabela hierarquica | UF -> tipo de documento | fato_documento_dia, dim_uf, dim_tipo_documento | Soma por UF+tipo | P,S | Sem drill nominal medico/paciente no MVP |
 | 6 | Documentos | Ranking (barras) | Documentos por especialidade | fato_documento_dia, dim_especialidade | Soma por especialidade | P,U,T | Pre-agregar no ETL (join rl_med_especialidade_consulta e caro) |
-| 7 | Medicos | Cards KPI | Inscricoes cadastradas, medicos cadastrados, ativos, inscricoes ativas, medicos que emitiram no periodo | fato_medico_dia, dim_medico, fato_documento_dia | Distinct por data de referencia | P,U,E | Ativo = in_situacao 'A' (decisao 14) |
+| 7 | Medicos | Cards KPI | Inscricoes cadastradas (CRM/UF) e medicos ativos (CPF unicos com aceite do termo) | fato_medico_snapshot | Snapshot por UF + total global | U | Ativo = CPF com aceite (decisao 2026-09-23) |
 | 8 | Medicos | Mapa Brasil | Medicos ativos por UF | fato_medico_dia, dim_uf | Distinct por UF (snapshot) | U | Snapshot da ultima carga |
 | 9 | Medicos | Barras horizontais | Ranking de medicos por UF | fato_medico_dia, dim_uf | Distinct por UF | U,E | |
 | 10 | Medicos | Linha | Total acumulado de medicos por mes | fato_medico_dia, dim_data | Soma acumulada por ano_mes | P,U | |
@@ -682,7 +682,7 @@ Atividades:
 - Confirmar usuario de leitura da base origem. (RESOLVIDO: `usr_select`, somente leitura)
 - Confirmar politica de acesso para administradores e auditores. (RESOLVIDO 2026-09-21: perfil unico; config de carga restrita a mrichard@portalmedico.org.br)
 - Confirmar janela historica inicial. (RESOLVIDO 2026-09-21: desde 2021-11)
-- Confirmar definicoes de medico ativo, inscricao ativa, assinatura AE/CD e inatividade. (RESOLVIDO 2026-09-21: ativo=`in_situacao='A'`; assinatura unica sem AE/CD; inatividade por faixas sem emissao. Novos medicos: `dh_aceite_termo` desde 2026-09-23)
+- Confirmar definicoes de medico ativo, inscricao ativa, assinatura AE/CD e inatividade. (RESOLVIDO 2026-09-21: assinatura unica sem AE/CD; inatividade por faixas sem emissao. 2026-09-23: medico ativo = CPF unico com aceite do termo; novos medicos = `dh_aceite_termo`)
 - Confirmar horario padrao da carga. (RESOLVIDO 2026-09-21: 02:00 BRT)
 - Confirmar exportacao. (RESOLVIDO 2026-09-21: nao permitida no MVP)
 
@@ -801,7 +801,7 @@ Risco: dependencia de mapa externo.
 
 1. Assinatura de dispensacao: um unico tipo; assinada = `tb_dispensacao.in_assinado='S'`. Sem distincao AE/CD.
 2. UF dos documentos: UF da unidade de atendimento (`tb_unidade_atendimento.sg_uf`).
-3. Medico ativo: `tb_medico.in_situacao='A'`; NULL e demais valores tratados como nao ativos.
+3. Medico ativo: REVOGADA em 2026-09-23 a regra `tb_medico.in_situacao='A'`; nova regra: CPF unico de medicos com aceite do termo (`tb_usuario.dh_aceite_termo`).
 4. Novos medicos por mes: usar `tb_usuario.dh_aceite_termo` (aceite do termo). REVOGADA em 2026-09-23 a regra anterior (`dh_atualizacao` como proxy de cadastro — invalidada por atualizacao em massa da origem).
 5. Indices: solicitar ao DBA indices em `tb_consulta_documento.dh_documento`, `tb_consulta.dt_consulta`, `tb_historico_dispensacao.dh_historico_dispensacao` e FKs de dispensacao.
 6. Auditoria: nao usar a tabela de auditoria da base relacional; visao alimentada somente por anomalias das fatos, com media de referencia calculada sobre todos os medicos.

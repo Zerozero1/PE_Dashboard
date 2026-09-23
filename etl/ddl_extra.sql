@@ -56,7 +56,6 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_documento_medico_dia (
 CREATE TABLE IF NOT EXISTS prescricao.fato_medico_snapshot (
     sg_uf CHAR(2) PRIMARY KEY,
     inscricoes_cadastradas BIGINT NOT NULL,
-    inscricoes_ativas BIGINT NOT NULL,
     medicos_ativos BIGINT NOT NULL,
     atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
