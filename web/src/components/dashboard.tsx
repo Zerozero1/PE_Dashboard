@@ -242,7 +242,7 @@ function BarChart({ rows, bars, w = 800, h = 220 }: { rows: { x: string; v: numb
   );
 }
 
-function LinesChart({ meses, series }: { meses: string[]; series: { nome: string; cor: string; valores: (number | null)[] }[] }) {
+function LinesChart({ meses, series }: { meses: string[]; series: { nome: string; cor: string; dash?: string; valores: (number | null)[] }[] }) {
   const pad = 40;
   const w = 800;
   const h = 220;
@@ -268,9 +268,9 @@ function LinesChart({ meses, series }: { meses: string[]; series: { nome: string
         const pts = s.valores.map((v, i) => `${pad + i * step},${h - ((v ?? 0) / max) * (h - 26)}`).join(" ");
         return (
           <g key={s.nome}>
-            <polyline fill="none" stroke={s.cor} strokeWidth="2" points={pts} />
+            <polyline fill="none" stroke={s.cor} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={s.dash} points={pts} />
             {s.valores.map((v, i) => v !== null && (
-              <circle key={i} cx={pad + i * step} cy={h - ((v ?? 0) / max) * (h - 26)} r="2" fill={s.cor}>
+              <circle key={i} cx={pad + i * step} cy={h - ((v ?? 0) / max) * (h - 26)} r="3" fill={s.cor} stroke="#0d121a" strokeWidth="1">
                 <title>{`${meses[i]} · ${s.nome}: ${nf.format(v)}`}</title>
               </circle>
             ))}
@@ -378,11 +378,11 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
   const ultimo = data.serie_mensal[data.serie_mensal.length - 1];
   const [uy, um] = ultimo ? ultimo.mes.split("-") : ["", ""];
   const ultimoLabel = um ? `${MESES[Number(um) - 1]}/${String(uy).slice(2)}` : "—";
-  const ORIGENS: { key: string; nome: string; cor: string }[] = [
-    { key: "WEB", nome: "Web", cor: "var(--va)" },
-    { key: "WEB-MOBILE", nome: "Web mobile", cor: "#22d3ee" },
-    { key: "IOS", nome: "iOS", cor: "#f472b6" },
-    { key: "ANDROID", nome: "Android", cor: "#34d399" },
+  const ORIGENS: { key: string; nome: string; cor: string; dash?: string }[] = [
+    { key: "WEB", nome: "Web", cor: "#60a5fa" },
+    { key: "WEB-MOBILE", nome: "Web mobile", cor: "#fbbf24", dash: "7 5" },
+    { key: "IOS", nome: "iOS", cor: "#f472b6", dash: "2 4" },
+    { key: "ANDROID", nome: "Android", cor: "#4ade80", dash: "10 4 2 4" },
   ];
   const mesesOrigem = Array.from(new Set(data.serie_origem.map((s) => s.mes))).sort();
   const mapOrigem = new Map(data.serie_origem.map((s) => [`${s.mes}|${s.origem}`, Number(s.documentos)]));
@@ -390,6 +390,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
     .map((o) => ({
       nome: o.nome,
       cor: o.cor,
+      dash: o.dash,
       valores: mesesOrigem.map((m) => {
         const v = mapOrigem.get(`${m}|${o.key}`);
         return v === undefined ? null : v;
@@ -431,7 +432,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       <article className="card" style={{ gridColumn: "span 12" }}>
         <div className="section-title">
           <h2>Origem de criação por mês</h2>
-          <div className="legend">{seriesOrigem.map((s) => <span key={s.nome}><i style={{ background: s.cor }} />{s.nome}</span>)}</div>
+          <div className="legend">{seriesOrigem.map((s) => <span key={s.nome}><i style={{ background: s.cor, width: 18, height: 4, borderRadius: 2, alignSelf: "center" }} />{s.nome}</span>)}</div>
         </div>
         <div className="chart">
           <LinesChart meses={mesesOrigem} series={seriesOrigem} />
