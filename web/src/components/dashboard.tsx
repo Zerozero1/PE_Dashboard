@@ -525,10 +525,12 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
         <div className="meta">snapshot na última carga · {de} → {ate}</div>
       </div>
       {carregando && <Processando />}
-      <KpiCard label="Inscrições cadastradas" value={nf.format(k.inscricoes)} meta="CRM/UF" />
-      <KpiCard label="MÉDICOS CADASTRADOS" value={nf.format(k.ativos)} meta="CPF" />
+      <div style={{ gridColumn: "span 12", display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 14 }}>
+        <KpiCard label="Inscrições cadastradas" value={nf.format(k.inscricoes)} meta="CRM/UF" />
+        <KpiCard label="MÉDICOS CADASTRADOS" value={nf.format(k.ativos)} meta="CPF" />
+      </div>
 
-      <article className="card chart-main">
+      <article className="card" style={{ gridColumn: "span 6" }}>
         <div className="section-title">
           <h2>Novos médicos por mês</h2>
           <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês</span></div>
@@ -539,7 +541,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
         <div className="sub" style={{ marginTop: 4 }}>Novos médicos por mês · Acumulado: <b style={{ color: "var(--va)" }}>{nf.format(acumuladoNovos)}</b></div>
       </article>
 
-      <article className="card" style={{ gridColumn: "span 12" }}>
+      <article className="card" style={{ gridColumn: "span 6" }}>
         <div className="section-title">
           <h2>Médicos com emissão por mês</h2>
           <div className="legend"><span><i className="l1" />CPF distintos no mês</span></div>
