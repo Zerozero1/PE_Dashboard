@@ -37,15 +37,6 @@ type MedData = {
   emissores_30d: number;
 };
 
-type AudData = {
-  de: string;
-  ate: string;
-  por_dia: { dia: string; eventos: string }[];
-  tipos: { tipo: string; eventos: string }[];
-  dimensoes: { dimensao: string; eventos: string }[];
-  detalhe: { dia: string; tipo_anomalia: string; dimensao_afetada: string; valor_observado: string; valor_esperado: string; desvio: string; severidade: number }[];
-};
-
 type FiltrosData = { ufs: string[]; tipos: { id: number; nome: string }[] };
 
 function periodo(dias: number | "todos") {
@@ -75,7 +66,7 @@ type ViewId = (typeof VIEWS)[number];
 const VIEW_META: Record<ViewId, { title: string; subtitle: string; theme: string }> = {
   documentos: { title: "Documentos médicos", subtitle: "Emissões por período, UF, tipo e especialidade — UF da unidade de atendimento.", theme: "theme-cyan" },
   medicos: { title: "Médicos", subtitle: "Cadastro, situação da inscrição e atividade de prescrição por UF.", theme: "theme-cyan" },
-  auditoria: { title: "Auditoria", subtitle: "Anomalias agregadas — média de referência de todos os médicos · somente agregados.", theme: "theme-red" },
+  auditoria: { title: "Auditoria", subtitle: "Anomalias agregadas — média de referência de todos os médicos · somente agregados.", theme: "theme-cyan" },
 };
 
 const MIN_LON = -73.98, MAX_LAT = 5.27;
@@ -617,58 +608,23 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
   );
 }
 
-function AuditoriaView({ active }: { active: boolean }) {
+function AuditoriaView() {
   const [dias, setDias] = useState<"todos" | string>("todos");
   const [tipo, setTipo] = useState("");
   const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
-  const qs = `de=${de}&ate=${ate}&tipo=${tipo}`;
-  const { data, erro, carregando } = useApi<AudData>(`/api/dashboard/auditoria?${qs}`, active);
-  if (erro) return <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>;
-  if (!data) return <div className="card" style={{ gridColumn: "span 12", color: "#566271" }}>Carregando…</div>;
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
         <Sel label="Período" value={dias} onChange={setDias} options={[["todos", "Todos"], ["7", "7 dias"], ["30", "30 dias"], ["90", "90 dias"]]} />
-        <Sel label="Tipo de anomalia" value={tipo} onChange={setTipo} options={[["", "Todas"], ["AN1", "AN1 · Documentos"], ["AN2", "AN2 · Pacientes"], ["AN3", "AN3 · Tempo emissões"], ["AN4", "AN4 · Local"]]} />
+        <Sel label="Tipo de anomalia" value={tipo} onChange={setTipo} options={[
+          ["", "Todas"],
+          ["AN1", "AN1 · Documentos emitidos acima da média"],
+          ["AN2", "AN2 · Atendimentos de pacientes únicos acima da média"],
+          ["AN3", "AN3 · Tempo entre emissões acima da média"],
+          ["AN4", "AN4 · Documentos emitidos pelo local acima da média"],
+        ]} />
         <div className="meta">{de} → {ate} · somente agregados</div>
       </div>
-      {carregando && <Processando />}
-      <article className="card chart-main">
-        <div className="section-title"><h2>Eventos por dia</h2><div className="legend"><span><i className="l1" />Anomalias detectadas</span></div></div>
-        <div className="chart">
-          <BarChart rows={data.por_dia.map((d) => ({ x: d.dia.slice(5), v: Number(d.eventos) }))} />
-        </div>
-      </article>
-      <article className="card side-chart">
-        <div className="section-title"><h2>Tipos de anomalia</h2><span>ranking</span></div>
-        <RankRows rows={data.tipos.map((t) => ({ name: t.tipo, v: Number(t.eventos) }))} />
-      </article>
-      <article className="card" style={{ gridColumn: "span 7" }}>
-        <div className="section-title"><h2>Detalhe agregado — dia × dimensão × tipo</h2><span>observado vs. média esperada</span></div>
-        <table className="table">
-          <thead><tr><th>Dia</th><th>Anomalia</th><th>Dimensão</th><th>Observado</th><th>Média esperada</th><th>Desvio</th><th>Severidade</th></tr></thead>
-          <tbody>
-            {data.detalhe.slice(0, 30).map((r, i) => (
-              <tr key={i}>
-                <td>{String(r.dia).slice(0, 10)}</td>
-                <td>{r.tipo_anomalia}</td>
-                <td>{r.dimensao_afetada}</td>
-                <td>{nf.format(Number(r.valor_observado))}</td>
-                <td>{nf.format(Number(r.valor_esperado))}</td>
-                <td>{Number(r.desvio).toFixed(1)}x</td>
-                <td><span className={`badge ${Number(r.severidade) >= 5 ? "bad" : "warn"}`}>{r.severidade}x</span></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </article>
-      <article className="card" style={{ gridColumn: "span 5" }}>
-        <div className="section-title"><h2>Dimensões afetadas</h2><span>ranking</span></div>
-        <RankRows rows={data.dimensoes.map((d) => ({ name: d.dimensao, v: Number(d.eventos) }))} />
-      </article>
-      <article className="sql-box">
-        <span className="kw">SELECT</span> dia, tipo_anomalia, valor_observado, valor_esperado, desvio <span className="kw">FROM</span> prescricao.fato_auditoria_dia <span className="kw">WHERE</span> dia <span className="kw">BETWEEN</span> '{data.de}' <span className="kw">AND</span> '{data.ate}'
-      </article>
     </section>
   );
 }
@@ -766,7 +722,7 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
             </header>
             {v === "documentos" && <DocumentsView active={view === v} filtros={filtros} />}
             {v === "medicos" && <MedicosView active={view === v} filtros={filtros} />}
-            {v === "auditoria" && <AuditoriaView active={view === v} />}
+            {v === "auditoria" && <AuditoriaView />}
           </section>
         ))}
         <div className="footer">

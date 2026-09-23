@@ -1,10 +1,12 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-23 09:05 BRT_
+_Atualizado em: 2026-09-23 11:40 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python em Windows (maquina separada da aplicacao) e 3 visões: Documentos, Medicos, Auditoria.
 
 ## ✅ Última Sessão (Resumo)
+- Visao Auditoria simplificada (2026-09-23): removidos todos os objetos abaixo dos filtros (eventos por dia, rankings, tabela de detalhe, bloco SQL); a view ficou apenas com filtros Período + Tipo de anomalia. Chamada `useApi` da view removida (endpoint `/api/dashboard/auditoria` mantido no backend). Combos de anomalia agora com descricao completa (AN1 Documentos emitidos acima da media / AN2 Atendimentos de pacientes unicos / AN3 Tempo entre emissoes / AN4 Documentos pelo local). Tema da visao trocado de `theme-red` para `theme-cyan` (padrao das demais abas).
+- Tag de filtro (2026-09-23): KPIs/graficos/tabelas das visoes Documentos e Medicos ganharam tag em circulo com a letra "F" quando algum filtro difere de "Todos"; legenda "F — Dados com filtro(s) aplicados" no rodape de cada visao. Regras por consulta: Documentos KPIs/emissoes/UF respondem a periodo+UF+tipo; tipo donut/origem/especialidade so a periodo+UF. Medicos: KPIs/novos/inatividade so a UF; grafico de emissao a periodo+UF; "Medicos por UF" nunca (sem tag).
 - KPI "Pacientes distintos" suprimido da visao Documentos (2026-09-23): cadastro de paciente nao e centralizado (id_paciente por vinculo medico; CPF preenchido em apenas 26,7%; sem CNS/externo). Impacto no datamart: NENHUM por ora — `fato_documento_paciente_dia` continua sendo gerada porque a AN2 (anomalia de atendimentos) depende dela. Se AN2 tambem for descontinuada, pode-se dropar a fato e economizar ~70s por carga do pipeline.
 - Documentacao das bases revisada (2026-09-23): `RESUMO_BASE_bd_cfm.md` (base relacional) atualizado — `tb_usuario` (490.670, 1:1, `dh_aceite_termo` 94% como proxy de primeiro uso), `tb_medico` (`dh_atualizacao` invalidado por atualizacoes em massa), `tb_pessoa.nu_cpf` (1:1). `etl/README.md` (base analitica) ja estava sincronizado.
 - Layout da visao Medicos reordenado (2026-09-23): KPIs "Inscricoes cadastradas"/"MEDICOS CADASTRADOS" lado a lado no alto (span 2, padrao de Documentos); "Novos medicos por mes" e "Medicos com emissao por mes" na mesma linha (span 6 cada); abaixo "Medicos por UF" (7) + "Inatividade" (5).
