@@ -294,18 +294,19 @@ function Bars({ rows }: { rows: { x: string; v: number }[] }) {
   );
 }
 
-function Donut({ rows }: { rows: { label: string; v: number }[] }) {
+function Donut({ rows, cores, agruparOutros = true }: { rows: { label: string; v: number }[]; cores?: string[]; agruparOutros?: boolean }) {
   const total = rows.reduce((a, b) => a + b.v, 0);
-  const sorted = [...rows].sort((a, b) => b.v - a.v);
-  const principais = total > 0 ? sorted.filter((r) => (r.v / total) * 100 >= 2) : sorted;
-  const resto = total > 0 ? sorted.filter((r) => (r.v / total) * 100 < 2) : [];
+  const sorted = cores ? rows : [...rows].sort((a, b) => b.v - a.v);
+  const principais = agruparOutros && total > 0 ? sorted.filter((r) => (r.v / total) * 100 >= 2) : sorted;
+  const resto = agruparOutros && total > 0 ? sorted.filter((r) => (r.v / total) * 100 < 2) : [];
   const data = resto.length > 0 ? [...principais, { label: "Outros", v: resto.reduce((a, b) => a + b.v, 0) }] : principais;
-  const cores = ["var(--va)", "var(--va2)", "#9a7cff", "#ffb454", "#ff647c", "#7db9e8", "#f2c94c", "#34d399", "#f472b6", "#a3e635", "#c084fc", "#fdba74"];
+  const coresPadrao = ["var(--va)", "var(--va2)", "#9a7cff", "#ffb454", "#ff647c", "#7db9e8", "#f2c94c", "#34d399", "#f472b6", "#a3e635", "#c084fc", "#fdba74"];
+  const paleta = cores ?? coresPadrao;
   let acc = 0;
   const stops = data.map((r, i) => {
     const start = (acc / total) * 100;
     acc += r.v;
-    return `${cores[i % cores.length]} ${start}% ${(acc / total) * 100}%`;
+    return `${paleta[i % paleta.length]} ${start}% ${(acc / total) * 100}%`;
   }).join(", ");
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -321,7 +322,7 @@ function Donut({ rows }: { rows: { label: string; v: number }[] }) {
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
         {data.map((r, i) => (
           <li key={r.label} style={{ display: "flex", gap: 7, fontSize: 10, color: "#8d99a7", marginBottom: 6 }}>
-            <i style={{ width: 9, height: 9, borderRadius: 2, background: cores[i % cores.length], flex: "none" }} />
+            <i style={{ width: 9, height: 9, borderRadius: 2, background: paleta[i % paleta.length], flex: "none" }} />
             {r.label}
             <b style={{ marginLeft: "auto", paddingLeft: 12, color: "#c3ccd6" }}>{total ? Math.round((r.v / total) * 100) : 0}%</b>
           </li>
@@ -397,6 +398,11 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
   const totalUf = data.por_uf.reduce((a, u) => a + Number(u.docs), 0);
   const pctUf = (v: number, t: number) => `${(t > 0 ? ((v / t) * 100).toFixed(1) : "0.0").replace(".", ",")}%`;
   const milUf = (v: number) => Math.round(v / 1000).toLocaleString("pt-BR");
+  const totOrigem = new Map<string, number>();
+  data.serie_origem.forEach((s) => totOrigem.set(s.origem, (totOrigem.get(s.origem) ?? 0) + Number(s.documentos)));
+  const donutOrigem = ORIGENS
+    .map((o) => ({ label: o.nome, v: totOrigem.get(o.key) ?? 0, cor: o.cor }))
+    .filter((r) => r.v > 0);
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
@@ -429,13 +435,23 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
         <Donut rows={data.por_tipo.map((t) => ({ label: t.tipo, v: Number(t.docs) }))} />
       </article>
 
-      <article className="card" style={{ gridColumn: "span 12" }}>
+      <article className="card" style={{ gridColumn: "span 6" }}>
         <div className="section-title">
           <h2>Origem de criação por mês</h2>
           <div className="legend">{seriesOrigem.map((s) => <span key={s.nome}><i style={{ background: s.cor, width: 18, height: 4, borderRadius: 2, alignSelf: "center" }} />{s.nome}</span>)}</div>
         </div>
         <div className="chart">
           <LinesChart meses={mesesOrigem} series={seriesOrigem} />
+        </div>
+      </article>
+
+      <article className="card" style={{ gridColumn: "span 6" }}>
+        <div className="section-title">
+          <h2>Participação por origem</h2>
+          <span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 230 }}>
+          <Donut rows={donutOrigem} cores={donutOrigem.map((r) => r.cor)} agruparOutros={false} />
         </div>
       </article>
 
