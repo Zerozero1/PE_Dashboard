@@ -72,7 +72,7 @@ type ViewId = (typeof VIEWS)[number];
 
 const VIEW_META: Record<ViewId, { title: string; subtitle: string; theme: string }> = {
   documentos: { title: "Documentos médicos", subtitle: "Emissões por período, UF, tipo e especialidade — UF da unidade de atendimento.", theme: "theme-cyan" },
-  medicos: { title: "Médicos", subtitle: "Cadastro, situação da inscrição e atividade de prescrição por UF.", theme: "theme-blue" },
+  medicos: { title: "Médicos", subtitle: "Cadastro, situação da inscrição e atividade de prescrição por UF.", theme: "theme-cyan" },
   auditoria: { title: "Auditoria", subtitle: "Anomalias agregadas — média de referência de todos os médicos · somente agregados.", theme: "theme-red" },
 };
 
@@ -520,7 +520,9 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
 
       <article className="card side-chart">
         <div className="section-title"><h2>Médicos por UF</h2><span>inscrições cadastradas</span></div>
-        <RankRows rows={data.por_uf.slice(0, 8).map((u) => ({ name: u.uf, v: Number(u.inscricoes_cadastradas) }))} />
+        <div className="uf-scroll" style={{ maxHeight: 240, overflowY: "auto", paddingRight: 4 }}>
+          <RankRows showPct rows={data.por_uf.map((u) => ({ name: u.uf, v: Number(u.inscricoes_cadastradas) }))} />
+        </div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 7" }}>
