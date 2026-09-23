@@ -240,28 +240,30 @@ function LinesChart({ meses, series }: { meses: string[]; series: { nome: string
   const iw = w - pad;
   const max = Math.max(...series.flatMap((s) => s.valores.map((v) => v ?? 0)), 1);
   const step = meses.length > 1 ? iw / (meses.length - 1) : 0;
-  const ticks = [0, 0.25, 0.5, 0.75, 1];
+  const ticks: number[] = [];
+  for (let k = 0; Math.pow(10, k) <= max; k++) ticks.push(Math.pow(10, k));
+  const yPos = (v: number) => h - (Math.log10(Math.max(v, 1)) / Math.log10(max)) * (h - 26);
   const n = meses.length;
   const xStep = Math.max(Math.ceil((n - 1) / 8), 1);
   const xIdx = Array.from(new Set([0, ...Array.from({ length: n }, (_, i) => i).filter((i) => i % xStep === 0), n - 1]));
   return (
     <svg viewBox={`0 0 ${w + 52} ${h + 48}`} style={{ width: "100%", height: "auto" }}>
-      {ticks.map((f) => {
-        const y = h - f * (h - 26);
+      {ticks.map((t) => {
+        const y = yPos(t);
         return (
-          <g key={`l${f}`}>
+          <g key={`l${t}`}>
             <line x1={pad} x2={w} y1={y} y2={y} stroke="rgba(255,255,255,.07)" />
-            <text x={pad - 8} y={y + 3} fontSize="9" fill="#9fb0c1" textAnchor="end">{nfc.format(max * f)}</text>
+            <text x={pad - 8} y={y + 3} fontSize="9" fill="#9fb0c1" textAnchor="end">{nfc.format(t)}</text>
           </g>
         );
       })}
       {series.map((s) => {
-        const pts = s.valores.map((v, i) => `${pad + i * step},${h - ((v ?? 0) / max) * (h - 26)}`).join(" ");
+        const pts = s.valores.map((v, i) => `${pad + i * step},${yPos(v ?? 0)}`).join(" ");
         return (
           <g key={s.nome}>
             <polyline fill="none" stroke={s.cor} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={s.dash} points={pts} />
             {s.valores.map((v, i) => v !== null && (
-              <circle key={i} cx={pad + i * step} cy={h - ((v ?? 0) / max) * (h - 26)} r="3" fill={s.cor} stroke="#0d121a" strokeWidth="1">
+              <circle key={i} cx={pad + i * step} cy={yPos(v ?? 0)} r="3" fill={s.cor} stroke="#0d121a" strokeWidth="1">
                 <title>{`${meses[i]} · ${s.nome}: ${nf.format(v)}`}</title>
               </circle>
             ))}
