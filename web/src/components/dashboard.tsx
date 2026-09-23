@@ -531,10 +531,10 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
       </article>
 
       <article className="card" style={{ gridColumn: "span 7" }}>
-        <div className="section-title"><h2>Médicos por UF</h2><span>mapa — ativos · tabela — inscrições</span></div>
+        <div className="section-title"><h2>Médicos por UF</h2><span>inscrições cadastradas (CRM/UF)</span></div>
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ flex: 1.1, minWidth: 0 }}>
-            <MapBr rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.medicos_ativos) }))} />
+            <MapBr rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.inscricoes_cadastradas) }))} />
           </div>
           <div className="uf-scroll" style={{ flex: 1, maxHeight: 292, overflowY: "auto", paddingRight: 4 }}>
             <table className="table" style={{ fontSize: 10 }}>
