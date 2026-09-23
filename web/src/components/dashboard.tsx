@@ -294,7 +294,7 @@ function Bars({ rows }: { rows: { x: string; v: number }[] }) {
   );
 }
 
-function Donut({ rows, cores, agruparOutros = true }: { rows: { label: string; v: number }[]; cores?: string[]; agruparOutros?: boolean }) {
+function Donut({ rows, cores, agruparOutros = true, pctDec = 0 }: { rows: { label: string; v: number }[]; cores?: string[]; agruparOutros?: boolean; pctDec?: number }) {
   const total = rows.reduce((a, b) => a + b.v, 0);
   const sorted = cores ? rows : [...rows].sort((a, b) => b.v - a.v);
   const principais = agruparOutros && total > 0 ? sorted.filter((r) => (r.v / total) * 100 >= 2) : sorted;
@@ -324,7 +324,7 @@ function Donut({ rows, cores, agruparOutros = true }: { rows: { label: string; v
           <li key={r.label} style={{ display: "flex", gap: 7, fontSize: 10, color: "#8d99a7", marginBottom: 6 }}>
             <i style={{ width: 9, height: 9, borderRadius: 2, background: paleta[i % paleta.length], flex: "none" }} />
             {r.label}
-            <b style={{ marginLeft: "auto", paddingLeft: 12, color: "#c3ccd6" }}>{total ? Math.round((r.v / total) * 100) : 0}%</b>
+            <b style={{ marginLeft: "auto", paddingLeft: 12, color: "#c3ccd6" }}>{total ? ((r.v / total) * 100).toFixed(pctDec).replace(".", ",") : "0"}%</b>
           </li>
         ))}
       </ul>
@@ -451,7 +451,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
           <span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 230 }}>
-          <Donut rows={donutOrigem} cores={donutOrigem.map((r) => r.cor)} agruparOutros={false} />
+          <Donut rows={donutOrigem} cores={donutOrigem.map((r) => r.cor)} agruparOutros={false} pctDec={1} />
         </div>
       </article>
 
