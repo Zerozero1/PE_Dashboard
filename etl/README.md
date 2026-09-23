@@ -78,7 +78,7 @@ Staging: `stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_especia
 
 Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 
-Índices secundários: `fato_documento_dia(sg_uf,dia)`, `fato_documento_origem_dia(sg_uf,dia)`, `fato_documento_medico_dia(id_medico,dia)`, `fato_documento_especialidade_dia(id_medico_especialidade,dia)`, `fato_documento_unidade_dia(id_unidade_atendimento,dia)`, `dim_medico(sg_uf)`, `dashboard_refresh_job(status)`.
+Índices secundários: `fato_documento_dia(sg_uf,dia)`, `fato_documento_origem_dia(sg_uf,dia)`, `fato_documento_medico_dia(id_medico,dia)`, `fato_documento_medico_dia(sg_uf,dia)` (inatividade com filtro de UF), `fato_documento_especialidade_dia(id_medico_especialidade,dia)`, `fato_documento_unidade_dia(id_unidade_atendimento,dia)`, `fato_medico_dia(sg_uf,dia)`, `dim_medico(sg_uf)`, `dim_medico(id_pessoa)`, `dashboard_refresh_job(status)`.
 
 ## Definições de negócio aplicadas
 

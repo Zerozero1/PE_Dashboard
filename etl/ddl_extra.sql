@@ -78,3 +78,9 @@ ALTER TABLE prescricao.dim_medico
 
 CREATE INDEX IF NOT EXISTS idx_dim_medico_pessoa
     ON prescricao.dim_medico (id_pessoa);
+
+CREATE INDEX IF NOT EXISTS idx_fato_documento_medico_dia_uf
+    ON prescricao.fato_documento_medico_dia (sg_uf, dia);
+
+CREATE INDEX IF NOT EXISTS idx_fato_medico_dia_uf
+    ON prescricao.fato_medico_dia (sg_uf, dia);
