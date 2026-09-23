@@ -31,7 +31,7 @@ $env:DW_HOST='172.16.7.112'; $env:DW_DB='prescricao_dw'; $env:DW_USER='usr_presc
 | `setup.py` | Aplica `schema.sql` + `ddl_extra.sql` (idempotente). Criar/atualizar estrutura no DW. |
 | `load_dims.py` | Carrega dimensões: dim_data, dim_uf, dim_tipo_documento, dim_medico, dim_especialidade, dim_unidade. |
 | `load_fatos.py <modo>` | Fatos de documentos, em modos: `docs`, `origem`, `especialidade`, `unidade`, `medico`, `pacientes`. |
-| `load_medicos.py` | `fato_medico_snapshot` (contagens correntes por UF) + `fato_medico_dia.novos_por_dh_atualizacao` + `medicos_com_emissao` (derivado do DW). |
+| `load_medicos.py` | `fato_medico_snapshot` (contagens correntes por UF) + `fato_medico_dia.novos_aceite_termo` + `medicos_com_emissao` (derivado do DW). |
 | `load_anomalias.py` | `fato_auditoria_dia`: anomalias AN1–AN4 calculadas no DW (média de referência = todos os médicos). |
 | `run_all.py` | Pipeline completo e idempotente (dims → fatos → anomalias). ~30–40 min. |
 | `jobs.py` | Orquestração via fila `dashboard_refresh_job` (ver abaixo). |
@@ -70,7 +70,7 @@ Fatos:
 - `fato_documento_unidade_dia` (dia, sg_uf, id_unidade_atendimento, documentos)
 - `fato_documento_medico_dia` (dia, sg_uf, id_medico, documentos)
 - `fato_documento_paciente_dia` (dia, sg_uf, pacientes_distintos)
-- `fato_medico_dia` (dia, sg_uf, novos_por_dh_atualizacao, medicos_com_emissao)
+- `fato_medico_dia` (dia, sg_uf, novos_aceite_termo, medicos_com_emissao)
 - `fato_medico_snapshot` (sg_uf, inscricoes_cadastradas, inscricoes_ativas, medicos_ativos, atualizado_em)
 - `fato_auditoria_dia` (dia, tipo_anomalia, dimensao_afetada, valor_observado, valor_esperado, desvio, severidade)
 
@@ -88,7 +88,7 @@ Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 | Assinados / cancelados | colunas agregadas: `assinados` = `in_assinado='S'`, `cancelados` = `in_cancelado='S'`; `nao_assinados` = `documentos - assinados` (sem filtro por assinatura — grão sem `in_assinado`) |
 | Origem de criação | `ds_origem_criacao` (NULL ou vazio → `NAO_INFORMADO`); histórica incompleta (ver ressalvas) |
 | Médico ativo | `tb_medico.in_situacao = 'A'` (snapshot) |
-| Novos médicos | `tb_medico.dh_atualizacao::date` (proxy — origem sem data de cadastro) |
+| Novos médicos | `tb_usuario.dh_aceite_termo` (aceite do termo = primeiro uso; ~94% preenchido, janela completa do sistema); join `tb_usuario.id_pessoa = tb_medico.id_pessoa`; `count(DISTINCT id_pessoa)` por dia×UF — pessoa com inscrições em mais de uma UF conta em cada uma |
 | Anomalias AN1–AN4 | observado vs média móvel 30 dias de **todos os médicos**; severidade 2x/3x/5x |
 
 ## Ressalvas conhecidas

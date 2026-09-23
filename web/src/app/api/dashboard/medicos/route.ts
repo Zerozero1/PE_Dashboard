@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
         [de, ate, uf]
       ),
       query(
-        `SELECT to_char(dia,'YYYY-MM') AS mes, sum(novos_por_dh_atualizacao) AS novos
+        `SELECT to_char(dia,'YYYY-MM') AS mes, sum(novos_aceite_termo) AS novos
            FROM prescricao.fato_medico_dia
           WHERE ($1::text IS NULL OR sg_uf = $1)
           GROUP BY 1 ORDER BY 1`,

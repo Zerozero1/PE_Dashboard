@@ -6,7 +6,7 @@ from common import connect_dw, connect_origin, log, upsert_rows
 def main():
     origin = connect_origin()
     dw = connect_dw()
-    log("fato_medico_snapshot e novos por dh_atualizacao: iniciando")
+    log("fato_medico_snapshot e novos por aceite do termo: iniciando")
 
     cur = origin.cursor()
     cur.execute(
@@ -20,16 +20,17 @@ def main():
     log(f"fato_medico_snapshot: {len(rows)} UFs")
 
     cur.execute(
-        "SELECT dh_atualizacao::date AS dia, sg_uf, count(*) "
-        "FROM prescricao.tb_medico "
-        "WHERE dh_atualizacao IS NOT NULL "
+        "SELECT u.dh_aceite_termo AS dia, m.sg_uf, count(DISTINCT m.id_pessoa) "
+        "FROM prescricao.tb_medico m "
+        "JOIN prescricao.tb_usuario u ON u.id_pessoa = m.id_pessoa "
+        "WHERE u.dh_aceite_termo IS NOT NULL "
         "GROUP BY 1, 2")
     rows = cur.fetchall()
     cur.close()
     upsert_rows(dw, "prescricao.fato_medico_dia",
-                ["dia", "sg_uf", "novos_por_dh_atualizacao"], rows,
+                ["dia", "sg_uf", "novos_aceite_termo"], rows,
                 ["dia", "sg_uf"])
-    log(f"fato_medico_dia.novos_por_dh_atualizacao: {len(rows):,} linhas")
+    log(f"fato_medico_dia.novos_aceite_termo: {len(rows):,} linhas")
 
     cur = dw.cursor()
     cur.execute(

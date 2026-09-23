@@ -220,7 +220,7 @@ Trade-off:
 `fato_medico_dia`
 - grao: dia + UF + especialidade + situacao
 - metricas:
-  - novos_por_dh_atualizacao (proxy de cadastro)
+  - novos_aceite_termo (aceite do termo em `tb_usuario` = primeiro uso; substituiu `dh_atualizacao` em 2026-09-23 — proxy invalidado por atualizacao em massa da origem)
   - medicos_com_emissao (distintos por dia)
 - Contagens correntes de cadastro (inscricoes cadastradas/ativas, medicos ativos) ficam em `fato_medico_snapshot` (a origem nao guarda historico de cadastro).
 
@@ -275,7 +275,7 @@ Validado via MCP PostgreSQL (`usr_select`, `bd_cfm` 13.8). Verdict por requisito
 - Indices temporais serao solicitados ao DBA (decisao 2026-09-21): `tb_consulta_documento.dh_documento`, `tb_consulta.dt_consulta`, `tb_historico_dispensacao.dh_historico_dispensacao` e FKs de dispensacao.
 
 `fato_medico_dia` — PARCIALMENTE VIAVEL, com decisoes registradas:
-- "Novos medicos por mes": DECISAO — usar `tb_medico.dh_atualizacao` como proxy de cadastro (sem data de cadastro na origem).
+- "Novos medicos por mes": DECISAO 2026-09-23 — usar `tb_usuario.dh_aceite_termo` (aceite do termo = primeiro uso do sistema; join via `id_pessoa`; ~94% preenchido, janela completa desde 2021-10). O proxy anterior (`tb_medico.dh_atualizacao`) foi invalidado por atualizacao em massa do cadastro (59k registros tocados em um unico dia de set/2026).
 - "Medico ativo": DECISAO — `in_situacao = 'A'` (65,1%). NULL (19,4%) e demais valores tratados como nao ativos; expor NULL como categoria propria nos relatorios.
 - `in_tipo_inscricao`: P=70,6%, S=9,9%, V=0,1%, NULL=19,4%.
 
@@ -367,7 +367,7 @@ Graficos:
 
 Cuidados:
 - "Medico ativo" (DECISAO 2026-09-21): `tb_medico.in_situacao = 'A'`. NULL e demais valores sao nao ativos; exibir NULL como categoria propria.
-- "Novos medicos por mes" (DECISAO): usar `tb_medico.dh_atualizacao` como proxy de cadastro (na origem nao ha data de cadastro).
+- "Novos medicos por mes" (DECISAO 2026-09-23): usar `tb_usuario.dh_aceite_termo` (aceite do termo) via `id_pessoa`; contagem distinta de pessoa por dia×UF.
 - "Inativo" por regra operacional, por exemplo 30/60/90/120 dias sem emissao.
 
 ### 6.3 Visao Dispensacoes — REMOVIDA (2026-09-23)
@@ -443,7 +443,7 @@ Notas:
 | 8 | Medicos | Mapa Brasil | Medicos ativos por UF | fato_medico_dia, dim_uf | Distinct por UF (snapshot) | U | Snapshot da ultima carga |
 | 9 | Medicos | Barras horizontais | Ranking de medicos por UF | fato_medico_dia, dim_uf | Distinct por UF | U,E | |
 | 10 | Medicos | Linha | Total acumulado de medicos por mes | fato_medico_dia, dim_data | Soma acumulada por ano_mes | P,U | |
-| 11 | Medicos | Linha | Novos medicos por mes | fato_medico_dia, dim_data | Novos por mes (dh_atualizacao) | P,U | Proxy: primeira dh_atualizacao observada (decisao 14) |
+| 11 | Medicos | Linha | Novos medicos por mes | fato_medico_dia, dim_data | Novos por mes (dh_aceite_termo) | P,U | Aceite do termo em tb_usuario (decisao 2026-09-23) |
 | 12 | Medicos | Matriz/tabela | Inatividade por faixa de dias sem emissao (30/60/90/120) | fato_medico_dia, fato_documento_dia, dim_medico | Contagem por faixa | U | Regra operacional: ultima emissao |
 | 13–19 | Dispensacoes | — | REMOVIDAS (2026-09-23): visao Dispensacoes descontinuada | — | — | — | — |
 | 20 | Auditoria | Linha/barras | Anomalias detectadas por dia | fato_auditoria_dia | Contagem por dia | P(curto),TD,DIM | Sem registros individuais; exige filtros obrigatorios |
@@ -682,7 +682,7 @@ Atividades:
 - Confirmar usuario de leitura da base origem. (RESOLVIDO: `usr_select`, somente leitura)
 - Confirmar politica de acesso para administradores e auditores. (RESOLVIDO 2026-09-21: perfil unico; config de carga restrita a mrichard@portalmedico.org.br)
 - Confirmar janela historica inicial. (RESOLVIDO 2026-09-21: desde 2021-11)
-- Confirmar definicoes de medico ativo, inscricao ativa, assinatura AE/CD e inatividade. (RESOLVIDO 2026-09-21: ativo=`in_situacao='A'`; assinatura unica sem AE/CD; novos medicos via `dh_atualizacao`; inatividade por faixas sem emissao)
+- Confirmar definicoes de medico ativo, inscricao ativa, assinatura AE/CD e inatividade. (RESOLVIDO 2026-09-21: ativo=`in_situacao='A'`; assinatura unica sem AE/CD; inatividade por faixas sem emissao. Novos medicos: `dh_aceite_termo` desde 2026-09-23)
 - Confirmar horario padrao da carga. (RESOLVIDO 2026-09-21: 02:00 BRT)
 - Confirmar exportacao. (RESOLVIDO 2026-09-21: nao permitida no MVP)
 
@@ -802,7 +802,7 @@ Risco: dependencia de mapa externo.
 1. Assinatura de dispensacao: um unico tipo; assinada = `tb_dispensacao.in_assinado='S'`. Sem distincao AE/CD.
 2. UF dos documentos: UF da unidade de atendimento (`tb_unidade_atendimento.sg_uf`).
 3. Medico ativo: `tb_medico.in_situacao='A'`; NULL e demais valores tratados como nao ativos.
-4. Novos medicos por mes: usar `tb_medico.dh_atualizacao` como proxy de cadastro.
+4. Novos medicos por mes: usar `tb_usuario.dh_aceite_termo` (aceite do termo). REVOGADA em 2026-09-23 a regra anterior (`dh_atualizacao` como proxy de cadastro — invalidada por atualizacao em massa da origem).
 5. Indices: solicitar ao DBA indices em `tb_consulta_documento.dh_documento`, `tb_consulta.dt_consulta`, `tb_historico_dispensacao.dh_historico_dispensacao` e FKs de dispensacao.
 6. Auditoria: nao usar a tabela de auditoria da base relacional; visao alimentada somente por anomalias das fatos, com media de referencia calculada sobre todos os medicos.
 7. Base analitica (datamart) provisionada e testada (2026-09-21): base `prescricao_dw` em `172.16.7.112:5432`, PostgreSQL 13.7, usuario `usr_prescricao_dw` com gravacao confirmada (create/insert/select/drop) nos schemas `prescricao` e `staging` (ambos de propriedade do usuario) e em `public`.

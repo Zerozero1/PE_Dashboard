@@ -512,7 +512,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
       <KpiCard label="Emissões no período" value={nf.format(k.medicos_com_emissao)} meta="médicos distintos" />
 
       <article className="card chart-main">
-        <div className="section-title"><h2>Novos médicos por mês</h2><div className="legend"><span><i className="l1" />proxy dh_atualizacao</span></div></div>
+        <div className="section-title"><h2>Novos médicos por mês</h2><div className="legend"><span><i className="l1" />aceite do termo (tb_usuario)</span></div></div>
         <div className="chart">
           <BarChart rows={data.novos_mensal.map((s) => ({ x: s.mes, v: Number(s.novos) }))} />
         </div>

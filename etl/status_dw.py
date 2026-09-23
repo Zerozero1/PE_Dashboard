@@ -32,7 +32,7 @@ def main():
         "GROUP BY 1 ORDER BY 1")
     log(f"anomalias: {cur.fetchall()}")
     cur.execute(
-        "SELECT count(*) FROM prescricao.fato_medico_dia WHERE novos_por_dh_atualizacao > 0")
+        "SELECT count(*) FROM prescricao.fato_medico_dia WHERE novos_aceite_termo > 0")
     log(f"fato_medico_dia linhas com novos: {cur.fetchone()[0]:,}")
     dw.close()
 

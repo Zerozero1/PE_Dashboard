@@ -5,6 +5,7 @@ _Atualizado em: 2026-09-23 09:05 BRT_
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python em Windows (maquina separada da aplicacao) e 3 visões: Documentos, Medicos, Auditoria.
 
 ## ✅ Última Sessão (Resumo)
+- "Novos médicos por mês" trocou o proxy (2026-09-23): `tb_medico.dh_atualizacao` (invalidado por atualização em massa — pico de 278k em set/2026) → `tb_usuario.dh_aceite_termo` (aceite do termo = primeiro uso; 94% preenchido, janela completa 2021-10→hoje; join por id_pessoa, count DISTINCT por dia×UF). Fato recriada como `novos_aceite_termo` (45,4k linhas, 595,5k acumulado). Série agora coerente (~7–15k/mês, sazonalidade dez/jan).
 - Visao Dispensacoes REMOVIDA (2026-09-23): aba, componente, endpoint `/api/dashboard/dispensacoes`, tema `theme-green`, `load_dispensacoes.py`, `fato_dispensacao_dia` (7,9 MB) e `dim_farmaceutico` (11 MB) excluidos. Pipeline ganha ~25s por carga; docs sincronizadas (PLANO 5.1/5.2/6.3/6.5, consultas 13-19, endpoints, criterios de sucesso; etl/web READMEs).
 - Ajustes visao Documentos: rosca por tipo com todas as faixas >= 2% e "Outros" para o resto; tabela UF/Mil/% ao lado do mapa com scrollbar discreta; label do acumulado reposicionado; rodape do grafico de origem removido; paleta de alto contraste com tracos distintos no LinesChart; botao "Atualizar dados" so para admin; status de carga em PT-BR.
 - Grafico "Origem de criacao por mes" na visao Documentos (2026-09-23): nova fato `fato_documento_origem_dia` (dia+UF+`ds_origem_criacao`) alimenta serie `serie_origem` do endpoint; componente LinesChart (multi-linha SVG com legenda) responde a periodo/UF. Confirmado `ds_origem_criacao` na origem (WEB, WEB-MOBILE, IOS, ANDROID; ~70% NULL historico — serie so comparavel de meados de 2025 em diante).
@@ -44,7 +45,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 ## ⚠️ Pontos de Atencao
 - `usr_select` em `bd_cfm` e somente leitura; nenhuma gravacao na origem.
 - ETL sem os indices acima exigira varreduras pesadas (tb_consulta_documento: 43 GB).
-- `tb_medico` sem data de cadastro: "novos medicos" usa `dh_atualizacao` como proxy (decisao registrada).
+- `tb_medico` sem data de cadastro: "novos medicos" usa `tb_usuario.dh_aceite_termo` (aceite do termo; decisao 2026-09-23). `dh_atualizacao` e invalidado por atualizacoes em massa.
 - `tb_medico.ds_foto` (bytea, ~15 GB): nunca selecionar no ETL.
 - Auditoria da origem fora do escopo do dashboard (decisao registrada).
 - `usr_prescricao_dw` nao pode criar schemas em `prescricao_dw`; usar `prescricao`/`staging`.

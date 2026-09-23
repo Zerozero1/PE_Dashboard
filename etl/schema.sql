@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_documento_paciente_dia (
 CREATE TABLE IF NOT EXISTS prescricao.fato_medico_dia (
     dia DATE NOT NULL,
     sg_uf CHAR(2) NOT NULL,
-    novos_por_dh_atualizacao BIGINT NOT NULL DEFAULT 0,
+    novos_aceite_termo BIGINT NOT NULL DEFAULT 0,
     medicos_com_emissao BIGINT NOT NULL DEFAULT 0,
     PRIMARY KEY (dia, sg_uf)
 );
