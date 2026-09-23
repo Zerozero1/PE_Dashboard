@@ -349,10 +349,10 @@ function RankRows({ rows, showPct }: { rows: { name: string; v: number }[]; show
   ));
 }
 
-function KpiCard({ label, value, meta }: { label: string; value: string; meta: string }) {
+function KpiCard({ label, value, meta, tag }: { label: string; value: string; meta: string; tag?: boolean }) {
   return (
     <article className="card kpi">
-      <div className="label">{label}</div>
+      <div className="label">{label}{tag && <span className="tag">filtros</span>}</div>
       <div className="value">{value}</div>
       <div className="meta">{meta}</div>
     </article>
@@ -405,6 +405,8 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
   const donutOrigem = ORIGENS
     .map((o) => ({ label: o.nome, v: totOrigem.get(o.key) ?? 0, cor: o.cor }))
     .filter((r) => r.v > 0);
+  const filtrados = dias !== "todos" || uf !== "" || tipo !== "";
+  const filtradosSemTipo = dias !== "todos" || uf !== "";
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
@@ -414,16 +416,16 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
         <div className="meta">{de} → {ate}</div>
       </div>
       {carregando && <Processando />}
-      <KpiCard label="Emitidos" value={nf.format(k.emitidos)} meta="no período" />
-      <KpiCard label="Assinados" value={nf.format(k.assinados)} meta="no período" />
-      <KpiCard label="Não assinados" value={nf.format(k.nao_assinados)} meta="no período" />
-      <KpiCard label="% Assinatura" value={`${k.pct_assinatura}%`} meta="assinados/emitidos" />
-      <KpiCard label="Cancelados" value={nf.format(k.cancelados)} meta="no período" />
+      <KpiCard label="Emitidos" value={nf.format(k.emitidos)} meta="no período" tag={filtrados} />
+      <KpiCard label="Assinados" value={nf.format(k.assinados)} meta="no período" tag={filtrados} />
+      <KpiCard label="Não assinados" value={nf.format(k.nao_assinados)} meta="no período" tag={filtrados} />
+      <KpiCard label="% Assinatura" value={`${k.pct_assinatura}%`} meta="assinados/emitidos" tag={filtrados} />
+      <KpiCard label="Cancelados" value={nf.format(k.cancelados)} meta="no período" tag={filtrados} />
 
       <article className="card chart-main">
         <div className="section-title">
           <h2>Emissões por mês</h2>
-          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês (escala própria)</span></div>
+          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês (escala própria)</span>{filtrados && <span className="tag">filtros</span>}</div>
         </div>
         <div className="chart">
           <BarChart rows={serieAcumulada} bars={mensal} />
@@ -432,14 +434,14 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       </article>
 
       <article className="card side-chart">
-        <div className="section-title"><h2>Distribuição por tipo</h2><span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}</span></div>
+        <div className="section-title"><h2>Distribuição por tipo</h2><span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}{filtradosSemTipo && " · "}<span style={{ display: "inline" }}>{filtradosSemTipo && <span className="tag">filtros</span>}</span></span></div>
         <Donut rows={data.por_tipo.map((t) => ({ label: t.tipo, v: Number(t.docs) }))} />
       </article>
 
       <article className="card" style={{ gridColumn: "span 8" }}>
         <div className="section-title">
           <h2>Origem de criação por mês</h2>
-          <div className="legend">{seriesOrigem.map((s) => <span key={s.nome}><i style={{ background: s.cor, width: 18, height: 4, borderRadius: 2, alignSelf: "center" }} />{s.nome}</span>)}</div>
+          <div className="legend">{seriesOrigem.map((s) => <span key={s.nome}><i style={{ background: s.cor, width: 18, height: 4, borderRadius: 2, alignSelf: "center" }} />{s.nome}</span>)}{filtradosSemTipo && <span className="tag">filtros</span>}</div>
         </div>
         <div className="chart">
           <LinesChart meses={mesesOrigem} series={seriesOrigem} />
@@ -449,7 +451,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       <article className="card side-chart">
         <div className="section-title">
           <h2>Participação por origem</h2>
-          <span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}</span>
+          <span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}{filtradosSemTipo && " · "}{filtradosSemTipo && <span className="tag">filtros</span>}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 230 }}>
           <Donut rows={donutOrigem} cores={donutOrigem.map((r) => r.cor)} agruparOutros={false} pctDec={1} />
@@ -457,7 +459,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       </article>
 
       <article className="card" style={{ gridColumn: "span 7" }}>
-        <div className="section-title"><h2>Documentos emitidos por UF</h2></div>
+        <div className="section-title"><h2>Documentos emitidos por UF</h2>{filtrados && <span className="tag">filtros</span>}</div>
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ flex: 1.1, minWidth: 0 }}>
             <MapBr note={false} rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.docs) }))} />
@@ -482,7 +484,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       </article>
 
       <article className="card" style={{ gridColumn: "span 5" }}>
-        <div className="section-title"><h2>Documentos por especialidade</h2></div>
+        <div className="section-title"><h2>Documentos por especialidade</h2>{filtradosSemTipo && <span className="tag">filtros</span>}</div>
         <RankRows showPct rows={data.ranking_especialidade.map((e) => ({ name: e.especialidade, v: Number(e.docs) }))} />
       </article>
     </section>
@@ -516,6 +518,8 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
     "91-120": { cor: "#ff9f43", status: "Atenção" },
     "120+": { cor: "var(--red)", status: "Crítico" },
   };
+  const ufFiltrada = uf !== "";
+  const periodoFiltrado = dias !== "todos" || uf !== "";
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
@@ -525,14 +529,14 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
       </div>
       {carregando && <Processando />}
       <div style={{ gridColumn: "span 12", display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 14 }}>
-        <KpiCard label="Inscrições cadastradas" value={nf.format(k.inscricoes)} meta="CRM/UF" />
-        <KpiCard label="MÉDICOS CADASTRADOS" value={nf.format(k.ativos)} meta="CPF" />
+        <KpiCard label="Inscrições cadastradas" value={nf.format(k.inscricoes)} meta="CRM/UF" tag={ufFiltrada} />
+        <KpiCard label="MÉDICOS CADASTRADOS" value={nf.format(k.ativos)} meta="CPF" tag={ufFiltrada} />
       </div>
 
       <article className="card" style={{ gridColumn: "span 6" }}>
         <div className="section-title">
           <h2>Novos médicos por mês</h2>
-          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês</span></div>
+          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês</span>{ufFiltrada && <span className="tag">filtros</span>}</div>
         </div>
         <div className="chart">
           <BarChart rows={novosAcumulados} bars={novosMensal} tick={10} />
@@ -543,7 +547,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
       <article className="card" style={{ gridColumn: "span 6" }}>
         <div className="section-title">
           <h2>Médicos com pelo menos uma emissão de documento por mês</h2>
-          <div className="legend"><span><i className="l1" />CPF distintos no mês</span></div>
+          <div className="legend"><span><i className="l1" />CPF distintos no mês</span>{periodoFiltrado && <span className="tag">filtros</span>}</div>
         </div>
         <div className="chart">
           <BarChart rows={data.emissores_mensal.map((s) => ({ x: s.mes, v: Number(s.emissao) }))} tick={10} />
@@ -575,7 +579,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
       </article>
 
       <article className="card" style={{ gridColumn: "span 5" }}>
-        <div className="section-title"><h2>Inatividade por faixa sem emissão</h2><span>dias desde a última emissão</span></div>
+        <div className="section-title"><h2>Inatividade por faixa sem emissão</h2><span>dias desde a última emissão{ufFiltrada && " · "}{ufFiltrada && <span className="tag">filtros</span>}</span></div>
         <div style={{ paddingTop: 10, display: "flex", flexDirection: "column", gap: 14 }}>
           {faixas.map((f) => {
             const row = data.inatividade.find((i) => i.faixa === f);
