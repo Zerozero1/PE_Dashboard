@@ -37,11 +37,18 @@ def main():
         "WHERE u.dh_aceite_termo IS NOT NULL "
         "GROUP BY 1, 2")
     rows = cur.fetchall()
+    cur.execute(
+        "SELECT u.dh_aceite_termo AS dia, count(DISTINCT m.id_pessoa) "
+        "FROM prescricao.tb_medico m "
+        "JOIN prescricao.tb_usuario u ON u.id_pessoa = m.id_pessoa "
+        "WHERE u.dh_aceite_termo IS NOT NULL "
+        "GROUP BY 1")
+    rows += [(dia, "--", n) for dia, n in cur.fetchall()]
     cur.close()
     upsert_rows(dw, "prescricao.fato_medico_dia",
                 ["dia", "sg_uf", "novos_aceite_termo"], rows,
                 ["dia", "sg_uf"])
-    log(f"fato_medico_dia.novos_aceite_termo: {len(rows):,} linhas")
+    log(f"fato_medico_dia.novos_aceite_termo: {len(rows):,} linhas (por UF + global '--')")
 
     cur = dw.cursor()
     cur.execute(

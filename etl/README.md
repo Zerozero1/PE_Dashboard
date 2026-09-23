@@ -70,7 +70,7 @@ Fatos:
 - `fato_documento_unidade_dia` (dia, sg_uf, id_unidade_atendimento, documentos)
 - `fato_documento_medico_dia` (dia, sg_uf, id_medico, documentos)
 - `fato_documento_paciente_dia` (dia, sg_uf, pacientes_distintos)
-- `fato_medico_dia` (dia, sg_uf, novos_aceite_termo, medicos_com_emissao)
+- `fato_medico_dia` (dia, sg_uf, novos_aceite_termo, medicos_com_emissao; inclui linhas `sg_uf='--'` com distinct global por dia)
 - `fato_medico_snapshot` (sg_uf, inscricoes_cadastradas, medicos_ativos, atualizado_em; inclui `sg_uf='--'` com totais globais)
 - `fato_auditoria_dia` (dia, tipo_anomalia, dimensao_afetada, valor_observado, valor_esperado, desvio, severidade)
 
@@ -89,7 +89,7 @@ Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 | Origem de criação | `ds_origem_criacao` (NULL ou vazio → `NAO_INFORMADO`); histórica incompleta (ver ressalvas) |
 | Médico ativo | CPF único (`tb_pessoa.nu_cpf`) de médicos com aceite do termo (`tb_usuario.dh_aceite_termo`); sem relação com `in_situacao` (definição alterada 2026-09-23) |
 | Inscrições cadastradas | linhas de `tb_medico` (1 por CRM/UF) |
-| Novos médicos | `tb_usuario.dh_aceite_termo` (aceite do termo = primeiro uso; ~94% preenchido, janela completa do sistema); join `tb_usuario.id_pessoa = tb_medico.id_pessoa`; `count(DISTINCT id_pessoa)` por dia×UF — pessoa com inscrições em mais de uma UF conta em cada uma |
+| Novos médicos | `tb_usuario.dh_aceite_termo` (aceite do termo = primeiro uso; ~94% preenchido, janela completa do sistema); join `tb_usuario.id_pessoa = tb_medico.id_pessoa`; `count(DISTINCT id_pessoa)` por dia×UF + linha global `'--'` (distinct entre todas as UFs — pessoa multi-UF conta uma vez no total) |
 | Anomalias AN1–AN4 | observado vs média móvel 30 dias de **todos os médicos**; severidade 2x/3x/5x |
 
 ## Ressalvas conhecidas
