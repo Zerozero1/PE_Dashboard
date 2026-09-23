@@ -506,6 +506,15 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
   const novosMensal = data.novos_mensal.map((s) => Number(s.novos));
   const totalInsc = data.por_uf.reduce((a, u) => a + Number(u.inscricoes_cadastradas), 0);
   const pctInsc = (v: number) => `${(totalInsc > 0 ? ((v / totalInsc) * 100).toFixed(1) : "0.0").replace(".", ",")}%`;
+  const totalInat = data.inatividade.reduce((a, i) => a + Number(i.medicos), 0);
+  const maxInat = Math.max(...data.inatividade.map((i) => Number(i.medicos)), 1);
+  const INA_META: Record<string, { cor: string; status: string }> = {
+    "0-30": { cor: "var(--green)", status: "Observar" },
+    "31-60": { cor: "#a3e635", status: "Observar" },
+    "61-90": { cor: "var(--orange)", status: "Atenção" },
+    "91-120": { cor: "#ff9f43", status: "Atenção" },
+    "120+": { cor: "var(--red)", status: "Crítico" },
+  };
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
@@ -555,22 +564,28 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
 
       <article className="card" style={{ gridColumn: "span 5" }}>
         <div className="section-title"><h2>Inatividade por faixa sem emissão</h2><span>dias desde a última emissão</span></div>
-        <table className="table">
-          <thead><tr><th>Faixa (dias)</th><th>Médicos</th><th>Status</th></tr></thead>
-          <tbody>
-            {faixas.map((f) => {
-              const row = data.inatividade.find((i) => i.faixa === f);
-              const badge = f === "91-120" ? "warn" : f === "120+" ? "bad" : "ok";
-              return (
-                <tr key={f}>
-                  <td>{f}</td>
-                  <td>{row ? nf.format(Number(row.medicos)) : "0"}</td>
-                  <td><span className={`badge ${badge}`}>{f === "120+" ? "Crítico" : f === "91-120" ? "Atenção" : "Observar"}</span></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div style={{ paddingTop: 10, display: "flex", flexDirection: "column", gap: 14 }}>
+          {faixas.map((f) => {
+            const row = data.inatividade.find((i) => i.faixa === f);
+            const v = row ? Number(row.medicos) : 0;
+            const meta = INA_META[f];
+            const pct = totalInat > 0 ? ((v / totalInat) * 100).toFixed(1).replace(".", ",") : "0,0";
+            return (
+              <div key={f}>
+                <div style={{ display: "flex", alignItems: "baseline", fontSize: 10, color: "#8d99a7", marginBottom: 5 }}>
+                  <span>{f} dias</span>
+                  <span style={{ marginLeft: 8, fontSize: 9, color: meta.cor }}>{meta.status}</span>
+                  <b style={{ marginLeft: "auto", color: "#c3ccd6", fontSize: 10.5 }}>
+                    {nf.format(v)}<span style={{ color: "#667381", fontWeight: 400 }}> · {pct}%</span>
+                  </b>
+                </div>
+                <div className="bar-track">
+                  <i className="bar-fill" style={{ width: `${maxInat > 0 ? (v / maxInat) * 100 : 0}%`, background: meta.cor }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </article>
     </section>
   );
