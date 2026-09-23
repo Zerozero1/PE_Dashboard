@@ -31,10 +31,11 @@ export async function GET(req: NextRequest) {
       ),
       query(
         `WITH ult AS (
-           SELECT id_medico, max(dia) AS ultimo
-             FROM prescricao.fato_documento_medico_dia
-            WHERE ($1::text IS NULL OR sg_uf = $1)
-            GROUP BY id_medico
+           SELECT dm.id_pessoa, max(f.dia) AS ultimo
+             FROM prescricao.fato_documento_medico_dia f
+             JOIN prescricao.dim_medico dm ON dm.id_medico = f.id_medico
+            WHERE ($1::text IS NULL OR f.sg_uf = $1)
+            GROUP BY dm.id_pessoa
          ), ref AS (SELECT max(dia) AS hoje FROM prescricao.fato_documento_medico_dia)
          SELECT CASE
                   WHEN (ref.hoje - u.ultimo) <= 30 THEN '0-30'

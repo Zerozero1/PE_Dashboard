@@ -72,3 +72,9 @@ CREATE INDEX IF NOT EXISTS idx_fato_unidade_un
 
 CREATE INDEX IF NOT EXISTS idx_dim_medico_uf
     ON prescricao.dim_medico (sg_uf);
+
+ALTER TABLE prescricao.dim_medico
+    ADD COLUMN IF NOT EXISTS id_pessoa INTEGER;
+
+CREATE INDEX IF NOT EXISTS idx_dim_medico_pessoa
+    ON prescricao.dim_medico (id_pessoa);

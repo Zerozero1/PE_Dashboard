@@ -444,7 +444,7 @@ Notas:
 | 9 | Medicos | Barras horizontais | Ranking de medicos por UF | fato_medico_dia, dim_uf | Distinct por UF | U,E | |
 | 10 | Medicos | Linha | Total acumulado de medicos por mes | fato_medico_dia, dim_data | Soma acumulada por ano_mes | P,U | |
 | 11 | Medicos | Linha | Novos medicos por mes | fato_medico_dia, dim_data | Novos por mes (dh_aceite_termo) | P,U | Aceite do termo em tb_usuario (decisao 2026-09-23); total global via linhas `sg_uf='--'` |
-| 12 | Medicos | Matriz/tabela | Inatividade por faixa de dias sem emissao (30/60/90/120) | fato_medico_dia, fato_documento_dia, dim_medico | Contagem por faixa | U | Regra operacional: ultima emissao |
+| 12 | Medicos | Matriz/tabela | Inatividade por faixa de dias sem emissao (30/60/90/120) | fato_documento_medico_dia, dim_medico | Ultima emissao por pessoa (CPF) | U | Regra operacional: ultima emissao; alterado para pessoa em 2026-09-23 |
 | 13–19 | Dispensacoes | — | REMOVIDAS (2026-09-23): visao Dispensacoes descontinuada | — | — | — | — |
 | 20 | Auditoria | Linha/barras | Anomalias detectadas por dia | fato_auditoria_dia | Contagem por dia | P(curto),TD,DIM | Sem registros individuais; exige filtros obrigatorios |
 | 21 | Auditoria | Ranking (barras) | Tipos de anomalia mais frequentes, com severidade | fato_auditoria_dia | Contagem por tipo_anomalia | P,TD | Severidade por desvio (2x/3x/5x) |

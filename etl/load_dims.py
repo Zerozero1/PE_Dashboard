@@ -46,12 +46,12 @@ def main():
 
     cur = origin.cursor()
     cur.execute(
-        "SELECT id_medico, nu_crm, sg_uf, in_situacao, in_tipo_inscricao "
+        "SELECT id_medico, nu_crm, sg_uf, in_situacao, in_tipo_inscricao, id_pessoa "
         "FROM prescricao.tb_medico")
     log("tb_medico: lendo 605k linhas (sem ds_foto)...")
     for batch in iter(lambda: cur.fetchmany(20000), []):
         upsert_rows(dw, "prescricao.dim_medico",
-                    ["id_medico", "nu_crm", "sg_uf", "in_situacao", "in_tipo_inscricao"],
+                    ["id_medico", "nu_crm", "sg_uf", "in_situacao", "in_tipo_inscricao", "id_pessoa"],
                     batch, ["id_medico"])
     cur.close()
     log("dim_medico: carregada")

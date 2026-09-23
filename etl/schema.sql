@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS prescricao.dim_medico (
     nu_crm VARCHAR(20),
     sg_uf CHAR(2),
     in_situacao CHAR(1),
-    in_tipo_inscricao CHAR(1)
+    in_tipo_inscricao CHAR(1),
+    id_pessoa INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS prescricao.dim_especialidade (
