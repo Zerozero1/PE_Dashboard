@@ -384,7 +384,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
   const ultimoLabel = um ? `${MESES[Number(um) - 1]}/${String(uy).slice(2)}` : "—";
   const ORIGENS: { key: string; nome: string; cor: string; dash?: string }[] = [
     { key: "WEB", nome: "Web", cor: "#60a5fa" },
-    { key: "WEB-MOBILE", nome: "Web mobile", cor: "#fbbf24", dash: "7 5" },
+    { key: "WEB-MOBILE", nome: "Web mobile", cor: "#fbbf24" },
     { key: "IOS", nome: "iOS", cor: "#f472b6", dash: "2 4" },
     { key: "ANDROID", nome: "Android", cor: "#4ade80", dash: "10 4 2 4" },
   ];
@@ -441,7 +441,6 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
         <div className="chart">
           <LinesChart meses={mesesOrigem} series={seriesOrigem} />
         </div>
-        <div className="sub" style={{ marginTop: 4 }}>Dispositivo de emissão — <code>tb_consulta_documento.ds_origem_criacao</code></div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 7" }}>
