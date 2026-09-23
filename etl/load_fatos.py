@@ -21,6 +21,21 @@ WHERE d.id_consulta_documento BETWEEN %s AND %s
 GROUP BY 1, 2, 3
 """
 
+SQL_ORIGEM = """
+SELECT d.dh_documento::date AS dia,
+       CASE WHEN ua.sg_uf = 'BR' THEN '--' ELSE COALESCE(ua.sg_uf, '--') END AS sg_uf,
+       COALESCE(NULLIF(d.ds_origem_criacao, ''), 'NAO_INFORMADO') AS ds_origem_criacao,
+       count(*) AS documentos
+FROM prescricao.tb_consulta_documento d
+LEFT JOIN prescricao.tb_consulta c ON c.id_consulta = d.id_consulta
+LEFT JOIN prescricao.rl_medico_unidade_atendimento mu
+       ON mu.id_medico_unidade_atendimento = c.id_medico_unidade_atendimento
+LEFT JOIN prescricao.tb_unidade_atendimento ua
+       ON ua.id_unidade_atendimento = mu.id_unidade_atendimento
+WHERE d.id_consulta_documento BETWEEN %s AND %s
+GROUP BY 1, 2, 3
+"""
+
 SQL_ESPECIALIDADE = """
 SELECT d.dh_documento::date AS dia,
        CASE WHEN ua.sg_uf = 'BR' THEN '--' ELSE COALESCE(ua.sg_uf, '--') END AS sg_uf,
@@ -155,6 +170,15 @@ def main():
             ["dia", "sg_uf", "id_tipo_documento"],
             "prescricao.fato_documento_dia", 3)
         log(f"fato_documento_dia: concluido — {total:,} documentos")
+
+    elif mode == "origem":
+        log("fato_documento_origem_dia: iniciando")
+        total = batch_loop(
+            origin, dw, SQL_ORIGEM, "prescricao.stg_documento_origem_dia",
+            ["dia", "sg_uf", "ds_origem_criacao", "documentos"],
+            ["dia", "sg_uf", "ds_origem_criacao"],
+            "prescricao.fato_documento_origem_dia", 3)
+        log(f"fato_documento_origem_dia: concluido — {total:,} documentos")
 
     elif mode == "especialidade":
         log("fato_documento_especialidade_dia: iniciando")

@@ -66,6 +66,7 @@ Dimensões: `dim_data`, `dim_uf`, `dim_tipo_documento`, `dim_medico`, `dim_espec
 
 Fatos:
 - `fato_documento_dia` (dia, sg_uf, id_tipo_documento, documentos, assinados, cancelados)
+- `fato_documento_origem_dia` (dia, sg_uf, ds_origem_criacao, documentos) — origem de criação: WEB, WEB-MOBILE, IOS, ANDROID ou NAO_INFORMADO; campo majoritariamente NULL até meados de 2025 (~70% do total), preenchido sistematicamente só nos últimos meses
 - `fato_documento_especialidade_dia` (dia, sg_uf, id_medico_especialidade, documentos)
 - `fato_documento_unidade_dia` (dia, sg_uf, id_unidade_atendimento, documentos)
 - `fato_documento_medico_dia` (dia, sg_uf, id_medico, documentos)
@@ -75,11 +76,11 @@ Fatos:
 - `fato_dispensacao_dia` (dia, sg_uf, dispensacoes, assinadas, canceladas, farmaceuticos_distintos, farmacias_distintas, pacientes_distintos)
 - `fato_auditoria_dia` (dia, tipo_anomalia, dimensao_afetada, valor_observado, valor_esperado, desvio, severidade)
 
-Staging: `stg_documento_dia`, `stg_documento_especialidade_dia`, `stg_documento_unidade_dia`, `stg_documento_medico_dia`.
+Staging: `stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_especialidade_dia`, `stg_documento_unidade_dia`, `stg_documento_medico_dia`.
 
 Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 
-Índices secundários: `fato_documento_dia(sg_uf,dia)`, `fato_documento_medico_dia(id_medico,dia)`, `fato_documento_especialidade_dia(id_medico_especialidade,dia)`, `fato_documento_unidade_dia(id_unidade_atendimento,dia)`, `dim_medico(sg_uf)`, `dashboard_refresh_job(status)`.
+Índices secundários: `fato_documento_dia(sg_uf,dia)`, `fato_documento_origem_dia(sg_uf,dia)`, `fato_documento_medico_dia(id_medico,dia)`, `fato_documento_especialidade_dia(id_medico_especialidade,dia)`, `fato_documento_unidade_dia(id_unidade_atendimento,dia)`, `dim_medico(sg_uf)`, `dashboard_refresh_job(status)`.
 
 ## Definições de negócio aplicadas
 
@@ -87,6 +88,7 @@ Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 |---|---|
 | UF dos documentos | UF da unidade de atendimento (`tb_unidade_atendimento.sg_uf`); NULL e `BR` → `--` |
 | Assinados / cancelados | colunas agregadas: `assinados` = `in_assinado='S'`, `cancelados` = `in_cancelado='S'`; `nao_assinados` = `documentos - assinados` (sem filtro por assinatura — grão sem `in_assinado`) |
+| Origem de criação | `ds_origem_criacao` (NULL ou vazio → `NAO_INFORMADO`); histórica incompleta (ver ressalvas) |
 | Médico ativo | `tb_medico.in_situacao = 'A'` (snapshot) |
 | Novos médicos | `tb_medico.dh_atualizacao::date` (proxy — origem sem data de cadastro) |
 | Dispensação | `tb_historico_dispensacao` com `in_status='D'`; cancelada `'C'`; assinada `tb_dispensacao.in_assinado='S'` |
@@ -96,6 +98,7 @@ Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 ## Ressalvas conhecidas
 
 - A origem está em produção ativa: contagens podem variar entre varreduras; a carga diária converge.
+- `ds_origem_criacao` só é preenchido sistematicamente nos últimos meses — ~70% dos documentos históricos ficam como `NAO_INFORMADO`; a série de dispositivos só é comparável a partir de ~meados de 2025.
 - `tb_medico.ds_foto` (bytea, ~15 GB) nunca é lida.
 - Carga incremental por watermark ainda não implementada — o job roda o `run_all` completo (~30–40 min às 02:00).
 - Índices na origem ainda pendentes com o DBA (sem eles, a varredura em lotes é o caminho).

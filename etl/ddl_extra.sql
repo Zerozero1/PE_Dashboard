@@ -1,5 +1,12 @@
 -- DDL complementar (executar uma unica vez)
 
+CREATE TABLE IF NOT EXISTS prescricao.stg_documento_origem_dia (
+    dia DATE NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    ds_origem_criacao TEXT NOT NULL,
+    documentos BIGINT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS prescricao.stg_documento_dia (
     dia DATE NOT NULL,
     sg_uf CHAR(2) NOT NULL,

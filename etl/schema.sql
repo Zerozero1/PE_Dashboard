@@ -55,6 +55,17 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_documento_dia (
     PRIMARY KEY (dia, sg_uf, id_tipo_documento)
 );
 
+CREATE TABLE IF NOT EXISTS prescricao.fato_documento_origem_dia (
+    dia DATE NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    ds_origem_criacao TEXT NOT NULL,
+    documentos BIGINT NOT NULL,
+    PRIMARY KEY (dia, sg_uf, ds_origem_criacao)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fato_documento_origem_dia_uf
+    ON prescricao.fato_documento_origem_dia (sg_uf, dia);
+
 CREATE INDEX IF NOT EXISTS idx_fato_documento_dia_uf ON prescricao.fato_documento_dia (sg_uf, dia);
 
 CREATE TABLE IF NOT EXISTS prescricao.fato_documento_especialidade_dia (

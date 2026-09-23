@@ -35,7 +35,7 @@ Sem as credenciais do Google, o modo `development` usa sessão mock (`mrichard@p
 |---|---|
 | `GET /api/health` | Status da carga (último job), config (horário) e última data dos dados |
 | `GET /api/filtros` | UFs e tipos de documento para os filtros |
-| `GET /api/dashboard/documentos` | KPIs, série mensal, por tipo, por UF, ranking de especialidades (`de`, `ate`, `uf`, `tipo`) |
+| `GET /api/dashboard/documentos` | KPIs, série mensal, origem de criação por mês (`serie_origem`), por tipo, por UF, ranking de especialidades (`de`, `ate`, `uf`, `tipo`) |
 | `GET /api/dashboard/medicos` | KPIs snapshot, novos por mês, por UF, inatividade por faixa (`de`, `ate`, `uf`) |
 | `GET /api/dashboard/dispensacoes` | KPIs, série mensal, por UF (`de`, `ate`, `uf`) |
 | `GET /api/dashboard/auditoria` | Eventos por dia, tipos, dimensões, detalhe (`de`, `ate`, `tipo`) |

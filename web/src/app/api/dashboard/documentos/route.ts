@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const p = [de, ate, uf, tipo];
 
   try {
-    const [kpis, serie, porTipo, porUf, esp, pacientes] = await Promise.all([
+    const [kpis, serie, porTipo, porUf, esp, pacientes, origem] = await Promise.all([
       query(
         `SELECT coalesce(sum(f.documentos),0) AS emitidos,
                 coalesce(sum(f.assinados),0) AS assinados,
@@ -64,6 +64,16 @@ export async function GET(req: NextRequest) {
           WHERE dia BETWEEN $1 AND $2 AND ($3::text IS NULL OR sg_uf = $3)`,
         [de, ate, uf]
       ),
+      query(
+        `SELECT to_char(f.dia,'YYYY-MM') AS mes,
+                f.ds_origem_criacao AS origem,
+                sum(f.documentos) AS documentos
+           FROM prescricao.fato_documento_origem_dia f
+          WHERE f.dia BETWEEN $1 AND $2
+            AND ($3::text IS NULL OR f.sg_uf = $3)
+          GROUP BY 1, 2 ORDER BY 1, 2`,
+        [de, ate, uf]
+      ),
     ]);
 
     const k = kpis.rows[0];
@@ -81,6 +91,7 @@ export async function GET(req: NextRequest) {
         pacientes: Number(pacientes.rows[0]?.pacientes ?? 0),
       },
       serie_mensal: serie.rows,
+      serie_origem: origem.rows,
       por_tipo: porTipo.rows,
       por_uf: porUf.rows,
       ranking_especialidade: esp.rows,

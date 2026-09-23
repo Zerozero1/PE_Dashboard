@@ -22,6 +22,7 @@ type DocsData = {
     pct_assinatura: number; cancelados: number; pacientes: number;
   };
   serie_mensal: { mes: string; emitidos: string }[];
+  serie_origem: { mes: string; origem: string; documentos: string }[];
   por_tipo: { tipo: string; docs: string }[];
   por_uf: { uf: string; docs: string }[];
   ranking_especialidade: { especialidade: string; docs: string }[];
@@ -241,6 +242,52 @@ function BarChart({ rows, bars, w = 800, h = 220 }: { rows: { x: string; v: numb
   );
 }
 
+function LinesChart({ meses, series }: { meses: string[]; series: { nome: string; cor: string; valores: (number | null)[] }[] }) {
+  const pad = 40;
+  const w = 800;
+  const h = 220;
+  const iw = w - pad;
+  const max = Math.max(...series.flatMap((s) => s.valores.map((v) => v ?? 0)), 1);
+  const step = meses.length > 1 ? iw / (meses.length - 1) : 0;
+  const ticks = [0, 0.25, 0.5, 0.75, 1];
+  const n = meses.length;
+  const xStep = Math.max(Math.ceil((n - 1) / 8), 1);
+  const xIdx = Array.from(new Set([0, ...Array.from({ length: n }, (_, i) => i).filter((i) => i % xStep === 0), n - 1]));
+  return (
+    <svg viewBox={`0 0 ${w + 52} ${h + 48}`} style={{ width: "100%", height: "auto" }}>
+      {ticks.map((f) => {
+        const y = h - f * (h - 26);
+        return (
+          <g key={`l${f}`}>
+            <line x1={pad} x2={w} y1={y} y2={y} stroke="rgba(255,255,255,.07)" />
+            <text x={pad - 8} y={y + 3} fontSize="9" fill="#9fb0c1" textAnchor="end">{nfc.format(max * f)}</text>
+          </g>
+        );
+      })}
+      {series.map((s) => {
+        const pts = s.valores.map((v, i) => `${pad + i * step},${h - ((v ?? 0) / max) * (h - 26)}`).join(" ");
+        return (
+          <g key={s.nome}>
+            <polyline fill="none" stroke={s.cor} strokeWidth="2" points={pts} />
+            {s.valores.map((v, i) => v !== null && (
+              <circle key={i} cx={pad + i * step} cy={h - ((v ?? 0) / max) * (h - 26)} r="2" fill={s.cor}>
+                <title>{`${meses[i]} · ${s.nome}: ${nf.format(v)}`}</title>
+              </circle>
+            ))}
+          </g>
+        );
+      })}
+      {xIdx.map((i) => {
+        const [y, m] = String(meses[i]).split("-");
+        const label = m ? `${MESES[Number(m) - 1]}/${String(y).slice(2)}` : String(meses[i]);
+        return (
+          <text key={i} x={pad + i * step} y={h + 18} fontSize="9" fill="#9fb0c1" textAnchor="middle">{label}</text>
+        );
+      })}
+    </svg>
+  );
+}
+
 function Bars({ rows }: { rows: { x: string; v: number }[] }) {
   const max = Math.max(...rows.map((r) => r.v), 1);
   return (
@@ -331,6 +378,25 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
   const ultimo = data.serie_mensal[data.serie_mensal.length - 1];
   const [uy, um] = ultimo ? ultimo.mes.split("-") : ["", ""];
   const ultimoLabel = um ? `${MESES[Number(um) - 1]}/${String(uy).slice(2)}` : "—";
+  const ORIGENS: { key: string; nome: string; cor: string }[] = [
+    { key: "WEB", nome: "Web", cor: "var(--va)" },
+    { key: "WEB-MOBILE", nome: "Web mobile", cor: "#22d3ee" },
+    { key: "IOS", nome: "iOS", cor: "#f472b6" },
+    { key: "ANDROID", nome: "Android", cor: "#34d399" },
+    { key: "NAO_INFORMADO", nome: "Não informado", cor: "#9ca3af" },
+  ];
+  const mesesOrigem = Array.from(new Set(data.serie_origem.map((s) => s.mes))).sort();
+  const mapOrigem = new Map(data.serie_origem.map((s) => [`${s.mes}|${s.origem}`, Number(s.documentos)]));
+  const seriesOrigem = ORIGENS
+    .map((o) => ({
+      nome: o.nome,
+      cor: o.cor,
+      valores: mesesOrigem.map((m) => {
+        const v = mapOrigem.get(`${m}|${o.key}`);
+        return v === undefined ? null : v;
+      }),
+    }))
+    .filter((s) => s.valores.some((v) => (v ?? 0) > 0));
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
@@ -361,6 +427,17 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       <article className="card side-chart">
         <div className="section-title"><h2>Distribuição por tipo</h2><span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}</span></div>
         <Donut rows={data.por_tipo.map((t) => ({ label: t.tipo, v: Number(t.docs) }))} />
+      </article>
+
+      <article className="card" style={{ gridColumn: "span 12" }}>
+        <div className="section-title">
+          <h2>Origem de criação por mês</h2>
+          <div className="legend">{seriesOrigem.map((s) => <span key={s.nome}><i style={{ background: s.cor }} />{s.nome}</span>)}</div>
+        </div>
+        <div className="chart">
+          <LinesChart meses={mesesOrigem} series={seriesOrigem} />
+        </div>
+        <div className="sub" style={{ marginTop: 4 }}>Dispositivo de emissão — <code>tb_consulta_documento.ds_origem_criacao</code></div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 7" }}>

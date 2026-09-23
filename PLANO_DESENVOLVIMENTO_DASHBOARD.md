@@ -223,7 +223,7 @@ Trade-off:
   - assinados (`in_assinado='S'`)
   - cancelados (`in_cancelado='S'`)
   - nao_assinados = documentos - assinados (derivado)
-- complementares: `fato_documento_especialidade_dia`, `fato_documento_unidade_dia`, `fato_documento_medico_dia`, `fato_documento_paciente_dia`
+- complementares: `fato_documento_especialidade_dia`, `fato_documento_unidade_dia`, `fato_documento_medico_dia`, `fato_documento_paciente_dia`, `fato_documento_origem_dia` (dia + UF + `ds_origem_criacao` — WEB/WEB-MOBILE/IOS/ANDROID/NAO_INFORMADO; alimenta o grafico de evolucao dos dispositivos)
 
 `fato_medico_dia`
 - grao: dia + UF + especialidade + situacao

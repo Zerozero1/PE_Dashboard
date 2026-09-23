@@ -17,6 +17,7 @@ def main():
     steps = [
         ("dimensoes", "load_dims"),
         ("fato docs", "load_fatos docs"),
+        ("fato origem-criacao", "load_fatos origem"),
         ("fato especialidade", "load_fatos especialidade"),
         ("fato unidade", "load_fatos unidade"),
         ("fato medico-dia", "load_fatos medico"),
