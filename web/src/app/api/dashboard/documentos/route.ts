@@ -71,6 +71,7 @@ export async function GET(req: NextRequest) {
            FROM prescricao.fato_documento_origem_dia f
           WHERE f.dia BETWEEN $1 AND $2
             AND ($3::text IS NULL OR f.sg_uf = $3)
+            AND f.ds_origem_criacao <> 'NAO_INFORMADO'
           GROUP BY 1, 2 ORDER BY 1, 2`,
         [de, ate, uf]
       ),

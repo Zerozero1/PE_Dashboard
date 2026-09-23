@@ -383,7 +383,6 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
     { key: "WEB-MOBILE", nome: "Web mobile", cor: "#22d3ee" },
     { key: "IOS", nome: "iOS", cor: "#f472b6" },
     { key: "ANDROID", nome: "Android", cor: "#34d399" },
-    { key: "NAO_INFORMADO", nome: "Não informado", cor: "#9ca3af" },
   ];
   const mesesOrigem = Array.from(new Set(data.serie_origem.map((s) => s.mes))).sort();
   const mapOrigem = new Map(data.serie_origem.map((s) => [`${s.mes}|${s.origem}`, Number(s.documentos)]));
