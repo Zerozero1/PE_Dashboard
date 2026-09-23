@@ -303,9 +303,13 @@ function Bars({ rows }: { rows: { x: string; v: number }[] }) {
 
 function Donut({ rows }: { rows: { label: string; v: number }[] }) {
   const total = rows.reduce((a, b) => a + b.v, 0);
+  const sorted = [...rows].sort((a, b) => b.v - a.v);
+  const top = sorted.slice(0, 5);
+  const resto = sorted.slice(5);
+  const data = resto.length > 0 ? [...top, { label: "Outros", v: resto.reduce((a, b) => a + b.v, 0) }] : top;
   const cores = ["var(--va)", "var(--va2)", "#9a7cff", "#ffb454", "#ff647c", "#7db9e8", "#f2c94c"];
   let acc = 0;
-  const stops = rows.map((r, i) => {
+  const stops = data.map((r, i) => {
     const start = (acc / total) * 100;
     acc += r.v;
     return `${cores[i % cores.length]} ${start}% ${(acc / total) * 100}%`;
@@ -322,7 +326,7 @@ function Donut({ rows }: { rows: { label: string; v: number }[] }) {
         </div>
       </div>
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-        {rows.slice(0, 5).map((r, i) => (
+        {data.map((r, i) => (
           <li key={r.label} style={{ display: "flex", gap: 7, fontSize: 10, color: "#8d99a7", marginBottom: 6 }}>
             <i style={{ width: 9, height: 9, borderRadius: 2, background: cores[i % cores.length], flex: "none" }} />
             {r.label}
