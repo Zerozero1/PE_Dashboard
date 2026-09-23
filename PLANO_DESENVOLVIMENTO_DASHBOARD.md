@@ -433,7 +433,7 @@ Notas:
 
 | # | Aba | Objeto visual | Apresenta | Tabelas do datamart | Agregacao/Grao | Filtros | Notas |
 |---|---|---|---|---|---|---|---|
-| 1 | Documentos | Cards KPI | Documentos emitidos, assinados, nao assinados (derivado), % assinatura, cancelados, pacientes distintos | fato_documento_dia, dim_data, fato_documento_paciente_dia | Soma no periodo (pacientes = distinct) | P,U,T,E | % assinatura = assinados/emitidos |
+| 1 | Documentos | Cards KPI | Documentos emitidos, assinados, nao assinados (derivado), % assinatura, cancelados | fato_documento_dia | Soma no periodo | P,U,T,E | % assinatura = assinados/emitidos. "Pacientes distintos" REMOVIDO (2026-09-23): cadastro de paciente nao e centralizado (id_paciente por medico; CPF em apenas ~27%) — sem chave confiavel de paciente unico |
 | 2 | Documentos | Mapa Brasil (bolhas) | Documentos emitidos por UF | fato_documento_dia, dim_uf | Soma por UF | P | UF = unidade de atendimento (decisao 14) |
 | 3 | Documentos | Barras horizontais | Emissoes por mes | fato_documento_dia, dim_data | Soma por ano_mes | P,U,T,E,S | |
 | 4 | Documentos | Donut | Distribuicao por tipo de documento | fato_documento_dia, dim_tipo_documento | Soma por tipo | P,U,E,S | Nome oficial via dim_tipo_documento |

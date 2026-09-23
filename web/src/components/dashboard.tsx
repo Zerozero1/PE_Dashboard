@@ -19,7 +19,7 @@ type DocsData = {
   ate: string;
   kpis: {
     emitidos: number; assinados: number; nao_assinados: number;
-    pct_assinatura: number; cancelados: number; pacientes: number;
+    pct_assinatura: number; cancelados: number;
   };
   serie_mensal: { mes: string; emitidos: string }[];
   serie_origem: { mes: string; origem: string; documentos: string }[];
@@ -419,7 +419,6 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       <KpiCard label="Não assinados" value={nf.format(k.nao_assinados)} meta="no período" />
       <KpiCard label="% Assinatura" value={`${k.pct_assinatura}%`} meta="assinados/emitidos" />
       <KpiCard label="Cancelados" value={nf.format(k.cancelados)} meta="no período" />
-      <KpiCard label="Pacientes distintos" value={nf.format(k.pacientes)} meta="no período" />
 
       <article className="card chart-main">
         <div className="section-title">
