@@ -498,6 +498,12 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
   if (!data) return <div className="card" style={{ gridColumn: "span 12", color: "#566271" }}>Carregando…</div>;
   const k = data.kpis;
   const faixas = ["0-30", "31-60", "61-90", "91-120", "120+"];
+  let acumuladoNovos = 0;
+  const novosAcumulados = data.novos_mensal.map((s) => {
+    acumuladoNovos += Number(s.novos);
+    return { x: s.mes, v: acumuladoNovos };
+  });
+  const novosMensal = data.novos_mensal.map((s) => Number(s.novos));
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
@@ -512,10 +518,14 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
       <KpiCard label="Emissões no período" value={nf.format(k.medicos_com_emissao)} meta="médicos distintos" />
 
       <article className="card chart-main">
-        <div className="section-title"><h2>Novos médicos por mês</h2><div className="legend"><span><i className="l1" />aceite do termo (tb_usuario)</span></div></div>
-        <div className="chart">
-          <BarChart rows={data.novos_mensal.map((s) => ({ x: s.mes, v: Number(s.novos) }))} />
+        <div className="section-title">
+          <h2>Novos médicos por mês</h2>
+          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês (escala própria)</span></div>
         </div>
+        <div className="chart">
+          <BarChart rows={novosAcumulados} bars={novosMensal} />
+        </div>
+        <div className="sub" style={{ marginTop: 4 }}>Aceite do termo (<code>tb_usuario</code>) · Acumulado: <b style={{ color: "var(--va)" }}>{nf.format(acumuladoNovos)}</b></div>
       </article>
 
       <article className="card side-chart">
