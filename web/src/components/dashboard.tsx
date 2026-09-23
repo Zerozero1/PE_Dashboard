@@ -352,10 +352,18 @@ function RankRows({ rows, showPct }: { rows: { name: string; v: number }[]; show
 function KpiCard({ label, value, meta, tag }: { label: string; value: string; meta: string; tag?: boolean }) {
   return (
     <article className="card kpi">
-      <div className="label">{label}{tag && <span className="tag">filtros</span>}</div>
+      <div className="label">{label}{tag && <span className="tag">F</span>}</div>
       <div className="value">{value}</div>
       <div className="meta">{meta}</div>
     </article>
+  );
+}
+
+function LegendaFiltro() {
+  return (
+    <div style={{ gridColumn: "span 12", display: "flex", alignItems: "center", gap: 8, fontSize: 10.5, color: "#667381" }}>
+      <span className="tag" style={{ marginLeft: 0 }}>F</span> Dados com filtro(s) aplicados
+    </div>
   );
 }
 
@@ -425,7 +433,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       <article className="card chart-main">
         <div className="section-title">
           <h2>Emissões por mês</h2>
-          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês (escala própria)</span>{filtrados && <span className="tag">filtros</span>}</div>
+          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês (escala própria)</span>{filtrados && <span className="tag">F</span>}</div>
         </div>
         <div className="chart">
           <BarChart rows={serieAcumulada} bars={mensal} />
@@ -434,14 +442,14 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       </article>
 
       <article className="card side-chart">
-        <div className="section-title"><h2>Distribuição por tipo</h2><span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}{filtradosSemTipo && " · "}<span style={{ display: "inline" }}>{filtradosSemTipo && <span className="tag">filtros</span>}</span></span></div>
+        <div className="section-title"><h2>Distribuição por tipo</h2><span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}{filtradosSemTipo && " · "}<span style={{ display: "inline" }}>{filtradosSemTipo && <span className="tag">F</span>}</span></span></div>
         <Donut rows={data.por_tipo.map((t) => ({ label: t.tipo, v: Number(t.docs) }))} />
       </article>
 
       <article className="card" style={{ gridColumn: "span 8" }}>
         <div className="section-title">
           <h2>Origem de criação por mês</h2>
-          <div className="legend">{seriesOrigem.map((s) => <span key={s.nome}><i style={{ background: s.cor, width: 18, height: 4, borderRadius: 2, alignSelf: "center" }} />{s.nome}</span>)}{filtradosSemTipo && <span className="tag">filtros</span>}</div>
+          <div className="legend">{seriesOrigem.map((s) => <span key={s.nome}><i style={{ background: s.cor, width: 18, height: 4, borderRadius: 2, alignSelf: "center" }} />{s.nome}</span>)}{filtradosSemTipo && <span className="tag">F</span>}</div>
         </div>
         <div className="chart">
           <LinesChart meses={mesesOrigem} series={seriesOrigem} />
@@ -451,7 +459,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       <article className="card side-chart">
         <div className="section-title">
           <h2>Participação por origem</h2>
-          <span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}{filtradosSemTipo && " · "}{filtradosSemTipo && <span className="tag">filtros</span>}</span>
+          <span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}{filtradosSemTipo && " · "}{filtradosSemTipo && <span className="tag">F</span>}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 230 }}>
           <Donut rows={donutOrigem} cores={donutOrigem.map((r) => r.cor)} agruparOutros={false} pctDec={1} />
@@ -459,7 +467,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       </article>
 
       <article className="card" style={{ gridColumn: "span 7" }}>
-        <div className="section-title"><h2>Documentos emitidos por UF</h2>{filtrados && <span className="tag">filtros</span>}</div>
+        <div className="section-title"><h2>Documentos emitidos por UF</h2>{filtrados && <span className="tag">F</span>}</div>
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ flex: 1.1, minWidth: 0 }}>
             <MapBr note={false} rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.docs) }))} />
@@ -484,9 +492,10 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       </article>
 
       <article className="card" style={{ gridColumn: "span 5" }}>
-        <div className="section-title"><h2>Documentos por especialidade</h2>{filtradosSemTipo && <span className="tag">filtros</span>}</div>
+        <div className="section-title"><h2>Documentos por especialidade</h2>{filtradosSemTipo && <span className="tag">F</span>}</div>
         <RankRows showPct rows={data.ranking_especialidade.map((e) => ({ name: e.especialidade, v: Number(e.docs) }))} />
       </article>
+      <LegendaFiltro />
     </section>
   );
 }
@@ -536,7 +545,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
       <article className="card" style={{ gridColumn: "span 6" }}>
         <div className="section-title">
           <h2>Novos médicos por mês</h2>
-          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês</span>{ufFiltrada && <span className="tag">filtros</span>}</div>
+          <div className="legend"><span><i className="l1" />Acumulado</span><span><i className="l2" />Mês</span>{ufFiltrada && <span className="tag">F</span>}</div>
         </div>
         <div className="chart">
           <BarChart rows={novosAcumulados} bars={novosMensal} tick={10} />
@@ -547,7 +556,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
       <article className="card" style={{ gridColumn: "span 6" }}>
         <div className="section-title">
           <h2>Médicos com pelo menos uma emissão de documento por mês</h2>
-          <div className="legend"><span><i className="l1" />CPF distintos no mês</span>{periodoFiltrado && <span className="tag">filtros</span>}</div>
+          <div className="legend"><span><i className="l1" />CPF distintos no mês</span>{periodoFiltrado && <span className="tag">F</span>}</div>
         </div>
         <div className="chart">
           <BarChart rows={data.emissores_mensal.map((s) => ({ x: s.mes, v: Number(s.emissao) }))} tick={10} />
@@ -579,7 +588,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
       </article>
 
       <article className="card" style={{ gridColumn: "span 5" }}>
-        <div className="section-title"><h2>Inatividade por faixa sem emissão</h2><span>dias desde a última emissão{ufFiltrada && " · "}{ufFiltrada && <span className="tag">filtros</span>}</span></div>
+        <div className="section-title"><h2>Inatividade por faixa sem emissão</h2><span>dias desde a última emissão{ufFiltrada && " · "}{ufFiltrada && <span className="tag">F</span>}</span></div>
         <div style={{ paddingTop: 10, display: "flex", flexDirection: "column", gap: 14 }}>
           {faixas.map((f) => {
             const row = data.inatividade.find((i) => i.faixa === f);
@@ -603,6 +612,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
           })}
         </div>
       </article>
+      <LegendaFiltro />
     </section>
   );
 }

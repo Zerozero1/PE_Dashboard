@@ -72,7 +72,7 @@ h1{font-size:24px;margin:5px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
 .uf-scroll::-webkit-scrollbar-track{background:transparent}
 .uf-scroll::-webkit-scrollbar-thumb{background:#232d39;border-radius:3px}
 .uf-scroll::-webkit-scrollbar-thumb:hover{background:#2d3947}
-.tag{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;font-size:8.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--va);border:1px solid;border-color:color-mix(in srgb,var(--va) 35%,transparent);background:var(--va-soft);vertical-align:middle;white-space:nowrap}
+.tag{display:inline-flex;align-items:center;justify-content:center;margin-left:8px;width:16px;height:16px;border-radius:50%;font-size:9px;font-weight:700;line-height:1;color:var(--va);border:1px solid;border-color:color-mix(in srgb,var(--va) 45%,transparent);background:var(--va-soft);vertical-align:middle;flex:none}
 .chart svg{position:static;width:100%;height:auto;max-height:264px}
 .axis{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;color:#566271;font-size:9px}
 .legend{display:flex;gap:16px;font-size:10.5px;color:#9fb0c1;font-weight:600}.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
