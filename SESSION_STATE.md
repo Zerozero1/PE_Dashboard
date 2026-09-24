@@ -1,17 +1,18 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-24 10:25 BRT_
+_Atualizado em: 2026-09-24 11:10 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python em Windows (maquina separada da aplicacao) e 3 visões: Documentos, Medicos, Auditoria.
 
 ## ✅ Última Sessão (Resumo)
-- Visao Auditoria — AN1 (2026-09-24): tabela de medicos ordenados desc por quantidade de documentos do tipo selecionado, no periodo e UF. Filtros novos na pagina (Tipo de anomalia + Período + UF + Tipo de documento + quantidade de registros, default 20) + botao "Pesquisar" que dispara a consulta (a view nao carrega mais automaticamente; exige o clique). Identificacao por CRM/UF + NOME do medico.
-  - Datamart: nova fato `fato_documento_medico_tipo_dia` (dia, sg_uf, id_medico, id_tipo_documento, documentos) + staging `stg_documento_medico_tipo_dia` + indices `(id_tipo_documento,sg_uf,dia)` e `(id_medico,dia)`; novo modo `load_fatos medico_tipo` no pipeline (`run_all.py`). Carregada com 31,8M linhas / 62,08M documentos.
-  - `dim_medico` ganhou `nm_medico` (join `tb_pessoa.nm_pessoa` no `load_dims.py`) — nome exibido na tabela AN1.
-  - Endpoint `/api/dashboard/auditoria` reescrito para retornar `an1` (CRM, crm_uf, nome, docs), params `de/ate/uf/tipo/limite` (limite clamp 1..500, default 20).
-  - Decisoes registradas: filtro UF usa UF da unidade (como Documentos), coluna exibe UF do CRM; medico multi-UF aparece 1x por inscricao; tipo de documento pode ser "Todos".
-  - AN2/AN3/AN4 exibem card "em breve" ate serem implementadas.
-- Visao Auditoria simplificada (2026-09-23): removidos objetos abaixo dos filtros; combos de anomalia com descricao completa; tema `theme-cyan`.
+- Docker (2026-09-24): deploy de web + ETL via `docker-compose.yml` na raiz. Esclarecido o ponto-chave: Web e ETL NAO se comunicam por HTTP — o botao "Atualizar dados" insere job `manual` em `dashboard_refresh_job`, o `etl-worker` consome a fila (`FOR UPDATE SKIP LOCKED`) e o `etl-scheduler` cria os jobs diarios. Ambos so precisam enxergar o mesmo `prescricao_dw`.
+  - `web/Dockerfile` (multi-estagio, Next.js `output: standalone` — adicionado em `next.config.ts`), `web/.dockerignore`.
+  - `etl/Dockerfile` (python:3.12-slim + psycopg2-binary, entrypoint `jobs.py`, CMD `worker`), `etl/.dockerignore`.
+  - `docker-compose.yml` com 3 servicos: `web` (3000), `etl-worker`, `etl-scheduler`; env via `.env` (variaveis BDCFM_*/DW_*/OAuth).
+  - `.env.example` criado (e `!.env.example` liberado no `.gitignore`); `DEPLOY_PRODUCAO.md` ganhou secao 4.0 Docker.
+  - Build standalone validado localmente (`.next/standalone/server.js` existe). Docker CLI nao esta instalado nesta maquina de dev — teste do `docker compose up` fica para o ambiente de deploy.
+- Visao Auditoria — AN1 (2026-09-24): ranking "Maiores emissores de documentos medicos" + drill-down (donut por tipo, evolucao mensal, especialidades, situacao/tipo inscricao) via `/api/dashboard/auditoria/medico`. Fato `fato_documento_medico_tipo_dia` + `dim_medico.nm_medico`.
+- Visao Auditoria simplificada (2026-09-23): removidos objetos abaixo dos filtros; tema `theme-cyan`; tag "F" e legenda nas visoes Documentos/Medicos.
 - Tag de filtro (2026-09-23): KPIs/graficos/tabelas das visoes Documentos e Medicos ganharam tag em circulo com a letra "F" quando algum filtro difere de "Todos"; legenda "F — Dados com filtro(s) aplicados" no rodape de cada visao. Regras por consulta: Documentos KPIs/emissoes/UF respondem a periodo+UF+tipo; tipo donut/origem/especialidade so a periodo+UF. Medicos: KPIs/novos/inatividade so a UF; grafico de emissao a periodo+UF; "Medicos por UF" nunca (sem tag).
 - KPI "Pacientes distintos" suprimido da visao Documentos (2026-09-23): cadastro de paciente nao e centralizado (id_paciente por vinculo medico; CPF preenchido em apenas 26,7%; sem CNS/externo). Impacto no datamart: NENHUM por ora — `fato_documento_paciente_dia` continua sendo gerada porque a AN2 (anomalia de atendimentos) depende dela. Se AN2 tambem for descontinuada, pode-se dropar a fato e economizar ~70s por carga do pipeline.
 - Documentacao das bases revisada (2026-09-23): `RESUMO_BASE_bd_cfm.md` (base relacional) atualizado — `tb_usuario` (490.670, 1:1, `dh_aceite_termo` 94% como proxy de primeiro uso), `tb_medico` (`dh_atualizacao` invalidado por atualizacoes em massa), `tb_pessoa.nu_cpf` (1:1). `etl/README.md` (base analitica) ja estava sincronizado.

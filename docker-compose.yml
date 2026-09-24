@@ -1,0 +1,43 @@
+# PE Dashboard — orquestração Docker
+#
+# Web e ETL NÃO se comunicam por HTTP: o botão "Atualizar dados" insere um job
+# 'manual' em prescricao.dashboard_refresh_job; o ETL worker consome a fila
+# (FOR UPDATE SKIP LOCKED) e roda o pipeline. Ambos só precisam enxergar o
+# mesmo PostgreSQL (prescricao_dw); o ETL também lê a origem bd_cfm.
+
+services:
+  web:
+    build: ./web
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      DW_DATABASE_URL: ${DW_DATABASE_URL}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+    restart: unless-stopped
+
+  etl-worker:
+    build: ./etl
+    command: ["worker"]
+    environment: &etl-env
+      BDCFM_HOST: ${BDCFM_HOST}
+      BDCFM_PORT: ${BDCFM_PORT:-5432}
+      BDCFM_DB: ${BDCFM_DB}
+      BDCFM_USER: ${BDCFM_USER}
+      BDCFM_PASSWORD: ${BDCFM_PASSWORD}
+      DW_HOST: ${DW_HOST}
+      DW_PORT: ${DW_PORT:-5432}
+      DW_DB: ${DW_DB}
+      DW_USER: ${DW_USER}
+      DW_PASSWORD: ${DW_PASSWORD}
+      ETL_BATCH_SIZE: ${ETL_BATCH_SIZE:-2000000}
+      TZ: America/Sao_Paulo
+    restart: unless-stopped
+
+  etl-scheduler:
+    build: ./etl
+    command: ["scheduler"]
+    environment: *etl-env
+    restart: unless-stopped

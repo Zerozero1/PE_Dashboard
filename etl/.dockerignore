@@ -1,0 +1,13 @@
+__pycache__
+*.pyc
+.venv
+venv
+.git
+.env*
+*.log
+Dockerfile
+.dockerignore
+README.md
+debug_batch.py
+debug2.py
+debug3.py

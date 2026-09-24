@@ -65,6 +65,40 @@ Pontos de atenção:
 - Windows Server com Node.js 20+ (mesma versão validada no ambiente de desenvolvimento)
 - Acesso à pasta de aplicação (ex.: `C:\apps\pe-dashboard-web`)
 
+> **Docker (recomendado):** todo o deploy (web + ETL) pode ser feito com o
+> `docker-compose.yml` na raiz do repositório — ver seção 4.0 abaixo.
+
+### 4.0 Deploy via Docker (web + ETL juntos)
+
+```powershell
+# 1. copiar o .env.example para .env e preencher (nunca versionar)
+Copy-Item .env.example .env
+notepad .env
+
+# 2. subir tudo (web, etl-worker, etl-scheduler)
+docker compose up -d --build
+```
+
+Comunicação entre Web e ETL: **não há chamada HTTP**. O botão "Atualizar dados"
+insere um job `manual` em `prescricao.dashboard_refresh_job`; o container
+`etl-worker` consome a fila (`FOR UPDATE SKIP LOCKED`) e roda o pipeline;
+`etl-scheduler` cria os jobs `scheduled` diários (02:00 BRT). Ambos só precisam
+enxergar o mesmo `prescricao_dw`; o ETL também lê `bd_cfm`.
+
+```text
+                    ┌─────────────────────────────┐
+  usuário ──HTTP──► │ web (Next.js standalone)     │──leitura/escrita──┐
+                    └─────────────────────────────┘                   │
+                                                        prescricao_dw (fila de jobs)
+                    ┌─────────────────────────────┐                   │
+                    │ etl-worker (consome fila)     │──leitura/escrita─┤
+                    │ etl-scheduler (cria jobs)     │                  │
+                    └──────────┬──────────────────┘                   │
+                               │ leitura (bd_cfm)                      │
+                               ▼                                       ▼
+                             bd_cfm (origem)                PostgreSQL 172.16.7.112
+```
+
 ### 4.2 Obtenção do código
 ```powershell
 git clone https://github.com/Zerozero1/PE_Dashboard.git C:\apps\pe-dashboard-web
