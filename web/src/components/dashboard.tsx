@@ -665,7 +665,9 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
     setMedicoCarregando(true);
     try {
       const r = await fetch(`/api/dashboard/auditoria/medico?id_medico=${m.id_medico}&de=${de}&ate=${ate}&uf=${uf}`);
-      setMedicoData(await r.json());
+      const j = await r.json();
+      if (!r.ok || j.erro) { setMedicoErro(j.erro ?? `HTTP ${r.status}`); }
+      else { setMedicoData(j); }
     } catch (e) {
       setMedicoErro(String(e));
     } finally {
@@ -717,7 +719,9 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
                   <td>{r.crm_uf}</td>
                   <td>{r.nome ?? "—"}</td>
                   <td style={{ textAlign: "right" }}>{nf.format(Number(r.docs))}</td>
-                  <td style={{ textAlign: "right", color: "var(--va)" }}>▸</td>
+                  <td style={{ textAlign: "right" }}>
+                    <span className="drill-ico" title="Ver detalhes">›</span>
+                  </td>
                 </tr>
               ))}
               {data.an1.length === 0 && (

@@ -89,6 +89,8 @@ h1{font-size:24px;margin:5px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
 .table tr:last-child td{border-bottom:0}
 .table .group td{background:var(--va-soft);color:var(--va);font-weight:700;letter-spacing:.08em}
 .drill-row:hover td{background:var(--va-soft)}
+.drill-ico{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:1px solid;border-color:color-mix(in srgb,var(--va) 45%,transparent);color:var(--va);font-size:17px;line-height:1;font-weight:700;background:var(--va-soft);cursor:pointer;transition:all .15s}
+.drill-row:hover .drill-ico{background:var(--va);color:#06131a;box-shadow:0 0 12px var(--va)}
 .badge{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:9px;border:1px solid}
 .ok{color:var(--green);border-color:rgba(101,245,173,.22);background:rgba(101,245,173,.045)}
 .warn{color:var(--orange);border-color:rgba(255,180,84,.22);background:rgba(255,180,84,.045)}
