@@ -1,11 +1,17 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-23 11:40 BRT_
+_Atualizado em: 2026-09-24 10:15 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python em Windows (maquina separada da aplicacao) e 3 visões: Documentos, Medicos, Auditoria.
 
 ## ✅ Última Sessão (Resumo)
-- Visao Auditoria simplificada (2026-09-23): removidos todos os objetos abaixo dos filtros (eventos por dia, rankings, tabela de detalhe, bloco SQL); a view ficou apenas com filtros Período + Tipo de anomalia. Chamada `useApi` da view removida (endpoint `/api/dashboard/auditoria` mantido no backend). Combos de anomalia agora com descricao completa (AN1 Documentos emitidos acima da media / AN2 Atendimentos de pacientes unicos / AN3 Tempo entre emissoes / AN4 Documentos pelo local). Tema da visao trocado de `theme-red` para `theme-cyan` (padrao das demais abas).
+- Visao Auditoria — AN1 (2026-09-24): tabela de medicos ordenados desc por quantidade de documentos do tipo selecionado, no periodo e UF. Filtros novos na pagina (Período + UF + Tipo de documento + quantidade de registros, default 20). Identificacao por CRM/UF + NOME do medico.
+  - Datamart: nova fato `fato_documento_medico_tipo_dia` (dia, sg_uf, id_medico, id_tipo_documento, documentos) + staging `stg_documento_medico_tipo_dia` + indices `(id_tipo_documento,sg_uf,dia)` e `(id_medico,dia)`; novo modo `load_fatos medico_tipo` no pipeline (`run_all.py`).
+  - `dim_medico` ganhou `nm_medico` (join `tb_pessoa.nm_pessoa` no `load_dims.py`) — nome exibido na tabela AN1, ainda sem dados pessoais alem do nome.
+  - Endpoint `/api/dashboard/auditoria` reescrito para retornar `an1` (CRM, crm_uf, nome, docs), params `de/ate/uf/tipo/limite` (limite clamp 1..500, default 20).
+  - Decisoes registradas: filtro UF usa UF da unidade (como Documentos), coluna exibe UF do CRM; medico multi-UF aparece 1x por inscricao; tipo de documento pode ser "Todos".
+  - Nome do medico veio via ETL (nao consulta direta na origem em tempo de tela) — mantem o principio de ler apenas o datamart.
+- Visao Auditoria simplificada (2026-09-23): removidos todos os objetos abaixo dos filtros (eventos por dia, rankings, tabela de detalhe, bloco SQL); combos de anomalia com descricao completa; tema `theme-cyan`.
 - Tag de filtro (2026-09-23): KPIs/graficos/tabelas das visoes Documentos e Medicos ganharam tag em circulo com a letra "F" quando algum filtro difere de "Todos"; legenda "F — Dados com filtro(s) aplicados" no rodape de cada visao. Regras por consulta: Documentos KPIs/emissoes/UF respondem a periodo+UF+tipo; tipo donut/origem/especialidade so a periodo+UF. Medicos: KPIs/novos/inatividade so a UF; grafico de emissao a periodo+UF; "Medicos por UF" nunca (sem tag).
 - KPI "Pacientes distintos" suprimido da visao Documentos (2026-09-23): cadastro de paciente nao e centralizado (id_paciente por vinculo medico; CPF preenchido em apenas 26,7%; sem CNS/externo). Impacto no datamart: NENHUM por ora — `fato_documento_paciente_dia` continua sendo gerada porque a AN2 (anomalia de atendimentos) depende dela. Se AN2 tambem for descontinuada, pode-se dropar a fato e economizar ~70s por carga do pipeline.
 - Documentacao das bases revisada (2026-09-23): `RESUMO_BASE_bd_cfm.md` (base relacional) atualizado — `tb_usuario` (490.670, 1:1, `dh_aceite_termo` 94% como proxy de primeiro uso), `tb_medico` (`dh_atualizacao` invalidado por atualizacoes em massa), `tb_pessoa.nu_cpf` (1:1). `etl/README.md` (base analitica) ja estava sincronizado.

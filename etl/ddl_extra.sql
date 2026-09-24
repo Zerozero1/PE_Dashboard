@@ -76,6 +76,9 @@ CREATE INDEX IF NOT EXISTS idx_dim_medico_uf
 ALTER TABLE prescricao.dim_medico
     ADD COLUMN IF NOT EXISTS id_pessoa INTEGER;
 
+ALTER TABLE prescricao.dim_medico
+    ADD COLUMN IF NOT EXISTS nm_medico VARCHAR(200);
+
 CREATE INDEX IF NOT EXISTS idx_dim_medico_pessoa
     ON prescricao.dim_medico (id_pessoa);
 
@@ -99,3 +102,26 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_medico_extremos_emissao (
     ultimo_dia DATE NOT NULL,
     PRIMARY KEY (sg_uf, id_pessoa)
 );
+
+CREATE TABLE IF NOT EXISTS prescricao.stg_documento_medico_tipo_dia (
+    dia DATE NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_medico INTEGER NOT NULL,
+    id_tipo_documento INTEGER NOT NULL,
+    documentos BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS prescricao.fato_documento_medico_tipo_dia (
+    dia DATE NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_medico INTEGER NOT NULL,
+    id_tipo_documento INTEGER NOT NULL,
+    documentos BIGINT NOT NULL,
+    PRIMARY KEY (dia, sg_uf, id_medico, id_tipo_documento)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fato_medico_tipo_tipo
+    ON prescricao.fato_documento_medico_tipo_dia (id_tipo_documento, sg_uf, dia);
+
+CREATE INDEX IF NOT EXISTS idx_fato_medico_tipo_medico
+    ON prescricao.fato_documento_medico_tipo_dia (id_medico, dia);

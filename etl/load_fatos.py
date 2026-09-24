@@ -86,6 +86,23 @@ WHERE d.id_consulta_documento BETWEEN %s AND %s
 GROUP BY 1, 2, 3
 """
 
+SQL_MEDICO_TIPO = """
+SELECT d.dh_documento::date AS dia,
+       CASE WHEN ua.sg_uf = 'BR' THEN '--' ELSE COALESCE(ua.sg_uf, '--') END AS sg_uf,
+       mu.id_medico,
+       d.id_tipo_documento,
+       count(*) AS documentos
+FROM prescricao.tb_consulta_documento d
+LEFT JOIN prescricao.tb_consulta c ON c.id_consulta = d.id_consulta
+LEFT JOIN prescricao.rl_medico_unidade_atendimento mu
+       ON mu.id_medico_unidade_atendimento = c.id_medico_unidade_atendimento
+LEFT JOIN prescricao.tb_unidade_atendimento ua
+       ON ua.id_unidade_atendimento = mu.id_unidade_atendimento
+WHERE d.id_consulta_documento BETWEEN %s AND %s
+  AND mu.id_medico IS NOT NULL
+GROUP BY 1, 2, 3, 4
+"""
+
 SQL_PACIENTES = """
 SELECT d.dh_documento::date AS dia,
        CASE WHEN ua.sg_uf = 'BR' THEN '--' ELSE COALESCE(ua.sg_uf, '--') END AS sg_uf,
@@ -212,6 +229,15 @@ def main():
             ["dia", "sg_uf", "id_medico"],
             "prescricao.fato_documento_medico_dia", 3)
         log(f"fato_documento_medico_dia: concluido — {total:,} documentos")
+
+    elif mode == "medico_tipo":
+        log("fato_documento_medico_tipo_dia: iniciando")
+        total = batch_loop(
+            origin, dw, SQL_MEDICO_TIPO, "prescricao.stg_documento_medico_tipo_dia",
+            ["dia", "sg_uf", "id_medico", "id_tipo_documento", "documentos"],
+            ["dia", "sg_uf", "id_medico", "id_tipo_documento"],
+            "prescricao.fato_documento_medico_tipo_dia", 4)
+        log(f"fato_documento_medico_tipo_dia: concluido — {total:,} documentos")
 
     origin.close()
     dw.close()

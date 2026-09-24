@@ -21,6 +21,7 @@ def main():
         ("fato especialidade", "load_fatos especialidade"),
         ("fato unidade", "load_fatos unidade"),
         ("fato medico-dia", "load_fatos medico"),
+        ("fato medico-tipo", "load_fatos medico_tipo"),
         ("fato pacientes", "load_fatos pacientes"),
         ("medicos (snapshot/novos)", "load_medicos"),
         ("anomalias", "load_anomalias"),
