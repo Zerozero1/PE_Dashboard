@@ -41,3 +41,8 @@ services:
     command: ["scheduler"]
     environment: *etl-env
     restart: unless-stopped
+
+networks:
+  default:
+    name: cfm-network
+    external: true
