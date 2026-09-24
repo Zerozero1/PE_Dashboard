@@ -472,14 +472,14 @@ A media de referencia (valor esperado) e sempre o valor agregado de TODOS os med
 
 Fluxo da aba:
 
-1. Usuario escolhe os filtros obrigatorios (periodo curto, tipo de anomalia, dimensao).
-2. Backend monta e executa o SQL agregado somente sobre o datamart.
-3. A UI exibe os resultados agregados e o SQL executado (consulta 24); o usuario pode editar o SQL e re-executar, sempre limitado ao datamart.
+1. Usuario escolhe o tipo de anomalia, periodo, UF, tipo de documento e quantidade de registros.
+2. Clica em "Pesquisar" para disparar a consulta (a view nao carrega automaticamente).
+3. AN1 exibe o ranking de medicos; ao clicar na linha (icone circular "›"), abre um drill-down com: donut de documentos por tipo (quantidade e % do total), evolucao mensal (acumulado x mes), especialidades, situacao/tipo de inscricao e total no periodo — tudo lido do datamart (fato `fato_documento_medico_tipo_dia` + `dim_medico`/`dim_tipo_documento`/`dim_especialidade`). AN2–AN4 exibem card "em breve".
 
 Observacoes gerais:
 - Todas as consultas de tela leem apenas o datamart `prescricao_dw`; nenhuma consulta direta na origem `bd_cfm`.
 - Consultas agregadas sempre filtradas por periodo; limites de linhas em tabelas paginadas.
-- `dim_medico` guarda apenas identificadores tecnicos e atributos agregaveis, sem dados pessoais.
+- `dim_medico` guarda identificadores tecnicos e, desde 2026-09-24, `nm_medico` (nome) — exposto somente no drill-down da Auditoria, via ETL (nao em tempo de tela).
 - A visao Auditoria nao expoe registros individuais nem dados da tabela de auditoria relacional (decisao 14).
 
 ## 7. Experiencia e Interface

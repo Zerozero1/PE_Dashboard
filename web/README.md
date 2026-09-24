@@ -37,7 +37,8 @@ Sem as credenciais do Google, o modo `development` usa sessão mock (`mrichard@p
 | `GET /api/filtros` | UFs e tipos de documento para os filtros |
 | `GET /api/dashboard/documentos` | KPIs, série mensal, origem de criação por mês (`serie_origem`), por tipo, por UF, ranking de especialidades (`de`, `ate`, `uf`, `tipo`) |
 | `GET /api/dashboard/medicos` | KPIs snapshot, novos por mês, por UF, inatividade por faixa (`de`, `ate`, `uf`) |
-| `GET /api/dashboard/auditoria` | Eventos por dia, tipos, dimensões, detalhe (`de`, `ate`, `tipo`) |
+| `GET /api/dashboard/auditoria` | AN1 "Maiores emissores": ranking de médicos por documentos do tipo/UF/período (`de`, `ate`, `uf`, `tipo`, `limite`; limite clamp 1–500, default 20) |
+| `GET /api/dashboard/auditoria/medico` | Drill-down de um emissor: docs por tipo (donut), série mensal, especialidades e dados do médico (`id_medico`, `de`, `ate`, `uf`) |
 | `POST /api/admin/refresh-jobs` | Enfileira job manual no `dashboard_refresh_job` (botão "Atualizar dados") |
 
 ## Estrutura
