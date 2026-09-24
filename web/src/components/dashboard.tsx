@@ -614,18 +614,43 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
   );
 }
 
-function AuditoriaView({ active, filtros }: { active: boolean; filtros: FiltrosData | null }) {
+const ANOMALIAS: [string, string][] = [
+  ["AN1", "AN1 · Documentos emitidos acima da média"],
+  ["AN2", "AN2 · Atendimentos de pacientes únicos acima da média"],
+  ["AN3", "AN3 · Tempo entre emissões acima da média"],
+  ["AN4", "AN4 · Documentos emitidos pelo local acima da média"],
+];
+
+function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
+  const [anomalia, setAnomalia] = useState("AN1");
   const [dias, setDias] = useState<"todos" | string>("todos");
   const [uf, setUf] = useState("");
   const [tipo, setTipo] = useState("");
   const [limite, setLimite] = useState("20");
+  const [data, setData] = useState<AudData | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [carregando, setCarregando] = useState(false);
   const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
-  const qs = `de=${de}&ate=${ate}&uf=${uf}&tipo=${tipo}&limite=${limite}`;
-  const { data, erro, carregando } = useApi<AudData>(`/api/dashboard/auditoria?${qs}`, active);
-  if (erro) return <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>;
+
+  const pesquisar = async () => {
+    if (anomalia !== "AN1") { setData(null); setErro(null); return; }
+    const qs = `de=${de}&ate=${ate}&uf=${uf}&tipo=${tipo}&limite=${limite}`;
+    setCarregando(true);
+    setErro(null);
+    try {
+      const r = await fetch(`/api/dashboard/auditoria?${qs}`);
+      setData(await r.json());
+    } catch (e) {
+      setErro(String(e));
+    } finally {
+      setCarregando(false);
+    }
+  };
+
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
+        <Sel label="Tipo de anomalia" value={anomalia} onChange={setAnomalia} options={ANOMALIAS} />
         <Sel label="Período" value={dias} onChange={setDias} options={[["todos", "Todos"], ["7", "7 dias"], ["30", "30 dias"], ["90", "90 dias"]]} />
         <Sel label="UF" value={uf} onChange={setUf} options={[["", "Todas"], ...(filtros?.ufs.map((u) => [u, u] as [string, string]) ?? [])]} />
         <Sel label="Tipo de documento" value={tipo} onChange={setTipo} options={[["", "Todos"], ...(filtros?.tipos.map((t) => [String(t.id), t.nome] as [string, string]) ?? [])]} />
@@ -637,10 +662,18 @@ function AuditoriaView({ active, filtros }: { active: boolean; filtros: FiltrosD
             ))}
           </select>
         </label>
-        <div className="meta">{de} → {ate} · AN1</div>
+        <button className="btn primary" onClick={pesquisar} disabled={carregando}>Pesquisar</button>
+        <div className="meta">{de} → {ate} · {anomalia}</div>
       </div>
       {carregando && <Processando />}
-      {!carregando && data && (
+      {erro && <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>}
+      {!carregando && anomalia !== "AN1" && (
+        <article className="card" style={{ gridColumn: "span 12" }}>
+          <div className="section-title"><h2>{ANOMALIAS.find((a) => a[0] === anomalia)?.[1]}</h2><span>em breve</span></div>
+          <div style={{ color: "#566271", fontSize: 12 }}>Esta anomalia será implementada em uma próxima etapa.</div>
+        </article>
+      )}
+      {!carregando && anomalia === "AN1" && data && (
         <article className="card" style={{ gridColumn: "span 12" }}>
           <div className="section-title"><h2>AN1 · Documentos emitidos acima da média</h2><span>médicos por quantidade de documentos</span></div>
           <table className="table">
@@ -764,7 +797,7 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
             </header>
             {v === "documentos" && <DocumentsView active={view === v} filtros={filtros} />}
             {v === "medicos" && <MedicosView active={view === v} filtros={filtros} />}
-            {v === "auditoria" && <AuditoriaView active={view === v} filtros={filtros} />}
+            {v === "auditoria" && <AuditoriaView filtros={filtros} />}
           </section>
         ))}
         <div className="footer">
