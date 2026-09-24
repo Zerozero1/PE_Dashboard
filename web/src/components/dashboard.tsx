@@ -40,7 +40,14 @@ type MedData = {
 type AudData = {
   de: string;
   ate: string;
-  an1: { crm: string; crm_uf: string; nome: string; docs: string }[];
+  an1: { id_medico: number; crm: string; crm_uf: string; nome: string; docs: string }[];
+};
+
+type AudMedicoData = {
+  medico: { nome: string; crm: string; crm_uf: string; situacao: string | null; tipo_inscricao: string | null } | null;
+  por_tipo: { tipo: string; docs: string }[];
+  serie_mensal: { mes: string; docs: string }[];
+  especialidades: string[];
 };
 
 type FiltrosData = { ufs: string[]; tipos: { id: number; nome: string }[] };
@@ -630,6 +637,10 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
   const [data, setData] = useState<AudData | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
+  const [medico, setMedico] = useState<{ id_medico: number; nome: string } | null>(null);
+  const [medicoData, setMedicoData] = useState<AudMedicoData | null>(null);
+  const [medicoErro, setMedicoErro] = useState<string | null>(null);
+  const [medicoCarregando, setMedicoCarregando] = useState(false);
   const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
 
   const pesquisar = async () => {
@@ -644,6 +655,21 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
       setErro(String(e));
     } finally {
       setCarregando(false);
+    }
+  };
+
+  const abrirMedico = async (m: { id_medico: number; nome: string }) => {
+    setMedico(m);
+    setMedicoData(null);
+    setMedicoErro(null);
+    setMedicoCarregando(true);
+    try {
+      const r = await fetch(`/api/dashboard/auditoria/medico?id_medico=${m.id_medico}&de=${de}&ate=${ate}&uf=${uf}`);
+      setMedicoData(await r.json());
+    } catch (e) {
+      setMedicoErro(String(e));
+    } finally {
+      setMedicoCarregando(false);
     }
   };
 
@@ -680,27 +706,94 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
             <thead>
               <tr>
                 <th>#</th><th>CRM</th><th>UF</th><th>Nome</th>
-                <th style={{ textAlign: "right" }}>Documentos</th>
+                <th style={{ textAlign: "right" }}>Documentos</th><th />
               </tr>
             </thead>
             <tbody>
               {data.an1.map((r, i) => (
-                <tr key={`${r.crm}-${r.crm_uf}-${i}`}>
+                <tr key={`${r.crm}-${r.crm_uf}-${i}`} onClick={() => abrirMedico({ id_medico: r.id_medico, nome: r.nome ?? "—" })} style={{ cursor: "pointer" }} className="drill-row">
                   <td>{i + 1}</td>
                   <td>{r.crm}</td>
                   <td>{r.crm_uf}</td>
                   <td>{r.nome ?? "—"}</td>
                   <td style={{ textAlign: "right" }}>{nf.format(Number(r.docs))}</td>
+                  <td style={{ textAlign: "right", color: "var(--va)" }}>▸</td>
                 </tr>
               ))}
               {data.an1.length === 0 && (
-                <tr><td colSpan={5} style={{ color: "#566271", textAlign: "center" }}>Sem registros no período/filtros.</td></tr>
+                <tr><td colSpan={6} style={{ color: "#566271", textAlign: "center" }}>Sem registros no período/filtros.</td></tr>
               )}
             </tbody>
           </table>
         </article>
       )}
+      {medico && (
+        <MedicoDrill medico={medico} data={medicoData} erro={medicoErro} carregando={medicoCarregando} onClose={() => setMedico(null)} />
+      )}
     </section>
+  );
+}
+
+function MedicoDrill({ medico, data, erro, carregando, onClose }: {
+  medico: { id_medico: number; nome: string };
+  data: AudMedicoData | null;
+  erro: string | null;
+  carregando: boolean;
+  onClose: () => void;
+}) {
+  const total = data ? data.por_tipo.reduce((a, t) => a + Number(t.docs), 0) : 0;
+  let acumulado = 0;
+  const serie = data ? data.serie_mensal.map((s) => {
+    acumulado += Number(s.docs);
+    return { x: s.mes, v: acumulado };
+  }) : [];
+  const mensal = data ? data.serie_mensal.map((s) => Number(s.docs)) : [];
+  const situacaoLabel = data?.medico?.situacao ? `Situação ${data.medico.situacao}` : null;
+  const inscricaoLabel = data?.medico?.tipo_inscricao ? `Inscrição ${data.medico.tipo_inscricao}` : null;
+
+  return (
+    <article className="card" style={{ gridColumn: "span 12" }}>
+      <div className="section-title">
+        <h2>{medico.nome}</h2>
+        <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {data?.medico && <span>CRM {data.medico.crm}/{data.medico.crm_uf}</span>}
+          <button className="btn" onClick={onClose} style={{ padding: "4px 9px", fontSize: 10 }}>Fechar ✕</button>
+        </span>
+      </div>
+      {carregando && <Processando />}
+      {erro && <div style={{ color: "var(--red)" }}>Erro: {erro}</div>}
+      {!carregando && !erro && data && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 18 }}>
+          <div style={{ gridColumn: "span 4" }}>
+            <div className="section-title"><h2>Documentos por tipo</h2></div>
+            <Donut rows={data.por_tipo.map((t) => ({ label: t.tipo, v: Number(t.docs) }))} pctDec={1} />
+            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {situacaoLabel && <span className="badge ok">{situacaoLabel}</span>}
+              {inscricaoLabel && <span className="badge warn">{inscricaoLabel}</span>}
+            </div>
+          </div>
+          <div style={{ gridColumn: "span 8" }}>
+            <div className="section-title"><h2>Evolução mensal</h2><span>acumulado × mês</span></div>
+            <div className="chart" style={{ height: 210 }}>
+              <BarChart rows={serie} bars={mensal} />
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <div className="section-title"><h2>Especialidades</h2></div>
+              {data.especialidades.length > 0 ? (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {data.especialidades.map((e) => (
+                    <span key={e} className="badge">{e}</span>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ color: "#566271", fontSize: 11 }}>Sem especialidade cadastrada.</div>
+              )}
+            </div>
+            <div className="sub" style={{ marginTop: 14 }}>Total no período: <b style={{ color: "var(--va)" }}>{nf.format(total)}</b> documentos · {data.por_tipo.length} tipos distintos</div>
+          </div>
+        </div>
+      )}
+    </article>
   );
 }
 

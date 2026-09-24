@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const an1 = await query(
-      `SELECT m.nu_crm AS crm, m.sg_uf AS crm_uf, m.nm_medico AS nome,
+      `SELECT m.id_medico, m.nu_crm AS crm, m.sg_uf AS crm_uf, m.nm_medico AS nome,
               sum(f.documentos) AS docs
          FROM prescricao.fato_documento_medico_tipo_dia f
          JOIN prescricao.dim_medico m ON m.id_medico = f.id_medico
