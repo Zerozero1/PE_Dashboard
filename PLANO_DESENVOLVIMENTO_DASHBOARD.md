@@ -465,7 +465,7 @@ A media de referencia (valor esperado) e sempre o valor agregado de TODOS os med
 
 | Codigo | Anomalia | Como e calculada | Severidade |
 |---|---|---|---|
-| AN1 | Documentos emitidos acima da media | Total diario de documentos (na dimensao escolhida) comparado a media diaria de todos os medicos; dispara quando valor > media + limite | 2x/3x/5x o desvio |
+| AN1 | Maiores emissores de documentos medicos | Ranking decrescente de medicos por quantidade de documentos do tipo selecionado, no periodo e UF | - |
 | AN2 | Atendimentos de pacientes unicos acima da media | Igual AN1, usando pacientes_distintos e a media de todos os medicos | 2x/3x/5x o desvio |
 | AN3 | Tempo entre emissoes acima da media | Intervalo medio entre `dh_documento` do emissor comparado ao intervalo medio de todos os medicos; dispara quando o gap e muito acima da media geral | 2x/3x/5x o desvio |
 | AN4 | Documentos emitidos pelo local acima da media | Volume do local de atendimento comparado a media de todos os locais (que reflete todos os medicos) | 2x/3x/5x o desvio |

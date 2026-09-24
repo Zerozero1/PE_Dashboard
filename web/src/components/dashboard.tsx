@@ -615,7 +615,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
 }
 
 const ANOMALIAS: [string, string][] = [
-  ["AN1", "AN1 · Documentos emitidos acima da média"],
+  ["AN1", "AN1 · Maiores emissores de documentos médicos"],
   ["AN2", "AN2 · Atendimentos de pacientes únicos acima da média"],
   ["AN3", "AN3 · Tempo entre emissões acima da média"],
   ["AN4", "AN4 · Documentos emitidos pelo local acima da média"],
@@ -675,7 +675,7 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
       )}
       {!carregando && anomalia === "AN1" && data && (
         <article className="card" style={{ gridColumn: "span 12" }}>
-          <div className="section-title"><h2>AN1 · Documentos emitidos acima da média</h2><span>médicos por quantidade de documentos</span></div>
+          <div className="section-title"><h2>AN1 · Maiores emissores de documentos médicos</h2><span>médicos por quantidade de documentos</span></div>
           <table className="table">
             <thead>
               <tr>
