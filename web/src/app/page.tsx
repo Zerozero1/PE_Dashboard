@@ -10,7 +10,7 @@ export default async function Page() {
     if (process.env.NODE_ENV === "development" && !process.env.GOOGLE_CLIENT_ID) {
       return <Dashboard email="mrichard@portalmedico.org.br" mock />;
     }
-    redirect("/api/auth/signin?callbackUrl=/");
+    redirect("/login?callbackUrl=/");
   }
 
   return <Dashboard email={session.user.email} />;

@@ -27,7 +27,9 @@ Sem as credenciais do Google, o modo `development` usa sessão mock (`mrichard@p
 
 - next-auth v4 + provider Google (escopos `openid email profile`)
 - Validação de domínio no callback `signIn`: somente `@portalmedico.org.br`
-- Perfil único: todos os usuários do domínio veem as quatro visões
+- Página de login personalizada em `/login` (tema cyberpunk, botão "Entrar com Google")
+- Perfil único: todos os usuários do domínio veem as visões
+- Em servidor corporativo atrás de reverse-proxy, definir `NEXTAUTH_URL` com a URL pública
 
 ## Endpoints
 
@@ -50,6 +52,7 @@ src/
     globals.css      # tema cyberpunk dark
     layout.tsx       # shell raiz
     page.tsx         # sessão + dashboard
+    login/           # página de login (Google)
   components/
     dashboard.tsx    # abas, filtros e visões (SVG/CSS, sem lib de gráficos)
   lib/

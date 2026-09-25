@@ -12,11 +12,14 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   session: { strategy: "jwt" },
-  pages: { signIn: "/api/auth/signin" },
+  // Em servidor corporativo atrás de reverse-proxy, defina NEXTAUTH_URL com a
+  // URL pública/canônica (o cookie e o callback dependem dela). Em dev, a
+  // inferência automática funciona localmente.
+  pages: { signIn: "/login" },
   callbacks: {
     async signIn({ user }) {
-      const email = user.email ?? "";
-      return email.toLowerCase().endsWith(`@${ALLOWED_DOMAIN}`);
+      const email = (user.email ?? "").toLowerCase();
+      return email.endsWith(`@${ALLOWED_DOMAIN}`);
     },
     async session({ session, token }) {
       if (session.user) {

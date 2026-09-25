@@ -1,18 +1,17 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-24 11:10 BRT_
+_Atualizado em: 2026-09-24 11:40 BRT_
 
 ## 🎯 Objetivo Atual
-Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python em Windows (maquina separada da aplicacao) e 3 visões: Documentos, Medicos, Auditoria.
+Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões: Documentos, Medicos, Auditoria.
 
 ## ✅ Última Sessão (Resumo)
-- Docker (2026-09-24): deploy de web + ETL via `docker-compose.yml` na raiz. Esclarecido o ponto-chave: Web e ETL NAO se comunicam por HTTP — o botao "Atualizar dados" insere job `manual` em `dashboard_refresh_job`, o `etl-worker` consome a fila (`FOR UPDATE SKIP LOCKED`) e o `etl-scheduler` cria os jobs diarios. Ambos so precisam enxergar o mesmo `prescricao_dw`.
-  - `web/Dockerfile` (multi-estagio, Next.js `output: standalone` — adicionado em `next.config.ts`), `web/.dockerignore`.
-  - `etl/Dockerfile` (python:3.12-slim + psycopg2-binary, entrypoint `jobs.py`, CMD `worker`), `etl/.dockerignore`.
-  - `docker-compose.yml` com 3 servicos: `web` (3000), `etl-worker`, `etl-scheduler`; env via `.env` (variaveis BDCFM_*/DW_*/OAuth).
-  - `.env.example` criado (e `!.env.example` liberado no `.gitignore`); `DEPLOY_PRODUCAO.md` ganhou secao 4.0 Docker.
-  - Build standalone validado localmente (`.next/standalone/server.js` existe). Docker CLI nao esta instalado nesta maquina de dev — teste do `docker compose up` fica para o ambiente de deploy.
-- Visao Auditoria — AN1 (2026-09-24): ranking "Maiores emissores de documentos medicos" + drill-down (donut por tipo, evolucao mensal, especialidades, situacao/tipo inscricao) via `/api/dashboard/auditoria/medico`. Fato `fato_documento_medico_tipo_dia` + `dim_medico.nm_medico`.
-- Visao Auditoria simplificada (2026-09-23): removidos objetos abaixo dos filtros; tema `theme-cyan`; tag "F" e legenda nas visoes Documentos/Medicos.
+- Login Google finalizado (2026-09-24): o OAuth ja existia (next-auth v4 + GoogleProvider + validacao de dominio em `signIn`); faltava a pagina de login propria e o ajuste para servidor corporativo.
+  - Nova pagina `/login` (client component, tema cyberpunk, botao "Entrar com Google" com logo G, estado de carregando e erro).
+  - `pages.signIn` aponta para `/login` (antes era a pagina padrao do next-auth); `page.tsx` redireciona para `/login?callbackUrl=/`.
+  - Tentativa de `trustHost: true` REMOVIDA — esse campo nao existe no next-auth v4 (so no v5). Para servidor atras de reverse-proxy, usar `NEXTAUTH_URL` com a URL publica/canonica.
+  - Validado: build OK, `/login` registrado e renderizando (HTTP 200, botao Google presente).
+- Docker (2026-09-24): `docker-compose.yml` (web + etl-worker + etl-scheduler), Dockerfiles, `.env.example`, `output: standalone`.
+- Visao Auditoria — AN1 (2026-09-24): ranking "Maiores emissores de documentos medicos" + drill-down. Fato `fato_documento_medico_tipo_dia` + `dim_medico.nm_medico`.
 - Tag de filtro (2026-09-23): KPIs/graficos/tabelas das visoes Documentos e Medicos ganharam tag em circulo com a letra "F" quando algum filtro difere de "Todos"; legenda "F — Dados com filtro(s) aplicados" no rodape de cada visao. Regras por consulta: Documentos KPIs/emissoes/UF respondem a periodo+UF+tipo; tipo donut/origem/especialidade so a periodo+UF. Medicos: KPIs/novos/inatividade so a UF; grafico de emissao a periodo+UF; "Medicos por UF" nunca (sem tag).
 - KPI "Pacientes distintos" suprimido da visao Documentos (2026-09-23): cadastro de paciente nao e centralizado (id_paciente por vinculo medico; CPF preenchido em apenas 26,7%; sem CNS/externo). Impacto no datamart: NENHUM por ora — `fato_documento_paciente_dia` continua sendo gerada porque a AN2 (anomalia de atendimentos) depende dela. Se AN2 tambem for descontinuada, pode-se dropar a fato e economizar ~70s por carga do pipeline.
 - Documentacao das bases revisada (2026-09-23): `RESUMO_BASE_bd_cfm.md` (base relacional) atualizado — `tb_usuario` (490.670, 1:1, `dh_aceite_termo` 94% como proxy de primeiro uso), `tb_medico` (`dh_atualizacao` invalidado por atualizacoes em massa), `tb_pessoa.nu_cpf` (1:1). `etl/README.md` (base analitica) ja estava sincronizado.
