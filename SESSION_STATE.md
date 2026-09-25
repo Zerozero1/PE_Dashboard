@@ -1,16 +1,14 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-24 12:10 BRT_
+_Atualizado em: 2026-09-24 12:40 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões: Documentos, Medicos, Auditoria.
 
 ## ✅ Última Sessão (Resumo)
-- Login Google validado localmente (2026-09-24): OAuth criado no projeto `dashboard-prescricao` (Internal). Erros de config resolvidos: tela de consentimento (agora vive em **Google Auth Platform**, nao mais em "APIs & Services"), `redirect_uri_mismatch` corrigido ao acertar a redirect URI `http://localhost:3000/api/auth/callback/google`.
-  - Confirmado: com OAuth **Internal** nao precisa publicar nem adicionar test users.
-  - Preparado para producao `https://dashboard.prescricao.cfm.org.br/`: sem mudanca de codigo — so `NEXTAUTH_URL=https://...`, redirect URI nova no console, e proxy repassando `X-Forwarded-Proto: https`. Docs (`DEPLOY_PRODUCAO.md` secao 4.3/4.3.1 e `.env.example`) atualizadas.
-- Login Google implementado (2026-09-24): pagina `/login` custom (tema cyberpunk, botao Google); `pages.signIn=/login`; `trustHost` nao existe no next-auth v4 (removido) — usar `NEXTAUTH_URL`.
-- Docker (2026-09-24): `docker-compose.yml` (web + etl-worker + etl-scheduler), Dockerfiles, `.env.example`, `output: standalone`.
-- Visao Auditoria — AN1 (2026-09-24): ranking "Maiores emissores de documentos medicos" + drill-down. Fato `fato_documento_medico_tipo_dia` + `dim_medico.nm_medico`.
+- Limpeza de referencias obsoletas a Dispensacoes (2026-09-24): datamart confirmado LIMPO (fato_dispensacao_dia e dim_farmaceutico ja removidas; busca por `%dispens%`/`%farmaceut%` = nenhum). Documentacao corrigida no PLANO (secoes 3.4, 4.2, 5.2, 6.4, 6.5, 7 e titulo da Fase 3) e no RESUMO_BASE (recomendacao de fato_dispensacao_dia removida). CSS morto `.tab[data-view="dispensacoes"]` excluido. Mantidos como registro historico: SESSION_STATE, `migrate_drop_dispensacoes.py` e as anotacoes "REMOVIDA".
+- Login Google validado localmente (2026-09-24): OAuth `dashboard-prescricao` (Internal). Preparado para producao `https://dashboard.prescricao.cfm.org.br/`.
+- Docker (2026-09-24): `docker-compose.yml` (web + etl-worker + etl-scheduler).
+- Visao Auditoria — AN1 (2026-09-24): ranking "Maiores emissores" + drill-down.
 - Tag de filtro (2026-09-23): KPIs/graficos/tabelas das visoes Documentos e Medicos ganharam tag em circulo com a letra "F" quando algum filtro difere de "Todos"; legenda "F — Dados com filtro(s) aplicados" no rodape de cada visao. Regras por consulta: Documentos KPIs/emissoes/UF respondem a periodo+UF+tipo; tipo donut/origem/especialidade so a periodo+UF. Medicos: KPIs/novos/inatividade so a UF; grafico de emissao a periodo+UF; "Medicos por UF" nunca (sem tag).
 - KPI "Pacientes distintos" suprimido da visao Documentos (2026-09-23): cadastro de paciente nao e centralizado (id_paciente por vinculo medico; CPF preenchido em apenas 26,7%; sem CNS/externo). Impacto no datamart: NENHUM por ora — `fato_documento_paciente_dia` continua sendo gerada porque a AN2 (anomalia de atendimentos) depende dela. Se AN2 tambem for descontinuada, pode-se dropar a fato e economizar ~70s por carga do pipeline.
 - Documentacao das bases revisada (2026-09-23): `RESUMO_BASE_bd_cfm.md` (base relacional) atualizado — `tb_usuario` (490.670, 1:1, `dh_aceite_termo` 94% como proxy de primeiro uso), `tb_medico` (`dh_atualizacao` invalidado por atualizacoes em massa), `tb_pessoa.nu_cpf` (1:1). `etl/README.md` (base analitica) ja estava sincronizado.

@@ -38,7 +38,6 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;ba
 .tab:hover{color:#eefaff}
 .tab[data-view="documentos"].active{color:var(--cyan);border-bottom-color:var(--cyan);text-shadow:0 0 12px rgba(73,231,255,.5)}
 .tab[data-view="medicos"].active{color:#4a6ef0;border-bottom-color:#4a6ef0;text-shadow:0 0 12px rgba(74,110,240,.5)}
-.tab[data-view="dispensacoes"].active{color:var(--green);border-bottom-color:var(--green);text-shadow:0 0 12px rgba(101,245,173,.5)}
 .tab[data-view="auditoria"].active{color:var(--red);border-bottom-color:var(--red);text-shadow:0 0 12px rgba(255,100,124,.5)}
 
 .main{padding:22px 26px 34px;max-width:1800px;margin:auto}

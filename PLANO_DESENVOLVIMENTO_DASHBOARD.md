@@ -83,14 +83,15 @@ Regras:
 
 ### 3.4 Visões principais
 
-As quatro visões iniciais serao:
+As tres visões iniciais sao:
 
 1. Documentos medicos
 2. Medicos
-3. Dispensacoes
-4. Auditoria
+3. Auditoria
 
-A navegacao deve usar quatro entradas fixas e claras. As tres primeiras seguem a estrutura visual das referencias enviadas: filtros, KPIs, mapa, ranking e series temporais. A quarta deve ser mais controlada, com filtros obrigatorios e foco em seguranca.
+(Dispensacoes foi descontinuada em 2026-09-23.)
+
+A navegacao usa entradas fixas e claras. Documentos e Medicos seguem a estrutura visual das referencias enviadas: filtros, KPIs, mapa, ranking e series temporais. Auditoria e mais controlada, com filtros antes da consulta.
 
 ## 4. Arquitetura Recomendada
 
@@ -133,7 +134,7 @@ Backend/API:
 
 Camada de dados:
 - Banco/schema proprio do dashboard, separado da base operacional.
-- Tabelas fato e dimensoes agregadas por dia, UF, tipo de documento, medico, especialidade, farmacia/farmaceutico quando aplicavel.
+- Tabelas fato e dimensoes agregadas por dia, UF, tipo de documento, medico e especialidade.
 - Tabelas de status da carga do dashboard.
 - Este banco/schema proprio e o recurso recomendado para BI: um datamart PostgreSQL com modelo estrela e tabelas agregadas fisicas.
 - Arquivos de agregacao, como CSV/Excel, nao devem alimentar o dashboard principal; quando necessarios, devem ser tratados apenas como exportacao, backup analitico ou snapshot auxiliar.
@@ -228,7 +229,7 @@ Trade-off:
 
 `fato_auditoria_dia` (redefinida - ver secao 6.4)
 - Decisao: NAO usar `tl_prescricao_auditoria` (sem SELECT para `usr_select`) nem a tabela antiga (2,1B linhas, consulta inviavel por timeout).
-- A visao Auditoria sera alimentada somente por anomalias derivadas das demais fatos (documentos, atendimentos, dispensacoes, locais por periodo acima da media).
+- A visao Auditoria sera alimentada somente por anomalias derivadas das demais fatos (documentos, atendimentos, locais por periodo acima da media).
 - Linha de base (media de referencia): valores agregados de TODOS os medicos (nao historico individual do emissor).
 - grao: dia + tipo_anomalia + dimensao_afetada
 - metricas:
@@ -382,7 +383,7 @@ Sem imagem de referencia. DECISOES (2026-09-21):
 - Somente agregados: sem registros individuais no MVP.
 - Sem exportacao na visao de auditoria (exportacao nao permitida em todo o MVP).
 
-A visao sera alimentada por anomalias derivadas das fatos do datamart (documentos, atendimentos, dispensacoes, locais). A media de referencia (valor esperado) e sempre calculada sobre todos os medicos, nunca sobre o historico individual do emissor.
+A visao sera alimentada por anomalias derivadas das fatos do datamart (documentos, atendimentos, locais). A media de referencia (valor esperado) e sempre calculada sobre todos os medicos, nunca sobre o historico individual do emissor.
 
 Proposta:
 - Tela mais textual e investigativa, com filtros obrigatorios antes de executar consulta.
@@ -392,7 +393,7 @@ Proposta:
 Filtros obrigatorios:
 - Periodo curto, com limite padrao e maximo configuravel.
 - Tipo de anomalia.
-- Dimensao afetada (documentos, atendimentos, dispensacoes, local).
+- Dimensao afetada (documentos, atendimentos, local).
 
 Consultas previstas:
 - Anomalia - Quantidade de documentos emitidos por período (muito acima da média)
@@ -423,12 +424,12 @@ Legenda de filtros: P=periodo, U=UF, T=tipo documento, E=especialidade, TD=tipo 
 | T | Tipo de documento | Tipo do documento medico | 17 tipos de `td_tipo_documento` (atestado, receita simples, laudo...) | Documentos |
 | E | Especialidade | Especialidade/area de atuacao do medico | dim_especialidade | Documentos, Medicos |
 | TD | Tipo de anomalia | Qual anomalia investigar | Documentos por periodo, pacientes unicos por periodo, tempo entre emissoes, documentos por local | Auditoria |
-| DIM | Dimensao afetada | Qual face do datamart a anomalia envolve | Documentos, atendimentos, dispensacoes, local | Auditoria |
+| DIM | Dimensao afetada | Qual face do datamart a anomalia envolve | Documentos, atendimentos, local | Auditoria |
 
 Notas:
 - Filtros principais sempre visiveis; avancados recolhidos (padrao UX, secao 7).
 - Auditoria exige filtros antes de executar qualquer consulta; sem busca livre ampla.
-- Filtro U muda de significado conforme a aba (ver decisao 14: unidade para Documentos, CRM para Medicos, CRF para Dispensacoes).
+- Filtro U muda de significado conforme a aba (ver decisao 14: unidade para Documentos, CRM para Medicos).
 - A media de referencia das anomalias e sempre a de todos os medicos (nunca o historico individual do emissor).
 
 | # | Aba | Objeto visual | Apresenta | Tabelas do datamart | Agregacao/Grao | Filtros | Notas |
@@ -495,7 +496,7 @@ Direcao visual (DECISAO 2026-09-21 — padrao "cyberpunk dark", referencia aprov
 Navegacao:
 - Sidebar lateral fixa (235px, colapsa a 72px em telas menores) com:
   - brand "PE Dashboard / Prescricao Eletronica CFM";
-  - grupo "Visões": Documentos, Medicos, Dispensacoes, Auditoria;
+  - grupo "Visões": Documentos, Medicos, Auditoria;
   - grupo "Sistema": Configuracoes, Suporte;
   - rodape lateral com status da carga e usuario logado.
 - Cabecalho da pagina com eyebrow, titulo da visao, subtitulo e acoes (botao "Atualizar" e "Atualizar dados" primario).
@@ -726,7 +727,7 @@ Validacao:
 - Dashboard nao consulta tabelas brutas grandes em tempo de tela.
 - Nenhum job ou rota da aplicacao possui permissao de escrita na base `bd_cfm`.
 
-### Fase 3 - Visões Documentos, Medicos e Dispensacoes — CONCLUIDA (2026-09-22)
+### Fase 3 - Visões Documentos e Medicos — CONCLUIDA (2026-09-22)
 
 Objetivo:
 - Implementar as tres visões com base nas imagens de referencia.

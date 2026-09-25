@@ -466,7 +466,6 @@ Modelo minimo recomendado:
 - `dim_unidade`: `id_unidade_atendimento`, UF, CNES quando necessario.
 - `dim_tipo_documento`: baseada em `td_tipo_documento`.
 - `fato_documento_dia`: por dia, medico, unidade, tipo_documento, com contagens de documentos, assinados, cancelados, pacientes distintos e receitas.
-- `fato_dispensacao_dia`: por dia, farmacia/farmaceutico/tipo ou receita, com contagens de dispensacoes, cancelamentos e status historico.
 - `fato_sessao_dia`: por dia/plataforma/status, para uso operacional, sem dados pessoais.
 
 Consultas operacionais devem sempre aplicar:
