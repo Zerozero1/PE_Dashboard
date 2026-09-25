@@ -111,13 +111,31 @@ DW_DATABASE_URL=postgres://usr_prescricao_dw:SENHA@172.16.7.112:5432/prescricao_
 GOOGLE_CLIENT_ID=<client-id>
 GOOGLE_CLIENT_SECRET=<client-secret>
 NEXTAUTH_SECRET=<openssl rand -base64 32>
-NEXTAUTH_URL=http://<host-interno>:3000
+NEXTAUTH_URL=https://dashboard.prescricao.cfm.org.br/
 ```
 
-**Obrigatório no Google Cloud Console** (console.cloud.google.com, projeto do OAuth):
-adicionar o redirect URI do servidor — `http://<host-interno>:3000/api/auth/callback/google`.
-Sem isso o login falha em produção (o mock de dev só existe quando `GOOGLE_CLIENT_ID`
-não está definido e `NODE_ENV=development`).
+**Obrigatório no Google Cloud Console** (console.cloud.google.com, projeto `dashboard-prescricao`):
+adicionar a redirect URI do servidor em **Google Auth Platform → Clients → Authorized redirect URIs**:
+
+```
+https://dashboard.prescricao.cfm.org.br/api/auth/callback/google
+```
+
+O app usa OAuth **Internal** (somente contas `@portalmedico.org.br`); nesse modo não é
+necessário publicar a tela de consentimento. A validação de domínio também ocorre no
+backend (`signIn` callback em `src/lib/auth.ts`), não apenas no Google.
+
+### 4.3.1 Login em produção (HTTPS + reverse proxy)
+
+Aplicação atrás de reverse proxy (Nginx/Traefik/IIS) com HTTPS terminado no proxy:
+
+- `NEXTAUTH_URL` deve ser a URL pública com HTTPS (ex.: `https://dashboard.prescricao.cfm.org.br/`).
+- O proxy deve repassar `X-Forwarded-Proto: https` para o Next.js (cookies `Secure` são
+  gerados a partir disso).
+- `NEXTAUTH_SECRET` deve ser um segredo forte, diferente do usado em desenvolvimento.
+
+Sem o mock de dev: em produção (`NODE_ENV=production`) o mock nunca é usado; sem sessão
+válida o usuário é redirecionado para `/login`.
 
 ### 4.4 Build e execução
 ```powershell

@@ -1,15 +1,14 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-24 11:40 BRT_
+_Atualizado em: 2026-09-24 12:10 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões: Documentos, Medicos, Auditoria.
 
 ## ✅ Última Sessão (Resumo)
-- Login Google finalizado (2026-09-24): o OAuth ja existia (next-auth v4 + GoogleProvider + validacao de dominio em `signIn`); faltava a pagina de login propria e o ajuste para servidor corporativo.
-  - Nova pagina `/login` (client component, tema cyberpunk, botao "Entrar com Google" com logo G, estado de carregando e erro).
-  - `pages.signIn` aponta para `/login` (antes era a pagina padrao do next-auth); `page.tsx` redireciona para `/login?callbackUrl=/`.
-  - Tentativa de `trustHost: true` REMOVIDA — esse campo nao existe no next-auth v4 (so no v5). Para servidor atras de reverse-proxy, usar `NEXTAUTH_URL` com a URL publica/canonica.
-  - Validado: build OK, `/login` registrado e renderizando (HTTP 200, botao Google presente).
+- Login Google validado localmente (2026-09-24): OAuth criado no projeto `dashboard-prescricao` (Internal). Erros de config resolvidos: tela de consentimento (agora vive em **Google Auth Platform**, nao mais em "APIs & Services"), `redirect_uri_mismatch` corrigido ao acertar a redirect URI `http://localhost:3000/api/auth/callback/google`.
+  - Confirmado: com OAuth **Internal** nao precisa publicar nem adicionar test users.
+  - Preparado para producao `https://dashboard.prescricao.cfm.org.br/`: sem mudanca de codigo — so `NEXTAUTH_URL=https://...`, redirect URI nova no console, e proxy repassando `X-Forwarded-Proto: https`. Docs (`DEPLOY_PRODUCAO.md` secao 4.3/4.3.1 e `.env.example`) atualizadas.
+- Login Google implementado (2026-09-24): pagina `/login` custom (tema cyberpunk, botao Google); `pages.signIn=/login`; `trustHost` nao existe no next-auth v4 (removido) — usar `NEXTAUTH_URL`.
 - Docker (2026-09-24): `docker-compose.yml` (web + etl-worker + etl-scheduler), Dockerfiles, `.env.example`, `output: standalone`.
 - Visao Auditoria — AN1 (2026-09-24): ranking "Maiores emissores de documentos medicos" + drill-down. Fato `fato_documento_medico_tipo_dia` + `dim_medico.nm_medico`.
 - Tag de filtro (2026-09-23): KPIs/graficos/tabelas das visoes Documentos e Medicos ganharam tag em circulo com a letra "F" quando algum filtro difere de "Todos"; legenda "F — Dados com filtro(s) aplicados" no rodape de cada visao. Regras por consulta: Documentos KPIs/emissoes/UF respondem a periodo+UF+tipo; tipo donut/origem/especialidade so a periodo+UF. Medicos: KPIs/novos/inatividade so a UF; grafico de emissao a periodo+UF; "Medicos por UF" nunca (sem tag).
