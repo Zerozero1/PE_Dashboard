@@ -1,10 +1,16 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-28 09:30 BRT_
+_Atualizado em: 2026-09-28 14:09 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões (Documentos, Medicos, Auditoria) + visao "Logs" (admin).
 
 ## ✅ Última Sessão (Resumo)
+- Ajustes de rotulos/UI (2026-09-28) — todos em `web/src/components/dashboard.tsx`:
+  - **Documentos**: "Participação por origem" → "Participação por plataforma"; "Origem de criação por mês" → "Emissões por plataforma".
+  - **Rodapé**: apenas o rodapé global passou a exibir a versão → "PE Dashboard · CFM v1.0" (decisão: não incluir versão nos rodapés dos gráficos).
+  - **Medicos**: label do último ponto centralizado sobre o ponto (nova prop `labelCentralizado` no `BarChart`, usada SÓ no gráfico "Médicos com pelo menos uma emissão…"; demais gráficos inalterados); rodapé desse gráfico ganhou ", com crescimento/decréscimo de xxx profissionais por mês em média" — média = (último − primeiro)/(n−1) da série exibida (respeita filtros), omitida com <2 meses, "variação de 0" quando zero.
+  - **Medicos títulos**: "Inatividade por faixa sem emissão" → "Inatividade por faixa de tempo (CPF)"; "Médicos por UF" → "Médicos (CPF) por UF" (só o título — a métrica continua inscrições/CRM-UF).
+  - Valido: `npx tsc --noEmit` e `npm run build` OK; item "4)" da lista do usuário não existia (corte de mensagem).
 - Visao "Logs" (2026-09-28, exclusiva `mrichard@portalmedico.org.br`): duas tabelas com dados relevantes de cada evento.
   - **Log de utilizacao (logins)**: nova tabela `dashboard_access_log` (nm_email, tx_ip, in_sucesso, dh_evento) gravada no callback `signIn` do next-auth (captura sucesso E negado; IP via `x-forwarded-for`/`x-real-ip`).
   - **Log de atualizacoes**: reuso de `dashboard_refresh_job` (tipo manual/programado, status, solicitado_por, inicio/fim, duracao).
@@ -61,6 +67,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 - [ ] Solicitar ao DBA indices em `tb_consulta_documento.dh_documento` e `tb_consulta.dt_consulta`.
 
 ## ⚠️ Pontos de Atencao
+- `npm run lint` acusa 6 erros PRE-EXISTENTES em `dashboard.tsx` (react-hooks `set-state-in-effect` em `useApi`/`LogsView`/`loadHealth` e `immutability` nos acumulados do Donut/serie) — nenhum introduzido pela sessao de 2026-09-28; build e tsc passam.
 - `usr_select` em `bd_cfm` e somente leitura; nenhuma gravacao na origem.
 - ETL sem os indices acima exigira varreduras pesadas (tb_consulta_documento: 43 GB).
 - `tb_medico` sem data de cadastro: "novos medicos" usa `tb_usuario.dh_aceite_termo` (aceite do termo; decisao 2026-09-23). `dh_atualizacao` e invalidado por atualizacoes em massa.

@@ -186,7 +186,7 @@ function Processando() {
   );
 }
 
-function BarChart({ rows, bars, w = 800, h = 220, tick = 9 }: { rows: { x: string; v: number; v2?: number }[]; bars?: number[]; w?: number; h?: number; tick?: number }) {
+function BarChart({ rows, bars, w = 800, h = 220, tick = 9, labelCentralizado = false }: { rows: { x: string; v: number; v2?: number }[]; bars?: number[]; w?: number; h?: number; tick?: number; labelCentralizado?: boolean }) {
   const maxLine = Math.max(...rows.map((r) => Math.max(r.v, r.v2 ?? 0)), 1);
   const maxBars = Math.max(...(bars ?? []), 1);
   const pad = 40;
@@ -232,7 +232,13 @@ function BarChart({ rows, bars, w = 800, h = 220, tick = 9 }: { rows: { x: strin
         </circle>
       ))}
       {n > 0 && (
-        <text x={pad + (n - 1) * step - 12} y={h - (rows[n - 1].v / maxLine) * (h - 26) - 9} fontSize="9" fill="#9fb0c1" textAnchor="end">{nf.format(rows[n - 1].v)}</text>
+        <text
+          x={pad + (n - 1) * step + (labelCentralizado ? 0 : -12)}
+          y={h - (rows[n - 1].v / maxLine) * (h - 26) - (labelCentralizado ? 11 : 9)}
+          fontSize="9"
+          fill="#9fb0c1"
+          textAnchor={labelCentralizado ? "middle" : "end"}
+        >{nf.format(rows[n - 1].v)}</text>
       )}
       {xIdx.map((i) => {
         const [y, m] = String(rows[i].x).split("-");
@@ -458,7 +464,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
 
       <article className="card" style={{ gridColumn: "span 8" }}>
         <div className="section-title">
-          <h2>Origem de criação por mês</h2>
+          <h2>Emissões por plataforma</h2>
           <div className="legend">{seriesOrigem.map((s) => <span key={s.nome}><i style={{ background: s.cor, width: 18, height: 4, borderRadius: 2, alignSelf: "center" }} />{s.nome}</span>)}{filtradosSemTipo && <span className="tag">F</span>}</div>
         </div>
         <div className="chart">
@@ -468,7 +474,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
 
       <article className="card side-chart">
         <div className="section-title">
-          <h2>Participação por origem</h2>
+          <h2>Participação por plataforma</h2>
           <span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}{filtradosSemTipo && " · "}{filtradosSemTipo && <span className="tag">F</span>}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 230 }}>
@@ -538,6 +544,15 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
   };
   const ufFiltrada = uf !== "";
   const periodoFiltrado = dias !== "todos" || uf !== "";
+  const valsEmissores = data.emissores_mensal.map((s) => Number(s.emissao));
+  const mediaEmissores = valsEmissores.length >= 2
+    ? Math.round((valsEmissores[valsEmissores.length - 1] - valsEmissores[0]) / (valsEmissores.length - 1))
+    : null;
+  const tendenciaEmissores = mediaEmissores === null
+    ? null
+    : mediaEmissores === 0
+      ? "com variação de 0 profissionais por mês em média"
+      : `com ${mediaEmissores > 0 ? "crescimento" : "decréscimo"} de ${nf.format(Math.abs(mediaEmissores))} profissionais por mês em média`;
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
@@ -568,13 +583,16 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
           <div className="legend"><span><i className="l1" />CPF distintos no mês</span>{periodoFiltrado && <span className="tag">F</span>}</div>
         </div>
         <div className="chart">
-          <BarChart rows={data.emissores_mensal.map((s) => ({ x: s.mes, v: Number(s.emissao) }))} tick={10} />
+          <BarChart rows={data.emissores_mensal.map((s) => ({ x: s.mes, v: Number(s.emissao) }))} tick={10} labelCentralizado />
         </div>
-        <div className="sub" style={{ marginTop: 4 }}>Quantidade de médicos que emitiram pelo menos um documento nos últimos 30 dias: <b style={{ color: "var(--va)" }}>{nf.format(data.emissores_30d)}</b></div>
+        <div className="sub" style={{ marginTop: 4 }}>
+          Quantidade de médicos que emitiram pelo menos um documento nos últimos 30 dias: <b style={{ color: "var(--va)" }}>{nf.format(data.emissores_30d)}</b>
+          {tendenciaEmissores && <>, {tendenciaEmissores}</>}
+        </div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 7" }}>
-        <div className="section-title"><h2>Médicos por UF</h2><span>inscrições cadastradas (CRM/UF)</span></div>
+        <div className="section-title"><h2>Médicos (CPF) por UF</h2><span>inscrições cadastradas (CRM/UF)</span></div>
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ flex: 1.1, minWidth: 0 }}>
             <MapBr note={false} rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.inscricoes_cadastradas) }))} />
@@ -597,7 +615,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
       </article>
 
       <article className="card" style={{ gridColumn: "span 5" }}>
-        <div className="section-title"><h2>Inatividade por faixa sem emissão</h2><span>dias desde a última emissão{ufFiltrada && " · "}{ufFiltrada && <span className="tag">F</span>}</span></div>
+        <div className="section-title"><h2>Inatividade por faixa de tempo (CPF)</h2><span>dias desde a última emissão{ufFiltrada && " · "}{ufFiltrada && <span className="tag">F</span>}</span></div>
         <div style={{ paddingTop: 10, display: "flex", flexDirection: "column", gap: 14 }}>
           {faixas.map((f) => {
             const row = data.inatividade.find((i) => i.faixa === f);
@@ -1030,7 +1048,7 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
           </section>
         )}
         <div className="footer">
-          <span>PE Dashboard · CFM</span>
+          <span>PE Dashboard · CFM v1.0</span>
           <span>Datamart prescricao_dw · última carga: {health?.job?.finalizado_em ? new Date(health.job.finalizado_em).toLocaleString("pt-BR") : "—"}</span>
         </div>
       </main>
