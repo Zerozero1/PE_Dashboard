@@ -1,10 +1,11 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-28 15:30 BRT_
+_Atualizado em: 2026-09-28 16:44 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões (Documentos, Medicos, Auditoria) + visao "Logs" (admin).
 
 ## ✅ Última Sessão (Resumo)
+- Sessão do dashboard (2026-09-28): validade configurada para 12 horas via `session.maxAge` do NextAuth.
 - Rodape do grafico "Medicos com pelo menos uma emissao de documento por mes" (2026-09-28): nova grafia — "Nos ultimos 30 dias, foram registrados {X} usuarios ativos. Observa-se, ainda, um crescimento medio de {Y} medicos por mes na base de usuarios." (X = emissores_30d; Y = media mensal; mantida logica de crescimento/decremento e omissao com <2 meses).
 - AN2 — Atendimentos de pacientes unicos (2026-09-28): implementada como ranking de medicos com mais pacientes distintos (substitui a AN2 antiga que era global por dia).
   - **DW**: nova `fato_documento_medico_paciente_dia` (dia, sg_uf, id_medico, id_paciente) — grão paciente×dia para permitir `count(DISTINCT id_paciente)` no período (não-aditivo). DDL em `ddl_extra.sql` (tabela + 2 indices + staging `stg_documento_medico_paciente_dia`). Modo `medico_pacientes` em `load_fatos.py` (batch por faixa de id com `SELECT DISTINCT`, dedup via PK do staging, rebuild) e `run_all.py` (antes de `fato pacientes`/`medicos`). **Populada: 42.653.038 linhas** (ETL rodado em ~21 min a partir do laptop, usando credenciais da origem via MCP + DW).
@@ -63,6 +64,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 - Limpeza de colunas sem uso (2026-09-22): removidas `dim_data.dia_semana` e `fato_medico_dia.inscricoes_cadastradas/inscricoes_ativas/medicos_ativos` (sempre vazias; valores correntes vivem em `fato_medico_snapshot`). Demais colunas "redundantes" mantidas por custo baixo.
 
 ## 🔧 Em Progresso / Próximos Passos
+- [x] Configurar sessão NextAuth com validade de 12 horas (`session.maxAge`); TypeScript e build de produção aprovados.
 - [x] Popular `fato_documento_medico_paciente_dia` (42,65M linhas) — FEITO a partir do laptop (ETL `medico_pacientes`). A máquina do ETL deve rodar o modo no próximo job agendado para manter a carga (o `run_all.py` já o inclui).
 - [ ] Fase 1 — Fundacao (EM ANDAMENTO): projeto Next.js 16 criado em `web/` (app router, TS). Feito: shell com 4 visoes no padrao cyberpunk dark (abas horizontais, acento por visao), `api/health` lendo o DW real (job/config/dados), `api/admin/refresh-jobs` enfileirando job manual, next-auth v4 com Google OAuth + validacao de dominio `@portalmedico.org.br` (signIn callback). Modo dev sem credenciais Google: sessao mock.
   - Faltam: criar credenciais Google OAuth (console.cloud.google.com, redirect http://localhost:3000/api/auth/callback/google), `NEXTAUTH_SECRET`, `.env.local` em producao; remover mock dev ao subir.
@@ -77,6 +79,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 - [ ] Solicitar ao DBA indices em `tb_consulta_documento.dh_documento` e `tb_consulta.dt_consulta`.
 
 ## ⚠️ Pontos de Atencao
+- Sessão configurada com `session.maxAge` de 12 horas; sem limite absoluto adicional configurado.
 - `npm run lint` acusa 6 erros PRE-EXISTENTES em `dashboard.tsx` (react-hooks `set-state-in-effect` em `useApi`/`LogsView`/`loadHealth` e `immutability` nos acumulados do Donut/serie) — nenhum introduzido pela sessao de 2026-09-28; build e tsc passam.
 - `usr_select` em `bd_cfm` e somente leitura; nenhuma gravacao na origem.
 - ETL sem os indices acima exigira varreduras pesadas (tb_consulta_documento: 43 GB).
@@ -104,6 +107,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 - Google OAuth: client id/secret a criar; escopos minimos (openid, email, profile).
 
 ## 📝 Histórico de Decisões
+- 2026-09-28: Validade da sessão NextAuth reduzida do padrão de 30 dias para 12 horas (`session.maxAge`).
 - 2026-09-28: Sem FKs no datamart — star schema (OLAP), relacoes logicas via chaves garantidas pelo ETL; decisao 21 registrada na secao 14 do plano e no `etl/README.md` (Modelo fisico).
 - 2026-09-21: 19 decisoes de Fase 0 registradas na secao 14 do plano (auth, ETL, dados, acesso, auditoria, exportacao, topologia, anomalias).
 - 2026-09-21: Modelagem validada via MCP; correcoes de fonte (dispensacao/auditoria) aplicadas ao plano.

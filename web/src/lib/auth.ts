@@ -13,7 +13,7 @@ export const authOptions: NextAuthOptions = {
       authorization: { params: { scope: "openid email profile" } },
     }),
   ],
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 12 * 60 * 60 },
   // Em servidor corporativo atrás de reverse-proxy, defina NEXTAUTH_URL com a
   // URL pública/canônica (o cookie e o callback dependem dela). Em dev, a
   // inferência automática funciona localmente.
