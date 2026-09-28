@@ -824,6 +824,7 @@ Risco: dependencia de mapa externo.
 18. Topologia (2026-09-21): aplicacao web (UI + API) e ETL (Python) em maquinas Windows separadas; comunicacao exclusivamente via fila de jobs no `prescricao_dw`.
 19. Anomalias (2026-09-21): media de referencia calculada sobre todos os medicos (nunca o historico individual do emissor).
 20. Design system (2026-09-21): padrao "cyberpunk dark" aprovado (referencia PE_Dashboard_Cyberpunk); tema escuro com acentos ciano/verde/violeta/laranja, sidebar fixa, grade 12 colunas; draft em `design/draft_dashboard.html`.
+21. Sem FKs no datamart (2026-09-28): as tabelas do `prescricao_dw` (dimensoes e fatos) NAO usam `FOREIGN KEY`/`REFERENCES` — o modelo e um star schema (OLAP) onde as relacoes existem logicamente pelas chaves (ex.: `fato.id_medico` -> `dim_medico.id_medico`), garantidas pelo ETL (via JOINs na origem), nao por constraints. Motivos: (a) performance — upsert/rebuild de dezenas de milhoes de linhas sem checagem de FK por linha; (b) independencia de ordem de carga — `TRUNCATE`/rebuild de fatos e dimensoes (snapshots) sem violacao; (c) integridade vem de montante (a origem `bd_cfm` ja tem as FKs); (d) dimensoes sao recarregadas como snapshot. Regra geral: "confie no ETL, nao em constraints".
 
 Fase 0 concluida: todas as confirmacoes previstas foram respondidas.
 

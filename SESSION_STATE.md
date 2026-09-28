@@ -103,6 +103,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 - Google OAuth: client id/secret a criar; escopos minimos (openid, email, profile).
 
 ## 📝 Histórico de Decisões
+- 2026-09-28: Sem FKs no datamart — star schema (OLAP), relacoes logicas via chaves garantidas pelo ETL; decisao 21 registrada na secao 14 do plano e no `etl/README.md` (Modelo fisico).
 - 2026-09-21: 19 decisoes de Fase 0 registradas na secao 14 do plano (auth, ETL, dados, acesso, auditoria, exportacao, topologia, anomalias).
 - 2026-09-21: Modelagem validada via MCP; correcoes de fonte (dispensacao/auditoria) aplicadas ao plano.
 - 2026-09-21: Fonte B (trilha de acesso) suprimida da aba Auditoria; depois eliminada por completo (sem auditoria de uso do dashboard).
