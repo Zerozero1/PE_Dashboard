@@ -13,7 +13,7 @@ em um datamart próprio (`prescricao_dw`) que alimenta três visões:
 - **Documentos médicos** — emissões por período/UF/tipo/especialidade, origem de criação
 - **Médicos** — inscrições cadastradas (CRM/UF), médicos cadastrados (CPF), novos por
   aceite do termo, inatividade por faixa de dias sem emissão
-- **Auditoria** — anomalias agregadas (AN1–AN4), sem registros individuais
+- **Auditoria** — anomalias agregadas (AN1 "Maiores emissores", AN2 "Atendimentos de pacientes únicos"; AN3–AN4 em construção), sem registros individuais
 
 Restrições de negócio já definidas: sem exportação CSV/Excel, sem auditoria do uso do
 dashboard, sem nomes de médicos/pacientes (somente agregados e identificadores técnicos).

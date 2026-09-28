@@ -216,7 +216,7 @@ Trade-off:
   - assinados (`in_assinado='S'`)
   - cancelados (`in_cancelado='S'`)
   - nao_assinados = documentos - assinados (derivado)
-- complementares: `fato_documento_especialidade_dia`, `fato_documento_unidade_dia`, `fato_documento_medico_dia`, `fato_documento_paciente_dia`, `fato_documento_origem_dia` (dia + UF + `ds_origem_criacao` — WEB/WEB-MOBILE/IOS/ANDROID/NAO_INFORMADO; alimenta o grafico de evolucao dos dispositivos)
+- complementares: `fato_documento_especialidade_dia`, `fato_documento_unidade_dia`, `fato_documento_medico_dia`, `fato_documento_paciente_dia`, `fato_documento_medico_paciente_dia` (dia+UF+medico+paciente — alimenta a AN2, `count(DISTINCT id_paciente)`), `fato_documento_origem_dia` (dia + UF + `ds_origem_criacao` — WEB/WEB-MOBILE/IOS/ANDROID/NAO_INFORMADO; alimenta o grafico de evolucao dos dispositivos)
 
 `fato_medico_dia`
 - grao: dia + UF + especialidade + situacao
@@ -397,7 +397,7 @@ Filtros obrigatorios:
 
 Consultas previstas:
 - Anomalia - Quantidade de documentos emitidos por período (muito acima da média)
-- Anomalia - Quantidade de atendimento de pacientes únicos por período (muito acima da média)
+- Anomalia - Quantidade de atendimento de pacientes únicos por período (ranking decrescente por pacientes distintos, sem média — implementada como AN2)
 - Anomalia - Tempo de emissão entre documentos (muito acima da média)
 - Anomalia - quantidade de documentos emitidos pelo local de atendimento (muito acima da média)
 
@@ -467,7 +467,7 @@ A media de referencia (valor esperado) e sempre o valor agregado de TODOS os med
 | Codigo | Anomalia | Como e calculada | Severidade |
 |---|---|---|---|
 | AN1 | Maiores emissores de documentos medicos | Ranking decrescente de medicos por quantidade de documentos do tipo selecionado, no periodo e UF | - |
-| AN2 | Atendimentos de pacientes unicos acima da media | Igual AN1, usando pacientes_distintos e a media de todos os medicos | 2x/3x/5x o desvio |
+| AN2 | Atendimentos de pacientes unicos | Ranking decrescente de medicos por `count(DISTINCT id_paciente)` no periodo (fato `fato_documento_medico_paciente_dia`); sem media de referencia (decisao 2026-09-28) | - |
 | AN3 | Tempo entre emissoes acima da media | Intervalo medio entre `dh_documento` do emissor comparado ao intervalo medio de todos os medicos; dispara quando o gap e muito acima da media geral | 2x/3x/5x o desvio |
 | AN4 | Documentos emitidos pelo local acima da media | Volume do local de atendimento comparado a media de todos os locais (que reflete todos os medicos) | 2x/3x/5x o desvio |
 
@@ -475,7 +475,7 @@ Fluxo da aba:
 
 1. Usuario escolhe o tipo de anomalia, periodo, UF, tipo de documento e quantidade de registros.
 2. Clica em "Pesquisar" para disparar a consulta (a view nao carrega automaticamente).
-3. AN1 exibe o ranking de medicos; ao clicar na linha (icone circular "›"), abre um drill-down com: donut de documentos por tipo (quantidade e % do total), evolucao mensal (acumulado x mes), especialidades, situacao/tipo de inscricao e total no periodo — tudo lido do datamart (fato `fato_documento_medico_tipo_dia` + `dim_medico`/`dim_tipo_documento`/`dim_especialidade`). AN2–AN4 exibem card "em breve".
+3. AN1 exibe o ranking de medicos; ao clicar na linha (icone circular "›"), abre um drill-down com: donut de documentos por tipo (quantidade e % do total), evolucao mensal (acumulado x mes), especialidades, situacao/tipo de inscricao e total no periodo — tudo lido do datamart (fato `fato_documento_medico_tipo_dia` + `dim_medico`/`dim_tipo_documento`/`dim_especialidade`). AN2 exibe ranking de medicos por pacientes unicos no periodo; o drill-down mostra pacientes distintos por mes (sem acumulado), especialidades, situacao/tipo de inscricao e o total de pacientes distintos no periodo (fato `fato_documento_medico_paciente_dia`). AN3–AN4 exibem card "em breve".
 
 Observacoes gerais:
 - Todas as consultas de tela leem apenas o datamart `prescricao_dw`; nenhuma consulta direta na origem `bd_cfm`.

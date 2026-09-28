@@ -30,9 +30,9 @@ $env:DW_HOST='172.16.7.112'; $env:DW_DB='prescricao_dw'; $env:DW_USER='usr_presc
 |---|---|
 | `setup.py` | Aplica `schema.sql` + `ddl_extra.sql` (idempotente). Criar/atualizar estrutura no DW. |
 | `load_dims.py` | Carrega dimensões: dim_data, dim_uf, dim_tipo_documento, dim_medico, dim_especialidade, dim_unidade. |
-| `load_fatos.py <modo>` | Fatos de documentos, em modos: `docs`, `origem`, `especialidade`, `unidade`, `medico`, `medico_tipo`, `pacientes`. |
+| `load_fatos.py <modo>` | Fatos de documentos, em modos: `docs`, `origem`, `especialidade`, `unidade`, `medico`, `medico_tipo`, `pacientes`, `medico_pacientes`. |
 | `load_medicos.py` | `fato_medico_snapshot` (inscrições CRM/UF e CPFs únicos com aceite, por UF + total global `--`) + `fato_medico_dia.novos_aceite_termo` + `medicos_com_emissao` (derivado do DW). |
-| `load_anomalias.py` | `fato_auditoria_dia`: anomalias AN1–AN4 calculadas no DW (média de referência = todos os médicos). |
+| `load_anomalias.py` | `fato_auditoria_dia`: flags diárias AN1–AN4 calculadas no DW (média de referência = todos os médicos). As UIs de AN1 e AN2, porém, consultam diretamente as fatos `fato_documento_medico_tipo_dia` e `fato_documento_medico_paciente_dia` (ranking em tempo de tela); AN3–AN4 seguem "em breve". |
 | `run_all.py` | Pipeline completo e idempotente (dims → fatos → anomalias). ~30–40 min. |
 | `jobs.py` | Orquestração via fila `dashboard_refresh_job` (ver abaixo). |
 | `validate.py` / `status_dw.py` / `audit_counts.py` / `list_indexes.py` | Conferências: totais, cobertura, contagens da origem vs DW, índices. |
@@ -57,6 +57,7 @@ python jobs.py enqueue-manual <email>  # cria job manual (botão "Atualizar dado
 - **Lotes por faixa de `id_consulta_documento`** (2M ids por lote): a origem não tem índice em `dh_documento`; filtros temporais diretos varrem 43 GB e estouram qualquer timeout. A PK permite varrer por faixas com pausa/retomada.
 - **Staging + rebuild**: cada lote agrega no SQL da origem e grava em `stg_documento_*`; ao final, a fato é reconstruída com `SUM ... GROUP BY` (rebuild_fact). Necessário porque uma chave (dia×UF×tipo) aparece em vários lotes — upsert direto por lote sobrescrevia e perdia dados (~970k docs; corrigido em 2026-09-22).
 - **Varreduras completas** (`single_pass`, sem lote) apenas para distinct: pacientes por dia×UF (~55 s), com `statement_timeout=0` e `work_mem=256MB`.
+- **`medico_pacientes`** (grão médico×paciente×dia, para `count(DISTINCT id_paciente)`): lote por faixa de id com `SELECT DISTINCT` na origem; grava em `stg_documento_medico_paciente_dia` com dedup via PK (`ON CONFLICT DO NOTHING`); ao final, a fato é reconstruída com `INSERT ... SELECT` (sem `SUM` — distinct não é aditivo entre lotes/dias).
 - **Especialidade**: deriva do cadastro do médico que assina (`tb_medico_especialidade` via `rl_medico_unidade_atendimento.id_medico`, `in_ativo='S'`) — não de `rl_med_especialidade_consulta` (vínculo da consulta, com outliers de até 104 especialidades).
 
 ## Modelo físico (schema `prescricao` do DW)
@@ -70,6 +71,7 @@ Fatos:
 - `fato_documento_unidade_dia` (dia, sg_uf, id_unidade_atendimento, documentos)
 - `fato_documento_medico_dia` (dia, sg_uf, id_medico, documentos)
 - `fato_documento_medico_tipo_dia` (dia, sg_uf, id_medico, id_tipo_documento, documentos) — médico × tipo de documento; alimenta AN1 (maiores emissores) e o drill-down por tipo
+- `fato_documento_medico_paciente_dia` (dia, sg_uf, id_medico, id_paciente) — grão médico×paciente×dia; alimenta AN2 (`count(DISTINCT id_paciente)` no período) e o drill-down de pacientes
 - `fato_documento_paciente_dia` (dia, sg_uf, pacientes_distintos)
 - `fato_medico_dia` (dia, sg_uf, novos_aceite_termo, medicos_com_emissao; inclui linhas `sg_uf='--'` com distinct global por dia)
 - `fato_medico_snapshot` (sg_uf, inscricoes_cadastradas, medicos_ativos, atualizado_em; inclui `sg_uf='--'` com totais globais)
@@ -77,11 +79,11 @@ Fatos:
 - `fato_medico_extremos_emissao` (sg_uf, id_pessoa, primeiro_dia, ultimo_dia) — extremos de emissão por pessoa; alimenta inatividade e o total de emissores no período sem varrer a fato
 - `fato_auditoria_dia` (dia, tipo_anomalia, dimensao_afetada, valor_observado, valor_esperado, desvio, severidade)
 
-Staging: `stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_especialidade_dia`, `stg_documento_unidade_dia`, `stg_documento_medico_dia`, `stg_documento_medico_tipo_dia`.
+Staging: `stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_especialidade_dia`, `stg_documento_unidade_dia`, `stg_documento_medico_dia`, `stg_documento_medico_tipo_dia`, `stg_documento_medico_paciente_dia`.
 
 Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 
-Índices secundários: `fato_documento_dia(sg_uf,dia)`, `fato_documento_origem_dia(sg_uf,dia)`, `fato_documento_medico_dia(id_medico,dia)`, `fato_documento_medico_dia(sg_uf,dia)` (inatividade com filtro de UF), `fato_documento_medico_tipo_dia(id_tipo_documento,sg_uf,dia)`, `fato_documento_medico_tipo_dia(id_medico,dia)`, `fato_documento_especialidade_dia(id_medico_especialidade,dia)`, `fato_documento_unidade_dia(id_unidade_atendimento,dia)`, `fato_medico_dia(sg_uf,dia)`, `dim_medico(sg_uf)`, `dim_medico(id_pessoa)`, `dashboard_refresh_job(status)`.
+Índices secundários: `fato_documento_dia(sg_uf,dia)`, `fato_documento_origem_dia(sg_uf,dia)`, `fato_documento_medico_dia(id_medico,dia)`, `fato_documento_medico_dia(sg_uf,dia)` (inatividade com filtro de UF), `fato_documento_medico_tipo_dia(id_tipo_documento,sg_uf,dia)`, `fato_documento_medico_tipo_dia(id_medico,dia)`, `fato_documento_medico_paciente_dia(id_medico,dia)`, `fato_documento_medico_paciente_dia(sg_uf,dia)`, `fato_documento_especialidade_dia(id_medico_especialidade,dia)`, `fato_documento_unidade_dia(id_unidade_atendimento,dia)`, `fato_medico_dia(sg_uf,dia)`, `dim_medico(sg_uf)`, `dim_medico(id_pessoa)`, `dashboard_refresh_job(status)`.
 
 ## Definições de negócio aplicadas
 
@@ -94,7 +96,7 @@ Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 | Inscrições cadastradas | linhas de `tb_medico` (1 por CRM/UF) |
 | Inatividade | última emissão por **pessoa** (`fato_medico_extremos_emissao.ultimo_dia`), em faixas de 30/60/90/120 dias sem emissão; só quem emitiu entra |
 | Novos médicos | `tb_usuario.dh_aceite_termo` (aceite do termo = primeiro uso; ~94% preenchido, janela completa do sistema); join `tb_usuario.id_pessoa = tb_medico.id_pessoa`; `count(DISTINCT id_pessoa)` por dia×UF + linha global `'--'` (distinct entre todas as UFs — pessoa multi-UF conta uma vez no total) |
-| Anomalias AN1–AN4 | AN1 "Maiores emissores": ranking decrescente de médicos por documentos do tipo/UF/período (sem média; soma pura). AN2–AN4 (ainda não implementadas na UI) mantêm a regra original: observado vs média móvel 30 dias de **todos os médicos**; severidade 2x/3x/5x |
+| Anomalias AN1–AN4 | AN1 "Maiores emissores": ranking decrescente de médicos por documentos do tipo/UF/período (sem média; soma pura). AN2 "Atendimentos de pacientes únicos": ranking decrescente de médicos por `count(DISTINCT id_paciente)` no período (sem média). AN3–AN4 (ainda não implementadas na UI) mantêm a regra original: observado vs média móvel 30 dias de **todos os médicos**; severidade 2x/3x/5x |
 | Nome do médico | `dim_medico.nm_medico` via `tb_pessoa.nm_pessoa` (join `id_pessoa`); exibido apenas no drill-down da Auditoria |
 
 ## Ressalvas conhecidas

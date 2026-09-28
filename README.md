@@ -6,7 +6,7 @@ Painel analítico web restrito ao domínio `@portalmedico.org.br` (Google OAuth)
 
 - **Documentos médicos** — emissões por período, UF, tipo e especialidade; origem de criação (Web/Web mobile/iOS/Android); mapa e rankings.
 - **Médicos** — inscrições cadastradas (CRM/UF), médicos cadastrados (CPF único), novos por mês, inatividade por faixa sem emissão.
-- **Auditoria** — anomalias agregadas. AN1 "Maiores emissores de documentos médicos" (ranking com drill-down por tipo de documento); AN2–AN4 em construção.
+- **Auditoria** — anomalias agregadas. AN1 "Maiores emissores de documentos médicos" e AN2 "Atendimentos de pacientes únicos" (rankings com drill-down); AN3–AN4 em construção.
 
 ## Arquitetura
 
@@ -34,7 +34,7 @@ web/              aplicação Next.js (App Router, TypeScript)
   src/components/ visões e gráficos (SVG/CSS, sem lib de gráficos)
 etl/              ETL Python (dims → fatos → anomalias) + orquestração
   load_dims.py    dimensões
-  load_fatos.py   fatos de documentos (docs, origem, especialidade, unidade, medico, medico_tipo, pacientes)
+  load_fatos.py   fatos de documentos (docs, origem, especialidade, unidade, medico, medico_tipo, pacientes, medico_pacientes)
   load_medicos.py médicos (snapshot, novos, emissão)
   load_anomalias.py  anomalias AN1–AN4
   jobs.py         worker/scheduler (fila dashboard_refresh_job)
