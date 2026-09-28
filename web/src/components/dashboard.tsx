@@ -553,8 +553,8 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
   const tendenciaEmissores = mediaEmissores === null
     ? null
     : mediaEmissores === 0
-      ? "com variação de 0 profissionais por mês em média"
-      : `com ${mediaEmissores > 0 ? "crescimento" : "decréscimo"} de ${nf.format(Math.abs(mediaEmissores))} profissionais por mês em média`;
+      ? "Observa-se, ainda, uma variação média de 0 médicos por mês na base de usuários."
+      : `Observa-se, ainda, um ${mediaEmissores > 0 ? "crescimento" : "decréscimo"} médio de ${nf.format(Math.abs(mediaEmissores))} médicos por mês na base de usuários.`;
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
@@ -588,8 +588,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
           <BarChart rows={data.emissores_mensal.map((s) => ({ x: s.mes, v: Number(s.emissao) }))} tick={10} labelCentralizado />
         </div>
         <div className="sub" style={{ marginTop: 4 }}>
-          Quantidade de médicos que emitiram pelo menos um documento nos últimos 30 dias: <b style={{ color: "var(--va)" }}>{nf.format(data.emissores_30d)}</b>
-          {tendenciaEmissores && <>, {tendenciaEmissores}</>}
+          Nos últimos 30 dias, foram registrados <b style={{ color: "var(--va)" }}>{nf.format(data.emissores_30d)}</b> usuários ativos.{tendenciaEmissores && <> {tendenciaEmissores}</>}
         </div>
       </article>
 
