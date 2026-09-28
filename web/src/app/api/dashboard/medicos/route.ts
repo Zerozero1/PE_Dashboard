@@ -32,15 +32,15 @@ export async function GET(req: NextRequest) {
       query(
         `WITH ref AS (SELECT max(dia) AS hoje FROM prescricao.fato_documento_medico_dia)
          SELECT CASE
-                  WHEN (ref.hoje - e.ultimo_dia) <= 30 THEN '0-30'
-                  WHEN (ref.hoje - e.ultimo_dia) <= 60 THEN '31-60'
-                  WHEN (ref.hoje - e.ultimo_dia) <= 90 THEN '61-90'
-                  WHEN (ref.hoje - e.ultimo_dia) <= 120 THEN '91-120'
-                  ELSE '120+' END AS faixa,
-                count(*) AS medicos
-           FROM prescricao.fato_medico_extremos_emissao e CROSS JOIN ref
-          WHERE e.sg_uf = COALESCE($1::text, '--')
-          GROUP BY 1 ORDER BY 1`,
+                   WHEN (ref.hoje - e.ultimo_dia) <= 60 THEN '31-60'
+                   WHEN (ref.hoje - e.ultimo_dia) <= 90 THEN '61-90'
+                   WHEN (ref.hoje - e.ultimo_dia) <= 120 THEN '91-120'
+                   ELSE '120+' END AS faixa,
+                 count(*) AS medicos
+            FROM prescricao.fato_medico_extremos_emissao e CROSS JOIN ref
+           WHERE e.sg_uf = COALESCE($1::text, '--')
+             AND (ref.hoje - e.ultimo_dia) > 30
+           GROUP BY 1 ORDER BY 1`,
         [uf]
       ),
       query(

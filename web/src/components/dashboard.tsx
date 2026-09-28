@@ -513,7 +513,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
   if (erro) return <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>;
   if (!data) return <div className="card" style={{ gridColumn: "span 12", color: "#566271" }}>Carregando…</div>;
   const k = data.kpis;
-  const faixas = ["0-30", "31-60", "61-90", "91-120", "120+"];
+  const faixas = ["31-60", "61-90", "91-120", "120+"];
   let acumuladoNovos = 0;
   const novosAcumulados = data.novos_mensal.map((s) => {
     acumuladoNovos += Number(s.novos);
@@ -524,12 +524,11 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
   const pctInsc = (v: number) => `${(totalInsc > 0 ? ((v / totalInsc) * 100).toFixed(1) : "0.0").replace(".", ",")}%`;
   const totalInat = data.inatividade.reduce((a, i) => a + Number(i.medicos), 0);
   const maxInat = Math.max(...data.inatividade.map((i) => Number(i.medicos)), 1);
-  const INA_META: Record<string, { cor: string; status: string }> = {
-    "0-30": { cor: "var(--green)", status: "Observar" },
-    "31-60": { cor: "#a3e635", status: "Observar" },
-    "61-90": { cor: "var(--orange)", status: "Atenção" },
-    "91-120": { cor: "#ff9f43", status: "Atenção" },
-    "120+": { cor: "var(--red)", status: "Crítico" },
+  const INA_META: Record<string, { cor: string }> = {
+    "31-60": { cor: "#a3e635" },
+    "61-90": { cor: "var(--orange)" },
+    "91-120": { cor: "#ff9f43" },
+    "120+": { cor: "var(--red)" },
   };
   const ufFiltrada = uf !== "";
   const periodoFiltrado = dias !== "todos" || uf !== "";
@@ -603,7 +602,6 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
               <div key={f}>
                 <div style={{ display: "flex", alignItems: "baseline", fontSize: 10, color: "#8d99a7", marginBottom: 5 }}>
                   <span>{f} dias</span>
-                  <span style={{ marginLeft: 8, fontSize: 9, color: meta.cor }}>{meta.status}</span>
                   <b style={{ marginLeft: "auto", color: "#c3ccd6", fontSize: 10.5 }}>
                     {nf.format(v)}<span style={{ color: "#667381", fontWeight: 400 }}> · {pct}%</span>
                   </b>
