@@ -1,10 +1,17 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-28 14:09 BRT_
+_Atualizado em: 2026-09-28 14:45 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões (Documentos, Medicos, Auditoria) + visao "Logs" (admin).
 
 ## ✅ Última Sessão (Resumo)
+- AN2 — Atendimentos de pacientes unicos (2026-09-28): implementada como ranking de medicos com mais pacientes distintos (substitui a AN2 antiga que era global por dia).
+  - **DW**: nova `fato_documento_medico_paciente_dia` (dia, sg_uf, id_medico, id_paciente) — grão paciente×dia para permitir `count(DISTINCT id_paciente)` no período (não-aditivo). DDL em `ddl_extra.sql` (tabela + 2 indices + staging `stg_documento_medico_paciente_dia`). Modo `medico_pacientes` em `load_fatos.py` (batch por faixa de id com `SELECT DISTINCT`, dedup via PK do staging, rebuild) e `run_all.py` (antes de `fato pacientes`/`medicos`). **Populada: 42.653.038 linhas** (ETL rodado em ~21 min a partir do laptop, usando credenciais da origem via MCP + DW).
+  - **API `/api/dashboard/auditoria`**: endpoint agora lê param `anomalia`; AN1 inalterada (`fato_documento_medico_tipo_dia`, SUM documentos); AN2 nova (`fato_documento_medico_paciente_dia`, `count(DISTINCT id_paciente)` no período, sem filtro de tipo). Resposta: `{ de, ate, an2: [{ id_medico, crm, crm_uf, nome, pacientes }] }`.
+  - **API drill-down**: `/api/dashboard/auditoria/medico` recebe `anomalia` param; AN2 usa `fato_documento_medico_paciente_dia` para serie_mensal (count DISTINCT id_paciente por mês; por_tipo vazio).
+  - **Frontend**: `AudData` ganhou `an2?`; `pesquisar` agora processa AN1 e AN2 (qs leva `&anomalia=AN2`); tabela unificada (metricTitle varia "Documentos"/"Pacientes"); AN2 sai do "em breve"; label AN2 → "AN2 · Atendimentos de pacientes unicos" (sem "acima da media", decisao do usuario).
+  - Validado: `npx tsc --noEmit` OK; AN2 endpoint HTTP 200 com dados reais (top: 4.301 pacientes). AN1 endpoint regressao OK.
+  - ⚠️ Git: uma sessao concorrente (`CFM176`) rebobinou `main` para `99f60af`; meu commit de UI `dd6a23b` esta no branch `main-CFM176` e as mudancas nao-commitadas foram preservadas em copias `*-CFM176.*` (depois restauradas manualmente para os arquivos ativos).
 - Ajustes de rotulos/UI (2026-09-28) — todos em `web/src/components/dashboard.tsx`:
   - **Documentos**: "Participação por origem" → "Participação por plataforma"; "Origem de criação por mês" → "Emissões por plataforma".
   - **Rodapé**: apenas o rodapé global passou a exibir a versão → "PE Dashboard · CFM v1.0" (decisão: não incluir versão nos rodapés dos gráficos).
@@ -54,6 +61,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 - Limpeza de colunas sem uso (2026-09-22): removidas `dim_data.dia_semana` e `fato_medico_dia.inscricoes_cadastradas/inscricoes_ativas/medicos_ativos` (sempre vazias; valores correntes vivem em `fato_medico_snapshot`). Demais colunas "redundantes" mantidas por custo baixo.
 
 ## 🔧 Em Progresso / Próximos Passos
+- [x] Popular `fato_documento_medico_paciente_dia` (42,65M linhas) — FEITO a partir do laptop (ETL `medico_pacientes`). A máquina do ETL deve rodar o modo no próximo job agendado para manter a carga (o `run_all.py` já o inclui).
 - [ ] Fase 1 — Fundacao (EM ANDAMENTO): projeto Next.js 16 criado em `web/` (app router, TS). Feito: shell com 4 visoes no padrao cyberpunk dark (abas horizontais, acento por visao), `api/health` lendo o DW real (job/config/dados), `api/admin/refresh-jobs` enfileirando job manual, next-auth v4 com Google OAuth + validacao de dominio `@portalmedico.org.br` (signIn callback). Modo dev sem credenciais Google: sessao mock.
   - Faltam: criar credenciais Google OAuth (console.cloud.google.com, redirect http://localhost:3000/api/auth/callback/google), `NEXTAUTH_SECRET`, `.env.local` em producao; remover mock dev ao subir.
   - Testado: build OK; dev server OK; `/api/health` retorna DW real (job success, config 02:00, 61,84M docs); pagina renderiza (HTTP 200).

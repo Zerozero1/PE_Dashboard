@@ -118,6 +118,24 @@ LEFT JOIN prescricao.rl_medico_paciente mp
 GROUP BY 1, 2
 """
 
+SQL_MEDICO_PACIENTE = """
+SELECT DISTINCT d.dh_documento::date AS dia,
+       CASE WHEN ua.sg_uf = 'BR' THEN '--' ELSE COALESCE(ua.sg_uf, '--') END AS sg_uf,
+       mu.id_medico,
+       mp.id_paciente
+FROM prescricao.tb_consulta_documento d
+LEFT JOIN prescricao.tb_consulta c ON c.id_consulta = d.id_consulta
+LEFT JOIN prescricao.rl_medico_unidade_atendimento mu
+       ON mu.id_medico_unidade_atendimento = c.id_medico_unidade_atendimento
+LEFT JOIN prescricao.tb_unidade_atendimento ua
+       ON ua.id_unidade_atendimento = mu.id_unidade_atendimento
+LEFT JOIN prescricao.rl_medico_paciente mp
+       ON mp.id_medico_paciente = c.id_medico_paciente
+WHERE d.id_consulta_documento BETWEEN %s AND %s
+  AND mu.id_medico IS NOT NULL
+  AND mp.id_paciente IS NOT NULL
+"""
+
 SQL_MEDICOS = """
 SELECT d.dh_documento::date AS dia,
        CASE WHEN ua.sg_uf = 'BR' THEN '--' ELSE COALESCE(ua.sg_uf, '--') END AS sg_uf,
@@ -238,6 +256,42 @@ def main():
             ["dia", "sg_uf", "id_medico", "id_tipo_documento"],
             "prescricao.fato_documento_medico_tipo_dia", 4)
         log(f"fato_documento_medico_tipo_dia: concluido — {total:,} documentos")
+
+    elif mode == "medico_pacientes":
+        log("fato_documento_medico_paciente_dia: iniciando")
+        from common import append_rows, truncate_table
+        stg = "prescricao.stg_documento_medico_paciente_dia"
+        truncate_table(dw, stg)
+        cur = origin.cursor()
+        cur.execute("SET statement_timeout = 0")
+        cur.execute("SET work_mem = '256MB'")
+        cur.execute("SELECT max(id_consulta_documento) FROM prescricao.tb_consulta_documento")
+        max_id = cur.fetchone()[0]
+        start = 1
+        t0 = time.time()
+        n_batch = 0
+        total = 0
+        while start <= max_id:
+            end = min(start + BATCH_SIZE - 1, max_id)
+            cur.execute(SQL_MEDICO_PACIENTE, (start, end))
+            rows = cur.fetchall()
+            if rows:
+                append_rows(dw, stg, ["dia", "sg_uf", "id_medico", "id_paciente"], rows)
+                total += len(rows)
+            n_batch += 1
+            elapsed = time.time() - t0
+            log(f"{stg}: lote {n_batch} ids {start}-{end} "
+                f"(acum {total:,} · {elapsed:.0f}s)")
+            start = end + 1
+        cur.close()
+        cur2 = dw.cursor()
+        cur2.execute("TRUNCATE prescricao.fato_documento_medico_paciente_dia")
+        cur2.execute(
+            "INSERT INTO prescricao.fato_documento_medico_paciente_dia "
+            "SELECT dia, sg_uf, id_medico, id_paciente FROM " + stg)
+        dw.commit()
+        cur2.close()
+        log(f"fato_documento_medico_paciente_dia: concluido — {total:,} linhas")
 
     origin.close()
     dw.close()

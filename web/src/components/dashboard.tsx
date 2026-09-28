@@ -41,6 +41,7 @@ type AudData = {
   de: string;
   ate: string;
   an1: { id_medico: number; crm: string; crm_uf: string; nome: string; docs: string }[];
+  an2?: { id_medico: number; crm: string; crm_uf: string; nome: string; pacientes: string }[];
 };
 
 type AudMedicoData = {
@@ -645,7 +646,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
 
 const ANOMALIAS: [string, string][] = [
   ["AN1", "AN1 · Maiores emissores de documentos médicos"],
-  ["AN2", "AN2 · Atendimentos de pacientes únicos acima da média"],
+  ["AN2", "AN2 · Atendimentos de pacientes únicos"],
   ["AN3", "AN3 · Tempo entre emissões acima da média"],
   ["AN4", "AN4 · Documentos emitidos pelo local acima da média"],
 ];
@@ -666,8 +667,8 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
   const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
 
   const pesquisar = async () => {
-    if (anomalia !== "AN1") { setData(null); setErro(null); return; }
-    const qs = `de=${de}&ate=${ate}&uf=${uf}&tipo=${tipo}&limite=${limite}`;
+    if (anomalia !== "AN1" && anomalia !== "AN2") { setData(null); setErro(null); return; }
+    const qs = `anomalia=${anomalia}&de=${de}&ate=${ate}&uf=${uf}&tipo=${tipo}&limite=${limite}`;
     setCarregando(true);
     setErro(null);
     try {
@@ -686,7 +687,7 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
     setMedicoErro(null);
     setMedicoCarregando(true);
     try {
-      const r = await fetch(`/api/dashboard/auditoria/medico?id_medico=${m.id_medico}&de=${de}&ate=${ate}&uf=${uf}`);
+      const r = await fetch(`/api/dashboard/auditoria/medico?id_medico=${m.id_medico}&anomalia=${anomalia}&de=${de}&ate=${ate}&uf=${uf}`);
       const j = await r.json();
       if (!r.ok || j.erro) { setMedicoErro(j.erro ?? `HTTP ${r.status}`); }
       else { setMedicoData(j); }
@@ -717,42 +718,48 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
       </div>
       {carregando && <Processando />}
       {erro && <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>}
-      {!carregando && anomalia !== "AN1" && (
+      {!carregando && anomalia !== "AN1" && anomalia !== "AN2" && (
         <article className="card" style={{ gridColumn: "span 12" }}>
           <div className="section-title"><h2>{ANOMALIAS.find((a) => a[0] === anomalia)?.[1]}</h2><span>em breve</span></div>
           <div style={{ color: "#566271", fontSize: 12 }}>Esta anomalia será implementada em uma próxima etapa.</div>
         </article>
       )}
-      {!carregando && anomalia === "AN1" && data && (
+      {!carregando && (anomalia === "AN1" || anomalia === "AN2") && data && (() => {
+        const rows = anomalia === "AN1" ? (data.an1 ?? []) : (data.an2 ?? []);
+        const metricTitle = anomalia === "AN1" ? "Documentos" : "Pacientes";
+        const subtitle = anomalia === "AN1" ? "médicos por quantidade de documentos" : "médicos por quantidade de pacientes distintos";
+        const getMetric = (r: typeof rows[number]) => anomalia === "AN1" ? Number((r as { docs: string }).docs) : Number((r as { pacientes: string }).pacientes);
+        return (
         <article className="card" style={{ gridColumn: "span 12" }}>
-          <div className="section-title"><h2>AN1 · Maiores emissores de documentos médicos</h2><span>médicos por quantidade de documentos</span></div>
+          <div className="section-title"><h2>{anomalia === "AN1" ? "AN1 · Maiores emissores de documentos médicos" : "AN2 · Atendimentos de pacientes únicos"}</h2><span>{subtitle}</span></div>
           <table className="table">
             <thead>
               <tr>
                 <th>#</th><th>CRM</th><th>UF</th><th>Nome</th>
-                <th style={{ textAlign: "right" }}>Documentos</th><th />
+                <th style={{ textAlign: "right" }}>{metricTitle}</th><th />
               </tr>
             </thead>
             <tbody>
-              {data.an1.map((r, i) => (
+              {rows.map((r, i) => (
                 <tr key={`${r.crm}-${r.crm_uf}-${i}`} onClick={() => abrirMedico({ id_medico: r.id_medico, nome: r.nome ?? "—" })} style={{ cursor: "pointer" }} className="drill-row">
                   <td>{i + 1}</td>
                   <td>{r.crm}</td>
                   <td>{r.crm_uf}</td>
                   <td>{r.nome ?? "—"}</td>
-                  <td style={{ textAlign: "right" }}>{nf.format(Number(r.docs))}</td>
+                  <td style={{ textAlign: "right" }}>{nf.format(getMetric(r))}</td>
                   <td style={{ textAlign: "right" }}>
                     <span className="drill-ico" title="Ver detalhes">›</span>
                   </td>
                 </tr>
               ))}
-              {data.an1.length === 0 && (
+              {rows.length === 0 && (
                 <tr><td colSpan={6} style={{ color: "#566271", textAlign: "center" }}>Sem registros no período/filtros.</td></tr>
               )}
             </tbody>
           </table>
         </article>
-      )}
+        );
+      })()}
       {medico && (
         <MedicoDrill medico={medico} data={medicoData} erro={medicoErro} carregando={medicoCarregando} onClose={() => setMedico(null)} />
       )}

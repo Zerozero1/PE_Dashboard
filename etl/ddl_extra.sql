@@ -125,3 +125,27 @@ CREATE INDEX IF NOT EXISTS idx_fato_medico_tipo_tipo
 
 CREATE INDEX IF NOT EXISTS idx_fato_medico_tipo_medico
     ON prescricao.fato_documento_medico_tipo_dia (id_medico, dia);
+
+DROP TABLE IF EXISTS prescricao.fato_documento_medico_pacientes_dia;
+
+CREATE TABLE IF NOT EXISTS prescricao.fato_documento_medico_paciente_dia (
+    dia DATE NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_medico INTEGER NOT NULL,
+    id_paciente INTEGER NOT NULL,
+    PRIMARY KEY (dia, sg_uf, id_medico, id_paciente)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fato_med_pac_medico
+    ON prescricao.fato_documento_medico_paciente_dia (id_medico, dia);
+
+CREATE INDEX IF NOT EXISTS idx_fato_med_pac_uf
+    ON prescricao.fato_documento_medico_paciente_dia (sg_uf, dia);
+
+CREATE TABLE IF NOT EXISTS prescricao.stg_documento_medico_paciente_dia (
+    dia DATE NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_medico INTEGER NOT NULL,
+    id_paciente INTEGER NOT NULL,
+    PRIMARY KEY (dia, sg_uf, id_medico, id_paciente)
+);
