@@ -49,6 +49,7 @@ type AudMedicoData = {
   por_tipo: { tipo: string; docs: string }[];
   serie_mensal: { mes: string; docs: string }[];
   especialidades: string[];
+  total_pacientes: number | null;
 };
 
 type FiltrosData = { ufs: string[]; tipos: { id: number; nome: string }[] };
@@ -761,7 +762,7 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
         );
       })()}
       {medico && (
-        <MedicoDrill medico={medico} data={medicoData} erro={medicoErro} carregando={medicoCarregando} onClose={() => setMedico(null)} />
+        <MedicoDrill medico={medico} anomalia={anomalia} data={medicoData} erro={medicoErro} carregando={medicoCarregando} onClose={() => setMedico(null)} />
       )}
     </section>
   );
@@ -878,20 +879,25 @@ function LogsView({ active }: { active: boolean }) {
   );
 }
 
-function MedicoDrill({ medico, data, erro, carregando, onClose }: {
+function MedicoDrill({ medico, anomalia, data, erro, carregando, onClose }: {
   medico: { id_medico: number; nome: string };
+  anomalia: string;
   data: AudMedicoData | null;
   erro: string | null;
   carregando: boolean;
   onClose: () => void;
 }) {
-  const total = data ? data.por_tipo.reduce((a, t) => a + Number(t.docs), 0) : 0;
+  const isAn2 = anomalia === "AN2";
+  const total = isAn2
+    ? (data?.total_pacientes ?? 0)
+    : (data ? data.por_tipo.reduce((a, t) => a + Number(t.docs), 0) : 0);
   let acumulado = 0;
   const serie = data ? data.serie_mensal.map((s) => {
+    if (isAn2) return { x: s.mes, v: Number(s.docs) };
     acumulado += Number(s.docs);
     return { x: s.mes, v: acumulado };
   }) : [];
-  const mensal = data ? data.serie_mensal.map((s) => Number(s.docs)) : [];
+  const mensal = isAn2 ? undefined : (data ? data.serie_mensal.map((s) => Number(s.docs)) : []);
   const situacaoLabel = data?.medico?.situacao ? `Situação ${data.medico.situacao}` : null;
   const inscricaoLabel = data?.medico?.tipo_inscricao ? `Inscrição ${data.medico.tipo_inscricao}` : null;
 
@@ -908,19 +914,30 @@ function MedicoDrill({ medico, data, erro, carregando, onClose }: {
       {erro && <div style={{ color: "var(--red)" }}>Erro: {erro}</div>}
       {!carregando && !erro && data && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 18 }}>
-          <div style={{ gridColumn: "span 4" }}>
-            <div className="section-title"><h2>Documentos por tipo</h2></div>
-            <Donut rows={data.por_tipo.map((t) => ({ label: t.tipo, v: Number(t.docs) }))} pctDec={1} />
-            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {situacaoLabel && <span className="badge ok">{situacaoLabel}</span>}
-              {inscricaoLabel && <span className="badge warn">{inscricaoLabel}</span>}
+          {!isAn2 && (
+            <div style={{ gridColumn: "span 4" }}>
+              <div className="section-title"><h2>Documentos por tipo</h2></div>
+              <Donut rows={data.por_tipo.map((t) => ({ label: t.tipo, v: Number(t.docs) }))} pctDec={1} />
+              <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {situacaoLabel && <span className="badge ok">{situacaoLabel}</span>}
+                {inscricaoLabel && <span className="badge warn">{inscricaoLabel}</span>}
+              </div>
             </div>
-          </div>
-          <div style={{ gridColumn: "span 8" }}>
-            <div className="section-title"><h2>Evolução mensal</h2><span>acumulado × mês</span></div>
+          )}
+          <div style={{ gridColumn: isAn2 ? "span 12" : "span 8" }}>
+            <div className="section-title">
+              <h2>{isAn2 ? "Pacientes distintos por mês" : "Evolução mensal"}</h2>
+              <span>{isAn2 ? "pacientes distintos" : "acumulado × mês"}</span>
+            </div>
             <div className="chart" style={{ height: 210 }}>
               <BarChart rows={serie} bars={mensal} />
             </div>
+            {isAn2 && (
+              <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {situacaoLabel && <span className="badge ok">{situacaoLabel}</span>}
+                {inscricaoLabel && <span className="badge warn">{inscricaoLabel}</span>}
+              </div>
+            )}
             <div style={{ marginTop: 10 }}>
               <div className="section-title"><h2>Especialidades</h2></div>
               {data.especialidades.length > 0 ? (
@@ -933,7 +950,11 @@ function MedicoDrill({ medico, data, erro, carregando, onClose }: {
                 <div style={{ color: "#566271", fontSize: 11 }}>Sem especialidade cadastrada.</div>
               )}
             </div>
-            <div className="sub" style={{ marginTop: 14 }}>Total no período: <b style={{ color: "var(--va)" }}>{nf.format(total)}</b> documentos · {data.por_tipo.length} tipos distintos</div>
+            <div className="sub" style={{ marginTop: 14 }}>
+              {isAn2
+                ? <>Total de pacientes distintos no período: <b style={{ color: "var(--va)" }}>{nf.format(total)}</b></>
+                : <>Total no período: <b style={{ color: "var(--va)" }}>{nf.format(total)}</b> documentos · {data.por_tipo.length} tipos distintos</>}
+            </div>
           </div>
         </div>
       )}

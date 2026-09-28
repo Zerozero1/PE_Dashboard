@@ -1,5 +1,5 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-28 14:45 BRT_
+_Atualizado em: 2026-09-28 15:30 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões (Documentos, Medicos, Auditoria) + visao "Logs" (admin).
@@ -8,7 +8,8 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 - AN2 — Atendimentos de pacientes unicos (2026-09-28): implementada como ranking de medicos com mais pacientes distintos (substitui a AN2 antiga que era global por dia).
   - **DW**: nova `fato_documento_medico_paciente_dia` (dia, sg_uf, id_medico, id_paciente) — grão paciente×dia para permitir `count(DISTINCT id_paciente)` no período (não-aditivo). DDL em `ddl_extra.sql` (tabela + 2 indices + staging `stg_documento_medico_paciente_dia`). Modo `medico_pacientes` em `load_fatos.py` (batch por faixa de id com `SELECT DISTINCT`, dedup via PK do staging, rebuild) e `run_all.py` (antes de `fato pacientes`/`medicos`). **Populada: 42.653.038 linhas** (ETL rodado em ~21 min a partir do laptop, usando credenciais da origem via MCP + DW).
   - **API `/api/dashboard/auditoria`**: endpoint agora lê param `anomalia`; AN1 inalterada (`fato_documento_medico_tipo_dia`, SUM documentos); AN2 nova (`fato_documento_medico_paciente_dia`, `count(DISTINCT id_paciente)` no período, sem filtro de tipo). Resposta: `{ de, ate, an2: [{ id_medico, crm, crm_uf, nome, pacientes }] }`.
-  - **API drill-down**: `/api/dashboard/auditoria/medico` recebe `anomalia` param; AN2 usa `fato_documento_medico_paciente_dia` para serie_mensal (count DISTINCT id_paciente por mês; por_tipo vazio).
+  - **API drill-down**: `/api/dashboard/auditoria/medico` recebe `anomalia` param; AN2 usa `fato_documento_medico_paciente_dia` para serie_mensal (count DISTINCT id_paciente por mês; por_tipo vazio) e novo campo `total_pacientes` (count DISTINCT no período).
+  - **Drill-down AN2 (frontend)**: suprimidas as infos de documentos (donut "Documentos por tipo" e rodapé "Total ... documentos" somem); gráfico vira "Pacientes distintos por mês" (mensal, sem acumulado) e o rodapé mostra "Total de pacientes distintos no período: X". `MedicoDrill` recebe prop `anomalia`.
   - **Frontend**: `AudData` ganhou `an2?`; `pesquisar` agora processa AN1 e AN2 (qs leva `&anomalia=AN2`); tabela unificada (metricTitle varia "Documentos"/"Pacientes"); AN2 sai do "em breve"; label AN2 → "AN2 · Atendimentos de pacientes unicos" (sem "acima da media", decisao do usuario).
   - Validado: `npx tsc --noEmit` OK; AN2 endpoint HTTP 200 com dados reais (top: 4.301 pacientes). AN1 endpoint regressao OK.
   - ⚠️ Git: uma sessao concorrente (`CFM176`) rebobinou `main` para `99f60af`; meu commit de UI `dd6a23b` esta no branch `main-CFM176` e as mudancas nao-commitadas foram preservadas em copias `*-CFM176.*` (depois restauradas manualmente para os arquivos ativos).

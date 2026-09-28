@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
 
     let porTipoQ: ReturnType<typeof query>;
     let serieMensalQ: ReturnType<typeof query>;
+    let totalPacientesQ: ReturnType<typeof query>;
 
     if (anomalia === "AN2") {
       porTipoQ = query("SELECT NULL::text AS tipo, NULL::bigint AS docs LIMIT 0");
@@ -43,6 +44,14 @@ export async function GET(req: NextRequest) {
             AND f.dia BETWEEN $2 AND $3
             AND ($4::text IS NULL OR f.sg_uf = $4)
           GROUP BY 1 ORDER BY 1`,
+        [idMedico, de, ate, uf]
+      );
+      totalPacientesQ = query(
+        `SELECT count(DISTINCT f.id_paciente)::bigint AS total
+           FROM prescricao.fato_documento_medico_paciente_dia f
+          WHERE f.id_medico = $1
+            AND f.dia BETWEEN $2 AND $3
+            AND ($4::text IS NULL OR f.sg_uf = $4)`,
         [idMedico, de, ate, uf]
       );
     } else {
@@ -65,10 +74,11 @@ export async function GET(req: NextRequest) {
           GROUP BY 1 ORDER BY 1`,
         [idMedico, de, ate, uf]
       );
+      totalPacientesQ = query("SELECT NULL::bigint AS total LIMIT 0");
     }
 
-    const [medico, porTipo, serieMensal, especialidades] = await Promise.all([
-      medicoQ, porTipoQ, serieMensalQ, especialidadesQ,
+    const [medico, porTipo, serieMensal, especialidades, totalPacientes] = await Promise.all([
+      medicoQ, porTipoQ, serieMensalQ, especialidadesQ, totalPacientesQ,
     ]);
 
     return NextResponse.json({
@@ -76,6 +86,7 @@ export async function GET(req: NextRequest) {
       por_tipo: porTipo.rows,
       serie_mensal: serieMensal.rows,
       especialidades: especialidades.rows.map((r) => r.esp),
+      total_pacientes: anomalia === "AN2" ? (totalPacientes.rows[0]?.total ?? 0) : null,
     });
   } catch (e) {
     return NextResponse.json({ erro: String(e) }, { status: 500 });
