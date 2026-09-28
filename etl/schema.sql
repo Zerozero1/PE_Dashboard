@@ -127,4 +127,15 @@ CREATE TABLE IF NOT EXISTS prescricao.dashboard_refresh_job (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS prescricao.dashboard_access_log (
+    id_access_log BIGSERIAL PRIMARY KEY,
+    nm_email VARCHAR(120),
+    tx_ip VARCHAR(45),
+    in_sucesso BOOLEAN NOT NULL,
+    dh_evento TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_access_log_evento
+    ON prescricao.dashboard_access_log (dh_evento DESC);
+
 CREATE INDEX IF NOT EXISTS idx_refresh_job_status ON prescricao.dashboard_refresh_job (status);

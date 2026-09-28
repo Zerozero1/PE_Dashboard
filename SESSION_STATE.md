@@ -1,16 +1,18 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-24 13:20 BRT_
+_Atualizado em: 2026-09-28 09:30 BRT_
 
 ## 🎯 Objetivo Atual
-Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões: Documentos, Medicos, Auditoria.
+Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões (Documentos, Medicos, Auditoria) + visao "Logs" (admin).
 
 ## ✅ Última Sessão (Resumo)
-- Grafico "Inatividade por faixa sem emissao" ajustado (2026-09-24): removida a faixa `0-30` (nao e inatividade) e removidas as acoes "Observar/Atencao/Critico". O `%` agora tem como 100% o total de medicos INATIVOS (quem emitiu e esta ha >30 dias sem emitir) — o endpoint filtra `(hoje - ultimo_dia) > 30`, entao o `%` e sobre as 4 faixas exibidas (31-60, 61-90, 91-120, 120+). Total global: 88.075 inativos (120+ = 62,4%).
-- Diagnostico imagens em producao (2026-09-24): app e Dockerfile estao corretos (servidor standalone serve `cfm.png` e `brazil.geojson`, HTTP 200). Problema no reverse proxy de `dashboard.prescricao.cfm.org.br` (nao serve os arquivos de `public/`). Pendente confirmar qual proxy e testar a porta 3000 direto.
-- Limpeza de referencias obsoletas a Dispensacoes (2026-09-24): datamart limpo; docs (PLANO/RESUMO/CSS) corrigidas.
-- Login Google validado localmente (2026-09-24): OAuth `dashboard-prescricao` (Internal); preparado para producao.
-- Docker (2026-09-24): `docker-compose.yml` + Dockerfiles + standalone.
-- Visao Auditoria — AN1 (2026-09-24): ranking "Maiores emissores" + drill-down.
+- Visao "Logs" (2026-09-28, exclusiva `mrichard@portalmedico.org.br`): duas tabelas com dados relevantes de cada evento.
+  - **Log de utilizacao (logins)**: nova tabela `dashboard_access_log` (nm_email, tx_ip, in_sucesso, dh_evento) gravada no callback `signIn` do next-auth (captura sucesso E negado; IP via `x-forwarded-for`/`x-real-ip`).
+  - **Log de atualizacoes**: reuso de `dashboard_refresh_job` (tipo manual/programado, status, solicitado_por, inicio/fim, duracao).
+  - Cada tabela tem botao "Excluir log" (TRUNCATE). Endpoints: `GET /api/admin/logs` e `POST /api/admin/logs/clear` ({alvo: acessos|jobs}), ambos restritos ao admin.
+  - Decisao 17 REVOGADA (era "sem auditoria de uso"); documentada no PLANO.
+  - IP nao preenchido em dev local (nao ha proxy); em producao vem do `x-forwarded-for`.
+- Grafico "Inatividade por faixa sem emissao" (2026-09-24): faixa 0-30 e acoes removidas; % sobre o total de inativos.
+- Login Google validado localmente; Docker; AN1 + drill-down; Dispensacoes removidas.
 - Tag de filtro (2026-09-23): KPIs/graficos/tabelas das visoes Documentos e Medicos ganharam tag em circulo com a letra "F" quando algum filtro difere de "Todos"; legenda "F — Dados com filtro(s) aplicados" no rodape de cada visao. Regras por consulta: Documentos KPIs/emissoes/UF respondem a periodo+UF+tipo; tipo donut/origem/especialidade so a periodo+UF. Medicos: KPIs/novos/inatividade so a UF; grafico de emissao a periodo+UF; "Medicos por UF" nunca (sem tag).
 - KPI "Pacientes distintos" suprimido da visao Documentos (2026-09-23): cadastro de paciente nao e centralizado (id_paciente por vinculo medico; CPF preenchido em apenas 26,7%; sem CNS/externo). Impacto no datamart: NENHUM por ora — `fato_documento_paciente_dia` continua sendo gerada porque a AN2 (anomalia de atendimentos) depende dela. Se AN2 tambem for descontinuada, pode-se dropar a fato e economizar ~70s por carga do pipeline.
 - Documentacao das bases revisada (2026-09-23): `RESUMO_BASE_bd_cfm.md` (base relacional) atualizado — `tb_usuario` (490.670, 1:1, `dh_aceite_termo` 94% como proxy de primeiro uso), `tb_medico` (`dh_atualizacao` invalidado por atualizacoes em massa), `tb_pessoa.nu_cpf` (1:1). `etl/README.md` (base analitica) ja estava sincronizado.

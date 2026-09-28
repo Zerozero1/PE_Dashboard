@@ -820,7 +820,7 @@ Risco: dependencia de mapa externo.
 14. Perfis de acesso (2026-09-21): perfil unico — todos os usuarios do dominio veem as quatro visões; sem perfis separados.
 15. Exportacao CSV/Excel (2026-09-21): NAO permitida no MVP.
 16. Auditoria (2026-09-21): somente agregados; sem registros individuais.
-17. Auditoria do uso do dashboard (2026-09-21): NAO havera (sem registro de logins, acessos ou consultas dos usuarios); tabela `dashboard_access_log` removida do modelo.
+17. Auditoria do uso do dashboard (2026-09-21): NAO havera (sem registro de logins, acessos ou consultas dos usuarios); tabela `dashboard_access_log` removida do modelo. **REVOGADA em 2026-09-28**: criada a visao "Logs" (exclusiva de `mrichard@portalmedico.org.br`) com log de logins (`dashboard_access_log`) e log de atualizacoes (`dashboard_refresh_job`), ambos com botao de exclusao.
 18. Topologia (2026-09-21): aplicacao web (UI + API) e ETL (Python) em maquinas Windows separadas; comunicacao exclusivamente via fila de jobs no `prescricao_dw`.
 19. Anomalias (2026-09-21): media de referencia calculada sobre todos os medicos (nunca o historico individual do emissor).
 20. Design system (2026-09-21): padrao "cyberpunk dark" aprovado (referencia PE_Dashboard_Cyberpunk); tema escuro com acentos ciano/verde/violeta/laranja, sidebar fixa, grade 12 colunas; draft em `design/draft_dashboard.html`.

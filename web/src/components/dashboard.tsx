@@ -52,6 +52,11 @@ type AudMedicoData = {
 
 type FiltrosData = { ufs: string[]; tipos: { id: number; nome: string }[] };
 
+type LogsData = {
+  acessos: { id_access_log: number; nm_email: string; tx_ip: string | null; in_sucesso: boolean; dh_evento: string }[];
+  jobs: { id_job: number; tipo: string; status: string; solicitado_por: string | null; agendado_para: string | null; iniciado_em: string | null; finalizado_em: string | null; mensagem: string | null }[];
+};
+
 function periodo(dias: number | "todos") {
   const ate = new Date().toISOString().slice(0, 10);
   const de = dias === "todos" ? "2021-10-01" : new Date(Date.now() - dias * 864e5).toISOString().slice(0, 10);
@@ -74,12 +79,13 @@ function Sel({ label, value, onChange, options }: { label: string; value: string
 const PERIODOS: [string, string][] = [["todos", "Todos"], ["30", "30 dias"], ["7", "7 dias"], ["90", "90 dias"], ["365", "12 meses"]];
 
 const VIEWS = ["documentos", "medicos", "auditoria"] as const;
-type ViewId = (typeof VIEWS)[number];
+type ViewId = (typeof VIEWS)[number] | "logs";
 
 const VIEW_META: Record<ViewId, { title: string; subtitle: string; theme: string }> = {
   documentos: { title: "Documentos médicos", subtitle: "Emissões por período, UF, tipo e especialidade — UF da unidade de atendimento.", theme: "theme-cyan" },
   medicos: { title: "Médicos", subtitle: "Cadastro, situação da inscrição e atividade de prescrição por UF.", theme: "theme-cyan" },
   auditoria: { title: "Auditoria", subtitle: "Anomalias agregadas — média de referência de todos os médicos · somente agregados.", theme: "theme-cyan" },
+  logs: { title: "Logs", subtitle: "Utilização (logins) e atualizações de dados — visão administrativa.", theme: "theme-cyan" },
 };
 
 const MIN_LON = -73.98, MAX_LAT = 5.27;
@@ -736,6 +742,117 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
   );
 }
 
+function LogsView({ active }: { active: boolean }) {
+  const [data, setData] = useState<LogsData | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [carregando, setCarregando] = useState(false);
+  const [excluindo, setExcluindo] = useState<string | null>(null);
+
+  const carregar = useCallback(async () => {
+    setCarregando(true);
+    setErro(null);
+    try {
+      const r = await fetch("/api/admin/logs");
+      const j = await r.json();
+      if (!r.ok || j.erro) { setErro(j.erro ?? `HTTP ${r.status}`); }
+      else { setData(j); }
+    } catch (e) {
+      setErro(String(e));
+    } finally {
+      setCarregando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (active) carregar();
+  }, [active, carregar]);
+
+  const excluir = async (alvo: string) => {
+    setExcluindo(alvo);
+    try {
+      await fetch("/api/admin/logs/clear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alvo }),
+      });
+      await carregar();
+    } catch (e) {
+      setErro(String(e));
+    } finally {
+      setExcluindo(null);
+    }
+  };
+
+  const fmtDataHora = (v: string | null) => (v ? new Date(v).toLocaleString("pt-BR") : "—");
+
+  return (
+    <section className="grid">
+      {carregando && <Processando />}
+      {erro && <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>}
+
+      <article className="card" style={{ gridColumn: "span 6" }}>
+        <div className="section-title">
+          <h2>Log de utilização (logins)</h2>
+          <button className="btn" onClick={() => excluir("acessos")} disabled={excluindo !== null} style={{ padding: "4px 9px", fontSize: 10, color: "var(--red)", borderColor: "rgba(255,100,124,.35)" }}>
+            {excluindo === "acessos" ? "…" : "Excluir log"}
+          </button>
+        </div>
+        <div className="uf-scroll" style={{ maxHeight: 460, overflowY: "auto" }}>
+          <table className="table" style={{ fontSize: 10.5 }}>
+            <thead><tr><th>Data/hora</th><th>E-mail</th><th>IP</th><th>Resultado</th></tr></thead>
+            <tbody>
+              {data?.acessos.map((a) => (
+                <tr key={a.id_access_log}>
+                  <td>{fmtDataHora(a.dh_evento)}</td>
+                  <td>{a.nm_email}</td>
+                  <td>{a.tx_ip ?? "—"}</td>
+                  <td><span className={`badge ${a.in_sucesso ? "ok" : "bad"}`}>{a.in_sucesso ? "sucesso" : "negado"}</span></td>
+                </tr>
+              ))}
+              {data && data.acessos.length === 0 && (
+                <tr><td colSpan={4} style={{ color: "#566271", textAlign: "center" }}>Sem registros.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article className="card" style={{ gridColumn: "span 6" }}>
+        <div className="section-title">
+          <h2>Log de atualizações</h2>
+          <button className="btn" onClick={() => excluir("jobs")} disabled={excluindo !== null} style={{ padding: "4px 9px", fontSize: 10, color: "var(--red)", borderColor: "rgba(255,100,124,.35)" }}>
+            {excluindo === "jobs" ? "…" : "Excluir log"}
+          </button>
+        </div>
+        <div className="uf-scroll" style={{ maxHeight: 460, overflowY: "auto" }}>
+          <table className="table" style={{ fontSize: 10.5 }}>
+            <thead><tr><th>Início</th><th>Tipo</th><th>Solicitado por</th><th>Status</th><th>Duração</th></tr></thead>
+            <tbody>
+              {data?.jobs.map((j) => {
+                const dur = j.iniciado_em && j.finalizado_em
+                  ? Math.max(0, Math.round((new Date(j.finalizado_em).getTime() - new Date(j.iniciado_em).getTime()) / 1000))
+                  : null;
+                return (
+                  <tr key={j.id_job}>
+                    <td>{fmtDataHora(j.iniciado_em)}</td>
+                    <td>{j.tipo === "manual" ? "manual" : "programado"}</td>
+                    <td>{j.solicitado_por ?? "—"}</td>
+                    <td><span className={`badge ${j.status === "success" ? "ok" : j.status === "failed" ? "bad" : "warn"}`}>{STATUS_PT[j.status] ?? j.status}</span></td>
+                    <td>{dur !== null ? `${Math.floor(dur / 60)}m ${dur % 60}s` : "—"}</td>
+                  </tr>
+                );
+              })}
+              {data && data.jobs.length === 0 && (
+                <tr><td colSpan={5} style={{ color: "#566271", textAlign: "center" }}>Sem registros.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  );
+}
+
 function MedicoDrill({ medico, data, erro, carregando, onClose }: {
   medico: { id_medico: number; nome: string };
   data: AudMedicoData | null;
@@ -878,6 +995,11 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
             {VIEW_META[v].title}
           </button>
         ))}
+        {email === ADMIN_EMAIL && (
+          <button className={`tab ${view === "logs" ? "active" : ""}`} data-view="logs" onClick={() => setView("logs")}>
+            {VIEW_META.logs.title}
+          </button>
+        )}
       </nav>
 
       <main className="main">
@@ -895,6 +1017,18 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
             {v === "auditoria" && <AuditoriaView filtros={filtros} />}
           </section>
         ))}
+        {email === ADMIN_EMAIL && (
+          <section className={`view theme-cyan ${view === "logs" ? "active" : ""}`}>
+            <header className="topbar">
+              <div>
+                <div className="eyebrow">VISÃO</div>
+                <h1>Logs</h1>
+                <div className="subtitle">Utilização (logins) e atualizações de dados — visão administrativa.</div>
+              </div>
+            </header>
+            <LogsView active={view === "logs"} />
+          </section>
+        )}
         <div className="footer">
           <span>PE Dashboard · CFM</span>
           <span>Datamart prescricao_dw · última carga: {health?.job?.finalizado_em ? new Date(health.job.finalizado_em).toLocaleString("pt-BR") : "—"}</span>

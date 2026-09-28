@@ -1,5 +1,7 @@
 import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import { headers } from "next/headers";
+import { registrarAcesso } from "@/lib/audit";
 
 export const ALLOWED_DOMAIN = "portalmedico.org.br";
 
@@ -19,7 +21,10 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user }) {
       const email = (user.email ?? "").toLowerCase();
-      return email.endsWith(`@${ALLOWED_DOMAIN}`);
+      const ok = email.endsWith(`@${ALLOWED_DOMAIN}`);
+      const ip = await extrairIp();
+      await registrarAcesso(email || "(sem email)", ok, ip);
+      return ok;
     },
     async session({ session, token }) {
       if (session.user) {
@@ -29,3 +34,13 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
+
+async function extrairIp(): Promise<string | null> {
+  try {
+    const h = await headers();
+    return h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h.get("x-real-ip") ?? null;
+  } catch {
+    return null;
+  }
+}
+
