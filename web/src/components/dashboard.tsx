@@ -28,6 +28,28 @@ type DocsData = {
   ranking_especialidade: { especialidade: string; docs: string }[];
 };
 
+type AudAn3Row = {
+  id_pessoa: number;
+  nome: string | null;
+  inscricoes: string | null;
+  instituicao: string;
+  instituicao_key: string;
+  cnes: string | null;
+  uf: string;
+  documentos: string;
+  pico_60s: string;
+  pct_intervalos_ate_5s: string | null;
+  intervalos_ate_5s: string;
+  unidades: number;
+};
+
+type AudAn3Detail = {
+  id_pessoa: number;
+  medico: { nome: string | null; inscricoes: string | null };
+  resumo: { documentos: number; intervalos_ate_5s: number; pico_60s: number; pct_intervalos_ate_5s: number | null; instituicoes: number };
+  diario: { dia: string; instituicao: string; instituicao_key: string; cnes: string | null; uf: string; documentos: string; intervalos: string; intervalos_ate_5s: string; pico_60s: string }[];
+};
+
 type MedData = {
   kpis: { inscricoes: number; ativos: number };
   novos_mensal: { mes: string; novos: string }[];
@@ -42,7 +64,7 @@ type AudData = {
   ate: string;
   an1: { id_medico: number; crm: string; crm_uf: string; nome: string; docs: string }[];
   an2?: { id_medico: number; crm: string; crm_uf: string; nome: string; pacientes: string }[];
-  an3?: { id_pessoa: number; nome: string | null; inscricoes: string | null; instituicao: string; instituicao_key: string; cnes: string | null; uf: string; documentos: string; pico_60s: string; pct_intervalos_ate_5s: string | null; intervalos_ate_5s: string; unidades: number }[];
+  an3?: AudAn3Row[];
 };
 
 type AudMedicoData = {
@@ -666,9 +688,16 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
   const [medicoData, setMedicoData] = useState<AudMedicoData | null>(null);
   const [medicoErro, setMedicoErro] = useState<string | null>(null);
   const [medicoCarregando, setMedicoCarregando] = useState(false);
+  const [an3Selecionado, setAn3Selecionado] = useState<AudAn3Row | null>(null);
+  const [an3Detalhe, setAn3Detalhe] = useState<AudAn3Detail | null>(null);
+  const [an3Erro, setAn3Erro] = useState<string | null>(null);
+  const [an3Carregando, setAn3Carregando] = useState(false);
   const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
 
   const pesquisar = async () => {
+    setAn3Selecionado(null);
+    setAn3Detalhe(null);
+    setAn3Erro(null);
     if (anomalia !== "AN1" && anomalia !== "AN2" && anomalia !== "AN3") { setData(null); setErro(null); return; }
     const qs = `anomalia=${anomalia}&de=${de}&ate=${ate}&uf=${uf}&tipo=${tipo}&limite=${limite}`;
     setCarregando(true);
@@ -690,6 +719,9 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
   };
 
   const abrirMedico = async (m: { id_medico: number; nome: string }) => {
+    setAn3Selecionado(null);
+    setAn3Detalhe(null);
+    setAn3Erro(null);
     setMedico(m);
     setMedicoData(null);
     setMedicoErro(null);
@@ -703,6 +735,38 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
       setMedicoErro(String(e));
     } finally {
       setMedicoCarregando(false);
+    }
+  };
+
+  const abrirAn3 = async (row: AudAn3Row) => {
+    setMedico(null);
+    setMedicoData(null);
+    setMedicoErro(null);
+    setAn3Selecionado(row);
+    setAn3Detalhe(null);
+    setAn3Erro(null);
+    setAn3Carregando(true);
+    const qs = new URLSearchParams({
+      anomalia: "AN3",
+      id_pessoa: String(row.id_pessoa),
+      de,
+      ate,
+      uf,
+      tipo,
+    });
+    try {
+      const r = await fetch(`/api/dashboard/auditoria/medico?${qs}`);
+      const resultado = await r.json();
+      if (!r.ok || resultado.erro) {
+        setAn3Erro(resultado.erro ?? `HTTP ${r.status}`);
+        setAn3Detalhe(null);
+      } else {
+        setAn3Detalhe(resultado);
+      }
+    } catch (e) {
+      setAn3Erro(String(e));
+    } finally {
+      setAn3Carregando(false);
     }
   };
 
@@ -746,6 +810,7 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
                   <th style={{ textAlign: "right" }}>Documentos</th>
                   <th style={{ textAlign: "right" }}>Pico/60 s</th>
                   <th style={{ textAlign: "right" }}>Intervalos ≤5 s</th>
+                  <th style={{ textAlign: "right" }}>Detalhe</th>
                 </tr>
               </thead>
               <tbody>
@@ -760,16 +825,29 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
                     <td style={{ textAlign: "right" }}>{nf.format(Number(r.documentos))}</td>
                     <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.pico_60s))}</td>
                     <td style={{ textAlign: "right" }}>{r.pct_intervalos_ate_5s === null ? "—" : `${Number(r.pct_intervalos_ate_5s).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`}</td>
+                    <td style={{ textAlign: "right" }}>
+                      <button
+                        type="button"
+                        className="drill-ico"
+                        title="Detalhar emissões"
+                        aria-label={`Detalhar emissões de ${r.nome ?? "médico"}`}
+                        style={{ padding: 0, fontFamily: "inherit" }}
+                        onClick={() => abrirAn3(r)}
+                      >›</button>
+                    </td>
                   </tr>
                 ))}
                 {(data.an3 ?? []).length === 0 && (
-                  <tr><td colSpan={9} style={{ color: "#566271", textAlign: "center" }}>Sem emissões que atendam aos critérios no período/filtros.</td></tr>
+                  <tr><td colSpan={10} style={{ color: "#566271", textAlign: "center" }}>Sem emissões que atendam aos critérios no período/filtros.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
-          <div className="sub" style={{ marginTop: 10 }}>
-            Sinalização inicial: mínimo de 20 documentos e pico de 10+ em 60 s ou pelo menos 5 intervalos até 5 s, correspondendo a 10% ou mais dos intervalos. É um alerta para revisão, não uma confirmação de automação.
+          <div className="sub" style={{ marginTop: 10, display: "grid", gap: 4 }}>
+            <div><b>Documentos:</b> total no período/filtros. <b>Instituições:</b> CNES distintos ou unidades sem CNES associadas às emissões.</div>
+            <div><b>Pico/60 s:</b> maior quantidade em qualquer janela móvel de 60 segundos; com tipo selecionado, considera somente esse tipo.</div>
+            <div><b>Intervalos ≤5 s:</b> percentual entre emissões consecutivas com intervalo de até cinco segundos; com tipo selecionado, compara esse tipo.</div>
+            <div>Sinalização inicial: mínimo de 20 documentos e pico de 10+ em 60 s ou pelo menos 5 intervalos curtos que representem 10% ou mais. É um alerta para revisão, não uma confirmação de automação.</div>
           </div>
         </article>
       )}
@@ -812,7 +890,79 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
       {medico && (
         <MedicoDrill medico={medico} anomalia={anomalia} data={medicoData} erro={medicoErro} carregando={medicoCarregando} onClose={() => setMedico(null)} />
       )}
+      {an3Selecionado && (
+        <An3Drill
+          row={an3Selecionado}
+          data={an3Detalhe}
+          erro={an3Erro}
+          carregando={an3Carregando}
+          onClose={() => { setAn3Selecionado(null); setAn3Detalhe(null); setAn3Erro(null); }}
+        />
+      )}
     </section>
+  );
+}
+
+function An3Drill({ row, data, erro, carregando, onClose }: {
+  row: AudAn3Row;
+  data: AudAn3Detail | null;
+  erro: string | null;
+  carregando: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <article className="card" style={{ gridColumn: "span 12" }}>
+      <div className="section-title">
+        <div>
+          <h2>{row.nome ?? "Médico"}</h2>
+          <span>{data?.medico.inscricoes ?? row.inscricoes ?? "Inscrição não disponível"}</span>
+        </div>
+        <button className="btn" onClick={onClose} style={{ padding: "4px 9px", fontSize: 10 }}>Fechar ✕</button>
+      </div>
+      {carregando && <div style={{ color: "#566271", fontSize: 12 }}>Carregando detalhamento…</div>}
+      {erro && <div style={{ color: "var(--red)", fontSize: 12 }}>Erro: {erro}</div>}
+      {!carregando && !erro && data && (
+        <>
+          <div className="grid" style={{ marginBottom: 14 }}>
+            <KpiCard label="Documentos no período" value={nf.format(data.resumo.documentos)} meta="após filtros" />
+            <KpiCard label="Pico/60 s" value={nf.format(data.resumo.pico_60s)} meta="janela móvel" />
+            <KpiCard label="Intervalos ≤5 s" value={data.resumo.pct_intervalos_ate_5s === null ? "—" : `${data.resumo.pct_intervalos_ate_5s.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`} meta={`${nf.format(data.resumo.intervalos_ate_5s)} intervalos`} />
+            <KpiCard label="Instituições" value={nf.format(data.resumo.instituicoes)} meta="CNES/unidades" />
+          </div>
+          <div className="section-title"><h2>Frequência por dia e instituição</h2><span>pico associado à unidade da emissão</span></div>
+          <div className="uf-scroll" style={{ overflowX: "auto" }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Data</th><th>Instituição</th><th>UF</th>
+                  <th style={{ textAlign: "right" }}>Documentos</th>
+                  <th style={{ textAlign: "right" }}>Pico/60 s</th>
+                  <th style={{ textAlign: "right" }}>Intervalos ≤5 s</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.diario.map((r) => {
+                  const dia = String(r.dia).slice(0, 10);
+                  return (
+                    <tr key={`${dia}-${r.instituicao_key}-${r.uf}`}>
+                      <td>{new Date(`${dia}T12:00:00`).toLocaleDateString("pt-BR")}</td>
+                      <td>{r.cnes ? `${r.instituicao} · CNES ${r.cnes}` : `${r.instituicao} · ${r.instituicao_key} · sem CNES`}</td>
+                      <td>{r.uf}</td>
+                      <td style={{ textAlign: "right" }}>{nf.format(Number(r.documentos))}</td>
+                      <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.pico_60s))}</td>
+                      <td style={{ textAlign: "right" }}>{r.intervalos === "0" ? "—" : `${(100 * Number(r.intervalos_ate_5s) / Number(r.intervalos)).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`}</td>
+                    </tr>
+                  );
+                })}
+                {data.diario.length === 0 && (
+                  <tr><td colSpan={6} style={{ color: "#566271", textAlign: "center" }}>Sem dados no período/filtros.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </article>
   );
 }
 

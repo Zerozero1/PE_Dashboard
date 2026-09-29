@@ -1,11 +1,12 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-29 15:14 BRT_
+_Atualizado em: 2026-09-29 15:37 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões (Documentos, Medicos, Auditoria) + visao "Logs" (admin).
 
 ## ✅ Última Sessão (Resumo)
 - AN3 implementada e populada (2026-09-29): "Emissões de documentos em alta frequência", identidade por `id_pessoa`, gaps até 5s e pico móvel de documentos/60s; ranking paginado por pico, filtros de período/UF/tipo e instituição/CNES da unidade do pico. Fato com 32.724.079 agregados, 62.183.411 documentos (2021-10-07 a 2026-09-29); endpoint HTTP 200, limite de 20 validado.
+- Drill-down AN3 (2026-09-29): botão à direita da linha abre resumo por pessoa e tabela diária por instituição/UF com documentos, pico/60s e percentual de intervalos curtos; endpoint recebe CPF/`id_pessoa` e preserva período/UF/tipo.
 - MCP global: servidor separado `postgres-dw` via `DW_DATABASE_URL`, carregado após reinício do OpenCode; conexão `postgres` read-only de `bd_cfm` mantida.
 - Sessão do dashboard (2026-09-28): validade configurada para 12 horas via `session.maxAge` do NextAuth.
 - Rodape do grafico "Medicos com pelo menos uma emissao de documento por mes" (2026-09-28): nova grafia — "Nos ultimos 30 dias, foram registrados {X} usuarios ativos. Observa-se, ainda, um crescimento medio de {Y} medicos por mes na base de usuarios." (X = emissores_30d; Y = media mensal; mantida logica de crescimento/decremento e omissao com <2 meses).
@@ -66,7 +67,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 - Limpeza de colunas sem uso (2026-09-22): removidas `dim_data.dia_semana` e `fato_medico_dia.inscricoes_cadastradas/inscricoes_ativas/medicos_ativos` (sempre vazias; valores correntes vivem em `fato_medico_snapshot`). Demais colunas "redundantes" mantidas por custo baixo.
 
 ## 🔧 Em Progresso / Próximos Passos
-- [x] Reiniciar o OpenCode, configurar MCP `postgres-dw`, carregar fato AN3 e validar endpoint (2026-09-29).
+- [x] Reiniciar o OpenCode, configurar MCP `postgres-dw`, carregar fato AN3, validar endpoint e drill-down (2026-09-29).
 - [x] Configurar sessão NextAuth com validade de 12 horas (`session.maxAge`); TypeScript e build de produção aprovados.
 - [x] Popular `fato_documento_medico_paciente_dia` (42,65M linhas) — FEITO a partir do laptop (ETL `medico_pacientes`). A máquina do ETL deve rodar o modo no próximo job agendado para manter a carga (o `run_all.py` já o inclui).
 - [ ] Fase 1 — Fundacao (EM ANDAMENTO): projeto Next.js 16 criado em `web/` (app router, TS). Feito: shell com 4 visoes no padrao cyberpunk dark (abas horizontais, acento por visao), `api/health` lendo o DW real (job/config/dados), `api/admin/refresh-jobs` enfileirando job manual, next-auth v4 com Google OAuth + validacao de dominio `@portalmedico.org.br` (signIn callback). Modo dev sem credenciais Google: sessao mock.
