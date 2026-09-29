@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { query } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
@@ -15,11 +17,16 @@ export async function GET(req: NextRequest) {
 
   try {
     if (anomalia === "AN3") {
+      const session = await getServerSession(authOptions);
+      const devMock = process.env.NODE_ENV === "development" && !process.env.GOOGLE_CLIENT_ID;
+      if (!session?.user?.email && !devMock) {
+        return NextResponse.json({ erro: "Não autenticado" }, { status: 401 });
+      }
       if (idPessoa === null || idPessoa <= 0) {
         return NextResponse.json({ erro: "id_pessoa invalido" }, { status: 400 });
       }
 
-      const [medico, serie] = await Promise.all([
+      const [medico, eventos] = await Promise.all([
         query(
           `SELECT max(nm_medico) AS nome,
                   string_agg(
@@ -31,57 +38,62 @@ export async function GET(req: NextRequest) {
           [idPessoa]
         ),
         query(
-          `SELECT f.dia,
-                  COALESCE('CNES:' || NULLIF(u.co_cnes, ''), 'UNIDADE:' || f.id_unidade_atendimento::text) AS instituicao_key,
-                  COALESCE(MAX(NULLIF(u.nm_unidade, '')), COALESCE('CNES:' || NULLIF(u.co_cnes, ''), 'UNIDADE:' || f.id_unidade_atendimento::text)) AS instituicao,
-                  NULLIF(u.co_cnes, '') AS cnes,
-                  MAX(f.sg_uf) AS uf,
-                  sum(f.documentos)::bigint AS documentos,
-                  sum(CASE WHEN $5::int IS NULL THEN f.intervalos ELSE f.intervalos_tipo END)::bigint AS intervalos,
-                  sum(CASE WHEN $5::int IS NULL THEN f.intervalos_ate_5s ELSE f.intervalos_tipo_ate_5s END)::bigint AS intervalos_ate_5s,
-                  max(CASE WHEN $5::int IS NULL THEN f.max_docs_60s ELSE f.max_docs_60s_tipo END)::bigint AS pico_60s
-             FROM prescricao.fato_an3_medico_unidade_tipo_dia f
-             LEFT JOIN prescricao.dim_unidade u ON u.id_unidade_atendimento = f.id_unidade_atendimento
-            WHERE f.id_pessoa = $1
-              AND f.dia BETWEEN $2 AND $3
-              AND ($4::text IS NULL OR f.sg_uf = $4)
-              AND ($5::int IS NULL OR f.id_tipo_documento = $5)
-            GROUP BY f.dia,
-                     COALESCE('CNES:' || NULLIF(u.co_cnes, ''), 'UNIDADE:' || f.id_unidade_atendimento::text),
-                     NULLIF(u.co_cnes, '')
-            ORDER BY f.dia, pico_60s DESC, documentos DESC`,
-          [idPessoa, de, ate, uf, tipo]
+          `WITH sinais AS (
+             SELECT f.id_consulta_documento, f.dh_documento,
+                    m.nu_crm AS crm, m.sg_uf AS crm_uf,
+                    t.nm_documento AS tipo,
+                    COALESCE(NULLIF(u.nm_unidade, ''), 'UNIDADE:' || f.id_unidade_atendimento::text) AS instituicao,
+                    NULLIF(u.co_cnes, '') AS cnes,
+                    f.id_unidade_atendimento,
+                    f.sg_uf AS uf,
+                    CASE WHEN $5::int IS NULL THEN f.gap_pessoa_seg ELSE f.gap_tipo_seg END AS intervalo_seg,
+                    CASE WHEN $5::int IS NULL THEN f.docs_60s ELSE f.docs_60s_tipo END AS docs_60s,
+                    concat_ws(' + ',
+                      CASE WHEN (($5::int IS NULL AND f.gap_pessoa_seg BETWEEN 0 AND 5)
+                                 OR ($5::int IS NOT NULL AND f.gap_tipo_seg BETWEEN 0 AND 5))
+                           THEN 'intervalo ≤5s' END,
+                      CASE WHEN (($5::int IS NULL AND f.docs_60s >= 10)
+                                 OR ($5::int IS NOT NULL AND f.docs_60s_tipo >= 10))
+                           THEN 'pico ≥10/60s' END
+                    ) AS sinal
+               FROM prescricao.fato_an3_emissao_detalhe f
+               JOIN prescricao.dim_medico m ON m.id_medico = f.id_medico
+               JOIN prescricao.dim_tipo_documento t ON t.id_tipo_documento = f.id_tipo_documento
+               LEFT JOIN prescricao.dim_unidade u ON u.id_unidade_atendimento = f.id_unidade_atendimento
+              WHERE f.id_pessoa = $1
+                AND f.dh_documento >= $2::date
+                AND f.dh_documento < ($3::date + interval '1 day')
+                AND ($4::text IS NULL OR f.sg_uf = $4)
+                AND ($5::int IS NULL OR f.id_tipo_documento = $5)
+                AND (($5::int IS NULL AND (f.gap_pessoa_seg BETWEEN 0 AND 5 OR f.docs_60s >= 10))
+                  OR ($5::int IS NOT NULL AND (f.gap_tipo_seg BETWEEN 0 AND 5 OR f.docs_60s_tipo >= 10)))
+           ), pagina AS (
+             SELECT row_number() OVER (ORDER BY dh_documento, id_consulta_documento)::int AS sequencia,
+                    to_char(dh_documento, 'YYYY-MM-DD HH24:MI:SS.MS') AS data_hora,
+                    crm, crm_uf, tipo, instituicao, cnes, id_unidade_atendimento, uf,
+                    intervalo_seg, docs_60s, sinal,
+                    count(*) OVER() AS total_eventos
+               FROM sinais
+           )
+         SELECT sequencia, data_hora, crm, crm_uf, tipo, instituicao, cnes,
+                id_unidade_atendimento, uf, intervalo_seg, docs_60s, sinal,
+                total_eventos
+           FROM pagina
+          ORDER BY sequencia
+          LIMIT $6`,
+          [idPessoa, de, ate, uf, tipo, 1000]
         ),
       ]);
 
-      const resumo = serie.rows.reduce((acc, row) => {
-        acc.documentos += Number(row.documentos);
-        acc.intervalos += Number(row.intervalos);
-        acc.intervalos_ate_5s += Number(row.intervalos_ate_5s);
-        acc.pico_60s = Math.max(acc.pico_60s, Number(row.pico_60s));
-        acc.instituicoes.add(row.instituicao_key);
-        return acc;
-      }, {
-        documentos: 0,
-        intervalos: 0,
-        intervalos_ate_5s: 0,
-        pico_60s: 0,
-        instituicoes: new Set<string>(),
-      });
+      const totalEventos = Number(eventos.rows[0]?.total_eventos ?? 0);
+      const eventosSemTotal = eventos.rows.map(({ total_eventos: _total, ...row }) => row);
 
       return NextResponse.json({
         id_pessoa: idPessoa,
         medico: medico.rows[0] ?? { nome: null, inscricoes: null },
-        resumo: {
-          documentos: resumo.documentos,
-          intervalos_ate_5s: resumo.intervalos_ate_5s,
-          pico_60s: resumo.pico_60s,
-          pct_intervalos_ate_5s: resumo.intervalos > 0
-            ? Math.round((resumo.intervalos_ate_5s / resumo.intervalos) * 1000) / 10
-            : null,
-          instituicoes: resumo.instituicoes.size,
-        },
-        diario: serie.rows,
+        eventos: eventosSemTotal,
+        total_eventos: totalEventos,
+        eventos_truncados: totalEventos > eventos.rows.length,
       });
     }
 

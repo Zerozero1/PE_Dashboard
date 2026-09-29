@@ -46,8 +46,9 @@ type AudAn3Row = {
 type AudAn3Detail = {
   id_pessoa: number;
   medico: { nome: string | null; inscricoes: string | null };
-  resumo: { documentos: number; intervalos_ate_5s: number; pico_60s: number; pct_intervalos_ate_5s: number | null; instituicoes: number };
-  diario: { dia: string; instituicao: string; instituicao_key: string; cnes: string | null; uf: string; documentos: string; intervalos: string; intervalos_ate_5s: string; pico_60s: string }[];
+  eventos: { sequencia: number; data_hora: string; crm: string; crm_uf: string; tipo: string; instituicao: string; cnes: string | null; id_unidade_atendimento: number; uf: string; intervalo_seg: string | null; docs_60s: string; sinal: string }[];
+  total_eventos: number;
+  eventos_truncados: boolean;
 };
 
 type MedData = {
@@ -923,39 +924,35 @@ function An3Drill({ row, data, erro, carregando, onClose }: {
       {erro && <div style={{ color: "var(--red)", fontSize: 12 }}>Erro: {erro}</div>}
       {!carregando && !erro && data && (
         <>
-          <div className="grid" style={{ marginBottom: 14 }}>
-            <KpiCard label="Documentos no período" value={nf.format(data.resumo.documentos)} meta="após filtros" />
-            <KpiCard label="Pico/60 s" value={nf.format(data.resumo.pico_60s)} meta="janela móvel" />
-            <KpiCard label="Intervalos ≤5 s" value={data.resumo.pct_intervalos_ate_5s === null ? "—" : `${data.resumo.pct_intervalos_ate_5s.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`} meta={`${nf.format(data.resumo.intervalos_ate_5s)} intervalos`} />
-            <KpiCard label="Instituições" value={nf.format(data.resumo.instituicoes)} meta="CNES/unidades" />
+          <div className="sub" style={{ marginBottom: 10 }}>
+            {nf.format(data.total_eventos)} eventos sinalizados{data.eventos_truncados ? " · exibindo os 1.000 primeiros" : ""}. São mostrados somente documentos com intervalo ≤5 s ou em janela com 10+ documentos/60 s; data/hora conforme registrada na origem, sem conversão de fuso.
           </div>
-          <div className="section-title"><h2>Frequência por dia e instituição</h2><span>pico associado à unidade da emissão</span></div>
           <div className="uf-scroll" style={{ overflowX: "auto" }}>
             <table className="table">
               <thead>
                 <tr>
-                  <th>Data</th><th>Instituição</th><th>UF</th>
-                  <th style={{ textAlign: "right" }}>Documentos</th>
-                  <th style={{ textAlign: "right" }}>Pico/60 s</th>
-                  <th style={{ textAlign: "right" }}>Intervalos ≤5 s</th>
+                  <th>#</th><th>Data/hora</th><th>Inscrição</th><th>Documento</th><th>Instituição</th><th>UF</th>
+                  <th style={{ textAlign: "right" }}>Intervalo anterior</th>
+                  <th style={{ textAlign: "right" }}>Docs/60 s</th>
+                  <th>Sinal</th>
                 </tr>
               </thead>
               <tbody>
-                {data.diario.map((r) => {
-                  const dia = String(r.dia).slice(0, 10);
-                  return (
-                    <tr key={`${dia}-${r.instituicao_key}-${r.uf}`}>
-                      <td>{new Date(`${dia}T12:00:00`).toLocaleDateString("pt-BR")}</td>
-                      <td>{r.cnes ? `${r.instituicao} · CNES ${r.cnes}` : `${r.instituicao} · ${r.instituicao_key} · sem CNES`}</td>
-                      <td>{r.uf}</td>
-                      <td style={{ textAlign: "right" }}>{nf.format(Number(r.documentos))}</td>
-                      <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.pico_60s))}</td>
-                      <td style={{ textAlign: "right" }}>{r.intervalos === "0" ? "—" : `${(100 * Number(r.intervalos_ate_5s) / Number(r.intervalos)).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`}</td>
-                    </tr>
-                  );
-                })}
-                {data.diario.length === 0 && (
-                  <tr><td colSpan={6} style={{ color: "#566271", textAlign: "center" }}>Sem dados no período/filtros.</td></tr>
+                {data.eventos.map((r) => (
+                  <tr key={`${r.sequencia}-${r.data_hora}`}>
+                    <td>{nf.format(r.sequencia)}</td>
+                    <td>{r.data_hora}</td>
+                    <td>{r.crm}/{r.crm_uf}</td>
+                    <td>{r.tipo}</td>
+                    <td>{r.cnes ? `${r.instituicao} · CNES ${r.cnes}` : `${r.instituicao} · Unidade ${r.id_unidade_atendimento} · sem CNES`}</td>
+                    <td>{r.uf}</td>
+                    <td style={{ textAlign: "right" }}>{r.intervalo_seg === null ? "—" : `${Number(r.intervalo_seg).toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 })} s`}</td>
+                    <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.docs_60s))}</td>
+                    <td>{r.sinal}</td>
+                  </tr>
+                ))}
+                {data.eventos.length === 0 && (
+                  <tr><td colSpan={9} style={{ color: "#566271", textAlign: "center" }}>Nenhum evento anômalo encontrado no período/filtros.</td></tr>
                 )}
               </tbody>
             </table>

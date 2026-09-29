@@ -11,8 +11,8 @@ def connect_origin():
         **ORIGIN,
         connect_timeout=20,
         keepalives=1,
-        keepalives_idle=60,
-        keepalives_interval=30,
+        keepalives_idle=15,
+        keepalives_interval=5,
         keepalives_count=5,
     )
     conn.set_session(readonly=True, autocommit=True)

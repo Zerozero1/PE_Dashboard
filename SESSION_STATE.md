@@ -1,12 +1,13 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-29 15:37 BRT_
+_Atualizado em: 2026-09-29 20:22 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões (Documentos, Medicos, Auditoria) + visao "Logs" (admin).
 
 ## ✅ Última Sessão (Resumo)
-- AN3 implementada e populada (2026-09-29): "Emissões de documentos em alta frequência", identidade por `id_pessoa`, gaps até 5s e pico móvel de documentos/60s; ranking paginado por pico, filtros de período/UF/tipo e instituição/CNES da unidade do pico. Fato com 32.724.079 agregados, 62.183.411 documentos (2021-10-07 a 2026-09-29); endpoint HTTP 200, limite de 20 validado.
-- Drill-down AN3 (2026-09-29): botão à direita da linha abre resumo por pessoa e tabela diária por instituição/UF com documentos, pico/60s e percentual de intervalos curtos; endpoint recebe CPF/`id_pessoa` e preserva período/UF/tipo.
+- AN3 implementada e populada (2026-09-29): identidade por `id_pessoa`, gaps até 5s e pico móvel de documentos/60s; fato diária com 32.740.814 agregados e 62.225.200 documentos válidos (2021-10-07 a 2026-09-29). Após refreshes, AN1 tem 62.634.963 docs (inclui cancelados) e AN2 tem 42.773.157 linhas médico×paciente×dia; todas cobrem até 2026-09-29.
+- Drill-down AN3 (2026-09-29): botão à direita abre somente emissões sinalizadas em sequência cronológica, com `dh_documento`, CRM/UF, tipo, unidade, intervalo anterior e motivo. `fato_an3_emissao_detalhe`: 495.417 documentos únicos, todos sinalizados, sem dados de paciente/conteúdo. Endpoint protegido por sessão; build aprovado.
+- Consistência AN1/AN2/AN3: grãos e métricas diferem por definição (AN1 por inscrição e inclui cancelados; AN2 por inscrição×paciente×dia; AN3 por pessoa/CPF e exclui cancelados). As janelas de data estão alinhadas; a origem é ativa, portanto leituras em horários distintos podem divergir ligeiramente.
 - MCP global: servidor separado `postgres-dw` via `DW_DATABASE_URL`, carregado após reinício do OpenCode; conexão `postgres` read-only de `bd_cfm` mantida.
 - Sessão do dashboard (2026-09-28): validade configurada para 12 horas via `session.maxAge` do NextAuth.
 - Rodape do grafico "Medicos com pelo menos uma emissao de documento por mes" (2026-09-28): nova grafia — "Nos ultimos 30 dias, foram registrados {X} usuarios ativos. Observa-se, ainda, um crescimento medio de {Y} medicos por mes na base de usuarios." (X = emissores_30d; Y = media mensal; mantida logica de crescimento/decremento e omissao com <2 meses).
@@ -67,7 +68,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 - Limpeza de colunas sem uso (2026-09-22): removidas `dim_data.dia_semana` e `fato_medico_dia.inscricoes_cadastradas/inscricoes_ativas/medicos_ativos` (sempre vazias; valores correntes vivem em `fato_medico_snapshot`). Demais colunas "redundantes" mantidas por custo baixo.
 
 ## 🔧 Em Progresso / Próximos Passos
-- [x] Reiniciar o OpenCode, configurar MCP `postgres-dw`, carregar fato AN3, validar endpoint e drill-down (2026-09-29).
+- [x] Reiniciar o OpenCode, configurar MCP `postgres-dw`, atualizar fatos AN1/AN2/AN3, carregar detalhe de eventos sinalizados e validar endpoint/build (2026-09-29).
 - [x] Configurar sessão NextAuth com validade de 12 horas (`session.maxAge`); TypeScript e build de produção aprovados.
 - [x] Popular `fato_documento_medico_paciente_dia` (42,65M linhas) — FEITO a partir do laptop (ETL `medico_pacientes`). A máquina do ETL deve rodar o modo no próximo job agendado para manter a carga (o `run_all.py` já o inclui).
 - [ ] Fase 1 — Fundacao (EM ANDAMENTO): projeto Next.js 16 criado em `web/` (app router, TS). Feito: shell com 4 visoes no padrao cyberpunk dark (abas horizontais, acento por visao), `api/health` lendo o DW real (job/config/dados), `api/admin/refresh-jobs` enfileirando job manual, next-auth v4 com Google OAuth + validacao de dominio `@portalmedico.org.br` (signIn callback). Modo dev sem credenciais Google: sessao mock.
@@ -84,9 +85,10 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 
 ## ⚠️ Pontos de Atencao
 - Sessão configurada com `session.maxAge` de 12 horas; sem limite absoluto adicional configurado.
-- A carga AN3 usa a linha temporal completa de `dh_documento` e requer benchmark no ETL (origem sem índice temporal; tabela ~60M documentos). O ETL aplica keepalive na conexão de origem; a dimensão de unidade usa `co_cnes VARCHAR(50)`.
+- A carga AN3 usa a linha temporal completa de `dh_documento` e requer benchmark no ETL (origem sem índice temporal; tabela ~60M documentos). O ETL processa faixas de 10k pessoas e retenta conflitos de recuperação; o detalhe consulta somente pessoas candidatas e grava eventos sinalizados. A dimensão de unidade usa `co_cnes VARCHAR(50)`.
 - `opencode mcp list` exibiu a URI da conexão `postgres`; rotacionar a senha de leitura `usr_select` e atualizar a entrada `postgres` sem alterar a conexão ao `bd_cfm`.
 - `npm run lint` acusa 6 erros PRE-EXISTENTES em `dashboard.tsx` (react-hooks `set-state-in-effect` em `useApi`/`LogsView`/`loadHealth` e `immutability` nos acumulados do Donut/serie) — nenhum introduzido pela sessao de 2026-09-28; build e tsc passam.
+- Deploy de produção não executado neste ambiente: Docker/`.env` ausentes e sem acesso ao servidor de aplicação; `npm run build` validado localmente.
 - `usr_select` em `bd_cfm` e somente leitura; nenhuma gravacao na origem.
 - ETL sem os indices acima exigira varreduras pesadas (tb_consulta_documento: 43 GB).
 - `tb_medico` sem data de cadastro: "novos medicos" usa `tb_usuario.dh_aceite_termo` (aceite do termo; decisao 2026-09-23). `dh_atualizacao` e invalidado por atualizacoes em massa.

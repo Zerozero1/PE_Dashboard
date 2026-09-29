@@ -6,7 +6,7 @@ Painel analítico web restrito ao domínio `@portalmedico.org.br` (Google OAuth)
 
 - **Documentos médicos** — emissões por período, UF, tipo e especialidade; origem de criação (Web/Web mobile/iOS/Android); mapa e rankings.
 - **Médicos** — inscrições cadastradas (CRM/UF), médicos cadastrados (CPF único), novos por mês, inatividade por faixa sem emissão.
-- **Auditoria** — AN1 "Maiores emissores de documentos médicos", AN2 "Atendimentos de pacientes únicos" e AN3 "Emissões de documentos em alta frequência" (rankings); AN4 em construção.
+- **Auditoria** — AN1 "Maiores emissores de documentos médicos", AN2 "Atendimentos de pacientes únicos" e AN3 "Emissões de documentos em alta frequência" (rankings; drill-down AN3 mostra somente eventos sinalizados com data/hora); AN4 em construção.
 
 ## Arquitetura
 

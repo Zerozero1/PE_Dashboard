@@ -380,10 +380,10 @@ Nota historica (fonte temporal): o evento real de dispensacao vinha de `tb_histo
 
 Sem imagem de referencia. DECISOES (2026-09-21):
 - Nao usar a tabela de auditoria da base relacional (`tl_prescricao_auditoria` sem SELECT para `usr_select`; tabela antiga inviavel).
-- Somente agregados: sem registros individuais no MVP.
+- AN1, AN2 e AN4 permanecem agregadas. AN3 admite detalhe apenas dos documentos sinalizados, com metadados temporais/institucionais e sem identificador de paciente ou conteúdo do documento.
 - Sem exportacao na visao de auditoria (exportacao nao permitida em todo o MVP).
 
-A visao sera alimentada por anomalias derivadas das fatos do datamart (documentos, atendimentos, locais). A media de referencia (valor esperado) e sempre calculada sobre todos os medicos, nunca sobre o historico individual do emissor.
+A visão é alimentada por fatos do datamart (documentos, atendimentos, locais e eventos sinalizados da AN3). A média de referência, quando aplicável às anomalias, usa todos os médicos; a AN3 avalia a sequência temporal da própria pessoa.
 
 Proposta:
 - Tela mais textual e investigativa, com filtros obrigatorios antes de executar consulta.
@@ -406,7 +406,7 @@ Componentes:
 - Grafico de eventos por dia.
 - Ranking de tipos de evento.
 - Ranking de entidades.
-- Tabela paginada com agregados por periodo/dimensao (sem registros individuais).
+- Tabelas paginadas agregadas; exceção AN3: detalhe sequencial restrito aos documentos que participam de um sinal de alta frequência.
 
 Cuidados:
 - Perfil unico: todos os usuarios autenticados do dominio podem ver os agregados da auditoria; sem permissao especial no MVP.
@@ -448,7 +448,7 @@ Notas:
 | 12 | Medicos | Matriz/tabela | Inatividade por faixa de dias sem emissao (30/60/90/120) | fato_medico_extremos_emissao | Ultima emissao por pessoa (CPF) | U | Regra operacional: ultima emissao; alterado para pessoa em 2026-09-23 |
 | 12a | Medicos | Linha/barras | Medicos com emissao por mes (CPFs distintos) | fato_medico_emissao_mes | Distinct por mes (por UF + global) | P,U | Total do periodo via fato_medico_extremos_emissao (2026-09-23) |
 | 13–19 | Dispensacoes | — | REMOVIDAS (2026-09-23): visao Dispensacoes descontinuada | — | — | — | — |
-| 20 | Auditoria | Linha/barras | Anomalias detectadas por dia | fato_auditoria_dia | Contagem por dia | P(curto),TD,DIM | Sem registros individuais; exige filtros obrigatorios |
+| 20 | Auditoria | Linha/barras | Anomalias detectadas por dia | fato_auditoria_dia (AN1/AN2/AN4), fatos AN3 | Contagem por dia | P(curto),TD,DIM | Detalhe AN3 limitado a eventos sinalizados; exige filtros obrigatórios |
 | 21 | Auditoria | Ranking (barras) | Tipos de anomalia mais frequentes, com severidade | fato_auditoria_dia | Contagem por tipo_anomalia | P,TD | Severidade por desvio (2x/3x/5x) |
 | 22 | Auditoria | Ranking (barras) | Dimensoes afetadas mais frequentes | fato_auditoria_dia | Contagem por dimensao_afetada | P,DIM | |
 | 23 | Auditoria | Tabela paginada | Detalhe agregado dia x dimensao x tipo: valor observado, media esperada e desvio | fato_auditoria_dia | Soma por dia+dimensao+tipo | P,TD,DIM | |
@@ -460,7 +460,7 @@ Notas:
 
 A aba Auditoria usa fatos agregadas do datamart; AN3 usa uma fato propria por pessoa/unidade/tipo. Nao ha auditoria do uso do dashboard (decisao 2026-09-21): as consultas executadas na aba nao sao registradas.
 
-AN1, AN2 e AN4 mantêm flags agregadas em `fato_auditoria_dia`. AN3 é calculada no ETL a partir dos horários originais e gravada em `fato_an3_medico_unidade_tipo_dia`, no grão pessoa/CPF × dia × unidade × tipo.
+AN1, AN2 e AN4 mantêm flags agregadas em `fato_auditoria_dia`. AN3 é calculada no ETL a partir dos horários originais e gravada em `fato_an3_medico_unidade_tipo_dia`, no grão pessoa/CPF × dia × unidade × tipo. O drill-down usa `fato_an3_emissao_detalhe`, com data/hora apenas dos documentos que participam dos sinais anômalos.
 
 Para AN1, AN2 e AN4, a média de referência (quando aplicável) é o valor agregado de todos os médicos no mesmo período; AN3 usa frequência e intervalos da própria pessoa, sem média populacional.
 
@@ -475,13 +475,13 @@ Fluxo da aba:
 
 1. Usuario escolhe o tipo de anomalia, periodo, UF, tipo de documento e quantidade de registros.
 2. Clica em "Pesquisar" para disparar a consulta (a view nao carrega automaticamente).
-3. AN1 exibe o ranking de médicos; ao clicar na linha (ícone circular "›"), abre um drill-down com: donut de documentos por tipo (quantidade e % do total), evolução mensal (acumulado x mês), especialidades, situação/tipo de inscrição e total no período — tudo lido do datamart (`fato_documento_medico_tipo_dia` + dimensões). AN2 exibe ranking de médicos por pacientes únicos no período; o drill-down mostra pacientes distintos por mês, especialidades, situação/tipo de inscrição e o total de pacientes distintos (`fato_documento_medico_paciente_dia`). AN3 exibe uma tabela de pessoas/CPF ordenada pelo pico móvel de emissões em 60 segundos, com volume, gaps curtos e instituição/CNES da unidade associada ao pico; respeita o limite do combo "Registros". AN4 permanece "em breve".
+3. AN1 exibe o ranking de médicos; ao clicar na linha (ícone circular "›"), abre um drill-down com: donut de documentos por tipo (quantidade e % do total), evolução mensal (acumulado x mês), especialidades, situação/tipo de inscrição e total no período — tudo lido do datamart (`fato_documento_medico_tipo_dia` + dimensões). AN2 exibe ranking de médicos por pacientes únicos no período; o drill-down mostra pacientes distintos por mês, especialidades, situação/tipo de inscrição e o total de pacientes distintos (`fato_documento_medico_paciente_dia`). AN3 exibe uma tabela de pessoas/CPF ordenada pelo pico móvel de emissões em 60 segundos, com volume, gaps curtos e instituição/CNES da unidade associada ao pico; o botão de detalhe lista somente eventos sinalizados, em sequência, com data/hora, intervalo anterior e motivo do sinal. A tabela respeita o limite do combo "Registros". AN4 permanece "em breve".
 
 Observacoes gerais:
 - Todas as consultas de tela leem apenas o datamart `prescricao_dw`; nenhuma consulta direta na origem `bd_cfm`.
 - Consultas agregadas sempre filtradas por periodo; limites de linhas em tabelas paginadas.
-- `dim_medico` guarda identificadores tecnicos e, desde 2026-09-24, `nm_medico` (nome) — exposto somente no drill-down da Auditoria, via ETL (nao em tempo de tela).
-- A visao Auditoria nao expoe registros individuais nem dados da tabela de auditoria relacional (decisao 14).
+- `dim_medico` guarda identificadores técnicos e `nm_medico` (nome), exibidos nos rankings de Auditoria via ETL (não em tempo de tela).
+- A visão Auditoria não exibe dados de pacientes/conteúdo dos documentos nem lê a tabela de auditoria relacional. O detalhe AN3 mostra apenas metadados de emissões sinalizadas (`dh_documento`, tipo, CRM/UF e unidade), sem identificador de paciente.
 
 ## 7. Experiencia e Interface
 
@@ -754,7 +754,7 @@ Atividades (status):
 - Criar tela com filtros obrigatorios. (FEITO: periodo + tipo de anomalia)
 
 Validacao:
-- Auditoria mostra apenas agregados, sem registros individuais.
+- Auditoria mostra agregados; o drill-down AN3 exibe somente metadados de documentos sinalizados, sem conteúdo ou paciente.
 - Auditoria exige periodo/filtros.
 
 ### Fase 5 - Operacao — EM ANDAMENTO
@@ -819,7 +819,7 @@ Risco: dependencia de mapa externo.
 13. Hospedagem (2026-09-21): servidor interno existente (mesmo ambiente Windows do ETL).
 14. Perfis de acesso (2026-09-21): perfil unico — todos os usuarios do dominio veem as quatro visões; sem perfis separados.
 15. Exportacao CSV/Excel (2026-09-21): NAO permitida no MVP.
-16. Auditoria (2026-09-21): somente agregados; sem registros individuais.
+16. Auditoria (2026-09-21): somente agregados; sem registros individuais. Atualizada para AN3 em 2026-09-29: detalhe sequencial restrito a eventos sinalizados, sem dados de paciente/conteúdo.
 17. Auditoria do uso do dashboard (2026-09-21): NAO havera (sem registro de logins, acessos ou consultas dos usuarios); tabela `dashboard_access_log` removida do modelo. **REVOGADA em 2026-09-28**: criada a visao "Logs" (exclusiva de `mrichard@portalmedico.org.br`) com log de logins (`dashboard_access_log`) e log de atualizacoes (`dashboard_refresh_job`), ambos com botao de exclusao.
 18. Topologia (2026-09-21): aplicacao web (UI + API) e ETL (Python) em maquinas Windows separadas; comunicacao exclusivamente via fila de jobs no `prescricao_dw`.
 19. Anomalias (2026-09-21): media de referencia calculada sobre todos os medicos (nunca o historico individual do emissor).

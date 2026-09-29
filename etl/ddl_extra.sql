@@ -188,6 +188,40 @@ CREATE INDEX IF NOT EXISTS idx_fato_an3_data_uf_tipo
 CREATE INDEX IF NOT EXISTS idx_fato_an3_pessoa_dia
     ON prescricao.fato_an3_medico_unidade_tipo_dia (id_pessoa, dia);
 
+CREATE TABLE IF NOT EXISTS prescricao.stg_an3_emissao_detalhe (
+    id_consulta_documento INTEGER NOT NULL,
+    id_pessoa INTEGER NOT NULL,
+    id_medico INTEGER NOT NULL,
+    dh_documento TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    id_tipo_documento INTEGER NOT NULL,
+    id_unidade_atendimento INTEGER NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    gap_pessoa_seg NUMERIC(14,3),
+    gap_tipo_seg NUMERIC(14,3),
+    docs_60s BIGINT NOT NULL,
+    docs_60s_tipo BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS prescricao.fato_an3_emissao_detalhe (
+    id_consulta_documento INTEGER PRIMARY KEY,
+    id_pessoa INTEGER NOT NULL,
+    id_medico INTEGER NOT NULL,
+    dh_documento TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    id_tipo_documento INTEGER NOT NULL,
+    id_unidade_atendimento INTEGER NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    gap_pessoa_seg NUMERIC(14,3),
+    gap_tipo_seg NUMERIC(14,3),
+    docs_60s BIGINT NOT NULL,
+    docs_60s_tipo BIGINT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_fato_an3_detalhe_pessoa_hora
+    ON prescricao.fato_an3_emissao_detalhe (id_pessoa, dh_documento, id_consulta_documento);
+
+CREATE INDEX IF NOT EXISTS idx_fato_an3_detalhe_pessoa_tipo_hora
+    ON prescricao.fato_an3_emissao_detalhe (id_pessoa, id_tipo_documento, dh_documento, id_consulta_documento);
+
 CREATE TABLE IF NOT EXISTS prescricao.stg_documento_medico_paciente_dia (
     dia DATE NOT NULL,
     sg_uf CHAR(2) NOT NULL,
