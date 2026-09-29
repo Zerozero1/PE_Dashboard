@@ -70,10 +70,12 @@ def main():
 
     cur = origin.cursor()
     cur.execute(
-        "SELECT id_unidade_atendimento, sg_uf FROM prescricao.tb_unidade_atendimento")
+        "SELECT ua.id_unidade_atendimento, ua.sg_uf, ua.co_cnes, p.nm_pessoa "
+        "FROM prescricao.tb_unidade_atendimento ua "
+        "LEFT JOIN prescricao.tb_pessoa p ON p.id_pessoa = ua.id_unidade_atendimento")
     for batch in iter(lambda: cur.fetchmany(20000), []):
         upsert_rows(dw, "prescricao.dim_unidade",
-                    ["id_unidade_atendimento", "sg_uf"], batch,
+                    ["id_unidade_atendimento", "sg_uf", "co_cnes", "nm_unidade"], batch,
                     ["id_unidade_atendimento"])
     cur.close()
     log("dim_unidade: carregada")

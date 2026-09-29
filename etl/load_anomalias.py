@@ -57,26 +57,6 @@ WHERE esperado IS NOT NULL AND esperado > 0
   AND pac/esperado >= 2
 """
 
-SQL_AN3 = """
-WITH gaps AS (
-  SELECT id_medico, dia,
-         (dia - lag(dia) OVER (PARTITION BY id_medico ORDER BY dia)) AS gap
-  FROM prescricao.fato_documento_medico_dia
-), media_geral AS (
-  SELECT avg(gap) AS ga FROM gaps WHERE gap IS NOT NULL
-), por_dia AS (
-  SELECT dia, avg(gap) AS gap_medio
-  FROM gaps WHERE gap IS NOT NULL GROUP BY dia
-)
-SELECT dia, gap_medio, (SELECT ga FROM media_geral),
-       CASE WHEN gap_medio/(SELECT ga FROM media_geral) >= 5 THEN 5
-            WHEN gap_medio/(SELECT ga FROM media_geral) >= 3 THEN 3
-            WHEN gap_medio/(SELECT ga FROM media_geral) >= 2 THEN 2 END AS sev
-FROM por_dia
-WHERE (SELECT ga FROM media_geral) IS NOT NULL
-  AND gap_medio/(SELECT ga FROM media_geral) >= 2
-"""
-
 SQL_AN4 = """
 WITH por_unidade_dia AS (
   SELECT dia, id_unidade_atendimento, sum(documentos)::numeric AS docs
@@ -100,10 +80,13 @@ FROM agregado
 
 def main():
     dw = connect_dw()
-    log("fato_auditoria_dia: iniciando (AN1-AN4)")
+    cur = dw.cursor()
+    cur.execute("DELETE FROM prescricao.fato_auditoria_dia WHERE tipo_anomalia = 'AN3'")
+    dw.commit()
+    cur.close()
+    log("fato_auditoria_dia: iniciando (AN1, AN2 e AN4)")
     run(dw, SQL_AN1, "AN1", "Documentos")
     run(dw, SQL_AN2, "AN2", "Atendimentos")
-    run(dw, SQL_AN3, "AN3", "Documentos")
     run(dw, SQL_AN4, "AN4", "Local")
     dw.close()
     log("fato_auditoria_dia: concluido")

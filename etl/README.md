@@ -32,8 +32,9 @@ $env:DW_HOST='172.16.7.112'; $env:DW_DB='prescricao_dw'; $env:DW_USER='usr_presc
 | `load_dims.py` | Carrega dimensões: dim_data, dim_uf, dim_tipo_documento, dim_medico, dim_especialidade, dim_unidade. |
 | `load_fatos.py <modo>` | Fatos de documentos, em modos: `docs`, `origem`, `especialidade`, `unidade`, `medico`, `medico_tipo`, `pacientes`, `medico_pacientes`. |
 | `load_medicos.py` | `fato_medico_snapshot` (inscrições CRM/UF e CPFs únicos com aceite, por UF + total global `--`) + `fato_medico_dia.novos_aceite_termo` + `medicos_com_emissao` (derivado do DW). |
-| `load_anomalias.py` | `fato_auditoria_dia`: flags diárias AN1–AN4 calculadas no DW (média de referência = todos os médicos). As UIs de AN1 e AN2, porém, consultam diretamente as fatos `fato_documento_medico_tipo_dia` e `fato_documento_medico_paciente_dia` (ranking em tempo de tela); AN3–AN4 seguem "em breve". |
-| `run_all.py` | Pipeline completo e idempotente (dims → fatos → anomalias). ~30–40 min. |
+| `load_an3.py` | Calcula a fato diária da AN3 por pessoa/CPF, unidade e tipo, usando gaps entre `dh_documento` e pico móvel de documentos em 60 segundos. |
+| `load_anomalias.py` | `fato_auditoria_dia`: flags diárias AN1, AN2 e AN4 calculadas no DW. AN1/AN2/AN3 consultam suas fatos próprias para ranking limitado em tempo de tela. |
+| `run_all.py` | Pipeline completo e idempotente (dims → fatos → AN3 → anomalias). A duração anterior era ~30–40 min; a varredura temporal/sort global da AN3 ainda precisa de medição. |
 | `jobs.py` | Orquestração via fila `dashboard_refresh_job` (ver abaixo). |
 | `validate.py` / `status_dw.py` / `audit_counts.py` / `list_indexes.py` | Conferências: totais, cobertura, contagens da origem vs DW, índices. |
 | `audit_especialidades.py` | Diagnóstico da distribuição de especialidades na origem. |
@@ -55,6 +56,7 @@ python jobs.py enqueue-manual <email>  # cria job manual (botão "Atualizar dado
 ## Estratégia de extração
 
 - **Lotes por faixa de `id_consulta_documento`** (2M ids por lote): a origem não tem índice em `dh_documento`; filtros temporais diretos varrem 43 GB e estouram qualquer timeout. A PK permite varrer por faixas com pausa/retomada.
+- **AN3**: uma consulta de leitura ordena a linha temporal completa por pessoa/CPF para calcular intervalos entre documentos e a janela móvel de 60 segundos; o resultado é agregado por dia, pessoa, unidade e tipo e carregado via cursor de servidor na staging. Como a origem não tem índice em `dh_documento`, esta varredura e ordenação são mais pesadas e ainda precisam de benchmark operacional.
 - **Staging + rebuild**: cada lote agrega no SQL da origem e grava em `stg_documento_*`; ao final, a fato é reconstruída com `SUM ... GROUP BY` (rebuild_fact). Necessário porque uma chave (dia×UF×tipo) aparece em vários lotes — upsert direto por lote sobrescrevia e perdia dados (~970k docs; corrigido em 2026-09-22).
 - **Varreduras completas** (`single_pass`, sem lote) apenas para distinct: pacientes por dia×UF (~55 s), com `statement_timeout=0` e `work_mem=256MB`.
 - **`medico_pacientes`** (grão médico×paciente×dia, para `count(DISTINCT id_paciente)`): lote por faixa de id com `SELECT DISTINCT` na origem; grava em `stg_documento_medico_paciente_dia` com dedup via PK (`ON CONFLICT DO NOTHING`); ao final, a fato é reconstruída com `INSERT ... SELECT` (sem `SUM` — distinct não é aditivo entre lotes/dias).
@@ -79,7 +81,8 @@ Fatos:
 - `fato_medico_snapshot` (sg_uf, inscricoes_cadastradas, medicos_ativos, atualizado_em; inclui `sg_uf='--'` com totais globais)
 - `fato_medico_emissao_mes` (mes, sg_uf, cpfs_distintos) — CPFs distintos com emissão por mês (por UF + global `--`); alimenta o gráfico "Médicos com emissão por mês"
 - `fato_medico_extremos_emissao` (sg_uf, id_pessoa, primeiro_dia, ultimo_dia) — extremos de emissão por pessoa; alimenta inatividade e o total de emissores no período sem varrer a fato
-- `fato_auditoria_dia` (dia, tipo_anomalia, dimensao_afetada, valor_observado, valor_esperado, desvio, severidade)
+- `fato_an3_medico_unidade_tipo_dia` (dia, pessoa/CPF, UF da unidade, unidade, tipo; documentos, gaps até 5s e pico móvel de 60s para todos os tipos e para o tipo selecionado)
+- `fato_auditoria_dia` (dia, tipo_anomalia, dimensao_afetada, valor_observado, valor_esperado, desvio, severidade; AN1, AN2 e AN4)
 
 Staging: `stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_especialidade_dia`, `stg_documento_unidade_dia`, `stg_documento_medico_dia`, `stg_documento_medico_tipo_dia`, `stg_documento_medico_paciente_dia`.
 
@@ -98,7 +101,8 @@ Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 | Inscrições cadastradas | linhas de `tb_medico` (1 por CRM/UF) |
 | Inatividade | última emissão por **pessoa** (`fato_medico_extremos_emissao.ultimo_dia`), em faixas de 30/60/90/120 dias sem emissão; só quem emitiu entra |
 | Novos médicos | `tb_usuario.dh_aceite_termo` (aceite do termo = primeiro uso; ~94% preenchido, janela completa do sistema); join `tb_usuario.id_pessoa = tb_medico.id_pessoa`; `count(DISTINCT id_pessoa)` por dia×UF + linha global `'--'` (distinct entre todas as UFs — pessoa multi-UF conta uma vez no total) |
-| Anomalias AN1–AN4 | AN1 "Maiores emissores": ranking decrescente de médicos por documentos do tipo/UF/período (sem média; soma pura). AN2 "Atendimentos de pacientes únicos": ranking decrescente de médicos por `count(DISTINCT id_paciente)` no período (sem média). AN3–AN4 (ainda não implementadas na UI) mantêm a regra original: observado vs média móvel 30 dias de **todos os médicos**; severidade 2x/3x/5x |
+| AN3 — Emissões de documentos em alta frequência | Pessoa/CPF é a identidade; gaps são calculados sobre todas as inscrições. A tabela lista quem teve pelo menos 20 documentos e (pico móvel ≥10 documentos/60s ou ≥5 gaps ≤5s representando ao menos 10% dos intervalos). Ordenação: pico/60s, percentual de gaps curtos e volume. UF e instituição vêm da unidade associada à consulta; CNES é preferido, unidade é fallback. A regra é triagem, não confirmação de automação. |
+| Anomalias AN1, AN2 e AN4 | AN1 "Maiores emissores": ranking decrescente de médicos por documentos do tipo/UF/período (sem média; soma pura). AN2 "Atendimentos de pacientes únicos": ranking decrescente de médicos por `count(DISTINCT id_paciente)` no período (sem média). AN4 mantém a regra original de volume por local. |
 | Nome do médico | `dim_medico.nm_medico` via `tb_pessoa.nm_pessoa` (join `id_pessoa`); exibido apenas no drill-down da Auditoria |
 
 ## Ressalvas conhecidas

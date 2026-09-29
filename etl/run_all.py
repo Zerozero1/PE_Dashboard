@@ -25,6 +25,7 @@ def main():
         ("fato medico-pacientes", "load_fatos medico_pacientes"),
         ("fato pacientes", "load_fatos pacientes"),
         ("medicos (snapshot/novos)", "load_medicos"),
+        ("anomalia AN3 (frequencia)", "load_an3"),
         ("anomalias", "load_anomalias"),
     ]
     for nome, cmd in steps:

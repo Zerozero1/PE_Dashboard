@@ -458,24 +458,24 @@ Notas:
 
 ### 6.6 Detalhamento das Consultas da Aba Auditoria
 
-A aba Auditoria usa uma unica fonte: anomalias do datamart (`fato_auditoria_dia`), agregadas e sem registros individuais. Nao ha auditoria do uso do dashboard (decisao 2026-09-21): as consultas executadas na aba nao sao registradas.
+A aba Auditoria usa fatos agregadas do datamart; AN3 usa uma fato propria por pessoa/unidade/tipo. Nao ha auditoria do uso do dashboard (decisao 2026-09-21): as consultas executadas na aba nao sao registradas.
 
-Calculadas no ETL (nao em tempo de tela) e gravadas com: `data`, `tipo_anomalia`, `dimensao_afetada`, `valor_observado`, `valor_esperado` (media de todos os medicos), `desvio` e `severidade`.
+AN1, AN2 e AN4 mantêm flags agregadas em `fato_auditoria_dia`. AN3 é calculada no ETL a partir dos horários originais e gravada em `fato_an3_medico_unidade_tipo_dia`, no grão pessoa/CPF × dia × unidade × tipo.
 
-A media de referencia (valor esperado) e sempre o valor agregado de TODOS os medicos no mesmo periodo de comparacao — nunca o historico individual do emissor.
+Para AN1, AN2 e AN4, a média de referência (quando aplicável) é o valor agregado de todos os médicos no mesmo período; AN3 usa frequência e intervalos da própria pessoa, sem média populacional.
 
 | Codigo | Anomalia | Como e calculada | Severidade |
 |---|---|---|---|
 | AN1 | Maiores emissores de documentos medicos | Ranking decrescente de medicos por quantidade de documentos do tipo selecionado, no periodo e UF | - |
 | AN2 | Atendimentos de pacientes unicos | Ranking decrescente de medicos por `count(DISTINCT id_paciente)` no periodo (fato `fato_documento_medico_paciente_dia`); sem media de referencia (decisao 2026-09-28) | - |
-| AN3 | Tempo entre emissoes acima da media | Intervalo medio entre `dh_documento` do emissor comparado ao intervalo medio de todos os medicos; dispara quando o gap e muito acima da media geral | 2x/3x/5x o desvio |
+| AN3 | Emissões de documentos em alta frequência | Por pessoa/CPF, calcula o pico móvel de documentos em 60 segundos e a proporção de intervalos de até 5 segundos, preservando instituição/unidade da emissão. Candidato: mínimo de 20 documentos e (pico ≥10/60s ou ≥5 gaps curtos que sejam ≥10% dos intervalos). A lista é ordenada pelo pico/60s. | Triagem; não confirma automação |
 | AN4 | Documentos emitidos pelo local acima da media | Volume do local de atendimento comparado a media de todos os locais (que reflete todos os medicos) | 2x/3x/5x o desvio |
 
 Fluxo da aba:
 
 1. Usuario escolhe o tipo de anomalia, periodo, UF, tipo de documento e quantidade de registros.
 2. Clica em "Pesquisar" para disparar a consulta (a view nao carrega automaticamente).
-3. AN1 exibe o ranking de medicos; ao clicar na linha (icone circular "›"), abre um drill-down com: donut de documentos por tipo (quantidade e % do total), evolucao mensal (acumulado x mes), especialidades, situacao/tipo de inscricao e total no periodo — tudo lido do datamart (fato `fato_documento_medico_tipo_dia` + `dim_medico`/`dim_tipo_documento`/`dim_especialidade`). AN2 exibe ranking de medicos por pacientes unicos no periodo; o drill-down mostra pacientes distintos por mes (sem acumulado), especialidades, situacao/tipo de inscricao e o total de pacientes distintos no periodo (fato `fato_documento_medico_paciente_dia`). AN3–AN4 exibem card "em breve".
+3. AN1 exibe o ranking de médicos; ao clicar na linha (ícone circular "›"), abre um drill-down com: donut de documentos por tipo (quantidade e % do total), evolução mensal (acumulado x mês), especialidades, situação/tipo de inscrição e total no período — tudo lido do datamart (`fato_documento_medico_tipo_dia` + dimensões). AN2 exibe ranking de médicos por pacientes únicos no período; o drill-down mostra pacientes distintos por mês, especialidades, situação/tipo de inscrição e o total de pacientes distintos (`fato_documento_medico_paciente_dia`). AN3 exibe uma tabela de pessoas/CPF ordenada pelo pico móvel de emissões em 60 segundos, com volume, gaps curtos e instituição/CNES da unidade associada ao pico; respeita o limite do combo "Registros". AN4 permanece "em breve".
 
 Observacoes gerais:
 - Todas as consultas de tela leem apenas o datamart `prescricao_dw`; nenhuma consulta direta na origem `bd_cfm`.

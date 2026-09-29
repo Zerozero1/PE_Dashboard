@@ -79,6 +79,12 @@ ALTER TABLE prescricao.dim_medico
 ALTER TABLE prescricao.dim_medico
     ADD COLUMN IF NOT EXISTS nm_medico VARCHAR(200);
 
+ALTER TABLE prescricao.dim_unidade
+    ADD COLUMN IF NOT EXISTS co_cnes VARCHAR(20);
+
+ALTER TABLE prescricao.dim_unidade
+    ADD COLUMN IF NOT EXISTS nm_unidade TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_dim_medico_pessoa
     ON prescricao.dim_medico (id_pessoa);
 
@@ -141,6 +147,43 @@ CREATE INDEX IF NOT EXISTS idx_fato_med_pac_medico
 
 CREATE INDEX IF NOT EXISTS idx_fato_med_pac_uf
     ON prescricao.fato_documento_medico_paciente_dia (sg_uf, dia);
+
+CREATE TABLE IF NOT EXISTS prescricao.stg_an3_medico_unidade_tipo_dia (
+    dia DATE NOT NULL,
+    id_pessoa INTEGER NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_unidade_atendimento INTEGER NOT NULL,
+    id_tipo_documento INTEGER NOT NULL,
+    documentos BIGINT NOT NULL,
+    intervalos BIGINT NOT NULL,
+    intervalos_ate_5s BIGINT NOT NULL,
+    max_docs_60s BIGINT NOT NULL,
+    intervalos_tipo BIGINT NOT NULL,
+    intervalos_tipo_ate_5s BIGINT NOT NULL,
+    max_docs_60s_tipo BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS prescricao.fato_an3_medico_unidade_tipo_dia (
+    dia DATE NOT NULL,
+    id_pessoa INTEGER NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_unidade_atendimento INTEGER NOT NULL,
+    id_tipo_documento INTEGER NOT NULL,
+    documentos BIGINT NOT NULL,
+    intervalos BIGINT NOT NULL,
+    intervalos_ate_5s BIGINT NOT NULL,
+    max_docs_60s BIGINT NOT NULL,
+    intervalos_tipo BIGINT NOT NULL,
+    intervalos_tipo_ate_5s BIGINT NOT NULL,
+    max_docs_60s_tipo BIGINT NOT NULL,
+    PRIMARY KEY (dia, id_pessoa, sg_uf, id_unidade_atendimento, id_tipo_documento)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fato_an3_data_uf_tipo
+    ON prescricao.fato_an3_medico_unidade_tipo_dia (dia, sg_uf, id_tipo_documento);
+
+CREATE INDEX IF NOT EXISTS idx_fato_an3_pessoa_dia
+    ON prescricao.fato_an3_medico_unidade_tipo_dia (id_pessoa, dia);
 
 CREATE TABLE IF NOT EXISTS prescricao.stg_documento_medico_paciente_dia (
     dia DATE NOT NULL,

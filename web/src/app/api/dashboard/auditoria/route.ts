@@ -45,6 +45,75 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ de, ate, an2: rows.rows });
     }
 
+    if (anomalia === "AN3") {
+      const rows = await query(
+        `WITH pessoa_unidade AS (
+           SELECT f.id_pessoa,
+                  COALESCE('CNES:' || NULLIF(u.co_cnes, ''), 'UNIDADE:' || f.id_unidade_atendimento::text) AS instituicao_key,
+                  NULLIF(u.co_cnes, '') AS cnes,
+                  MAX(NULLIF(u.nm_unidade, '')) AS instituicao,
+                  MAX(f.sg_uf) AS uf,
+                  sum(f.documentos)::bigint AS documentos,
+                  sum(CASE WHEN $4::int IS NULL THEN f.intervalos ELSE f.intervalos_tipo END)::bigint AS intervalos,
+                  sum(CASE WHEN $4::int IS NULL THEN f.intervalos_ate_5s ELSE f.intervalos_tipo_ate_5s END)::bigint AS intervalos_ate_5s,
+                  max(CASE WHEN $4::int IS NULL THEN f.max_docs_60s ELSE f.max_docs_60s_tipo END)::bigint AS pico_60s
+             FROM prescricao.fato_an3_medico_unidade_tipo_dia f
+             LEFT JOIN prescricao.dim_unidade u ON u.id_unidade_atendimento = f.id_unidade_atendimento
+            WHERE f.dia BETWEEN $1 AND $2
+              AND ($3::text IS NULL OR f.sg_uf = $3)
+              AND ($4::int IS NULL OR f.id_tipo_documento = $4)
+            GROUP BY f.id_pessoa,
+                     COALESCE('CNES:' || NULLIF(u.co_cnes, ''), 'UNIDADE:' || f.id_unidade_atendimento::text),
+                     NULLIF(u.co_cnes, '')
+         ), por_pessoa AS (
+           SELECT id_pessoa,
+                  sum(documentos)::bigint AS documentos,
+                  sum(intervalos)::bigint AS intervalos,
+                  sum(intervalos_ate_5s)::bigint AS intervalos_ate_5s,
+                  max(pico_60s)::bigint AS pico_60s,
+                  count(*)::int AS unidades
+             FROM pessoa_unidade
+            GROUP BY id_pessoa
+         ), candidatos AS (
+           SELECT *
+             FROM por_pessoa
+            WHERE documentos >= 20
+              AND (pico_60s >= 10 OR (
+                intervalos_ate_5s >= 5
+                AND intervalos_ate_5s::numeric / NULLIF(intervalos, 0) >= 0.10
+              ))
+         ), unidade_pico AS (
+         SELECT DISTINCT ON (id_pessoa)
+                  id_pessoa, instituicao_key, cnes, instituicao, uf
+             FROM pessoa_unidade
+            ORDER BY id_pessoa, pico_60s DESC, documentos DESC
+         ), inscricoes AS (
+           SELECT id_pessoa,
+                  max(nm_medico) AS nome,
+                  string_agg(
+                    DISTINCT (nu_crm || '/' || btrim(sg_uf)),
+                    ', ' ORDER BY (nu_crm || '/' || btrim(sg_uf))
+                  ) AS inscricoes
+             FROM prescricao.dim_medico
+            WHERE id_pessoa IS NOT NULL
+            GROUP BY id_pessoa
+         )
+         SELECT c.id_pessoa, i.nome, i.inscricoes,
+                COALESCE(u.instituicao, u.instituicao_key) AS instituicao,
+                u.instituicao_key, u.cnes, u.uf,
+                c.documentos, c.pico_60s,
+                round(100.0 * c.intervalos_ate_5s / NULLIF(c.intervalos, 0), 1) AS pct_intervalos_ate_5s,
+                c.intervalos_ate_5s, c.unidades
+           FROM candidatos c
+           LEFT JOIN inscricoes i ON i.id_pessoa = c.id_pessoa
+           LEFT JOIN unidade_pico u ON u.id_pessoa = c.id_pessoa
+          ORDER BY c.pico_60s DESC, pct_intervalos_ate_5s DESC, c.documentos DESC
+          LIMIT $5`,
+        [de, ate, uf, tipo, limite]
+      );
+      return NextResponse.json({ de, ate, an3: rows.rows });
+    }
+
     return NextResponse.json({ de, ate, info: "em breve" });
   } catch (e) {
     return NextResponse.json({ erro: String(e) }, { status: 500 });
