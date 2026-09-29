@@ -7,7 +7,14 @@ from config import ORIGIN, DW
 
 
 def connect_origin():
-    conn = psycopg2.connect(**ORIGIN, connect_timeout=20)
+    conn = psycopg2.connect(
+        **ORIGIN,
+        connect_timeout=20,
+        keepalives=1,
+        keepalives_idle=60,
+        keepalives_interval=30,
+        keepalives_count=5,
+    )
     conn.set_session(readonly=True, autocommit=True)
     return conn
 

@@ -1,12 +1,12 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-29 14:19 BRT_
+_Atualizado em: 2026-09-29 15:14 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões (Documentos, Medicos, Auditoria) + visao "Logs" (admin).
 
 ## ✅ Última Sessão (Resumo)
-- AN3 implementada (2026-09-29): "Emissões de documentos em alta frequência", identidade por `id_pessoa`, gaps até 5s e pico móvel de documentos/60s; ranking paginado com filtros de período, UF e tipo e instituição/CNES da unidade do pico. DDL aditivo aplicado em `prescricao_dw`; fato ainda sem carga histórica.
-- MCP global: adicionado servidor separado `postgres-dw` para o datamart via `DW_DATABASE_URL`; configuração precisa de reinício do OpenCode. A conexão `postgres` da origem `bd_cfm` foi mantida sem alteração.
+- AN3 implementada e populada (2026-09-29): "Emissões de documentos em alta frequência", identidade por `id_pessoa`, gaps até 5s e pico móvel de documentos/60s; ranking paginado por pico, filtros de período/UF/tipo e instituição/CNES da unidade do pico. Fato com 32.724.079 agregados, 62.183.411 documentos (2021-10-07 a 2026-09-29); endpoint HTTP 200, limite de 20 validado.
+- MCP global: servidor separado `postgres-dw` via `DW_DATABASE_URL`, carregado após reinício do OpenCode; conexão `postgres` read-only de `bd_cfm` mantida.
 - Sessão do dashboard (2026-09-28): validade configurada para 12 horas via `session.maxAge` do NextAuth.
 - Rodape do grafico "Medicos com pelo menos uma emissao de documento por mes" (2026-09-28): nova grafia — "Nos ultimos 30 dias, foram registrados {X} usuarios ativos. Observa-se, ainda, um crescimento medio de {Y} medicos por mes na base de usuarios." (X = emissores_30d; Y = media mensal; mantida logica de crescimento/decremento e omissao com <2 meses).
 - AN2 — Atendimentos de pacientes unicos (2026-09-28): implementada como ranking de medicos com mais pacientes distintos (substitui a AN2 antiga que era global por dia).
@@ -66,7 +66,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 - Limpeza de colunas sem uso (2026-09-22): removidas `dim_data.dia_semana` e `fato_medico_dia.inscricoes_cadastradas/inscricoes_ativas/medicos_ativos` (sempre vazias; valores correntes vivem em `fato_medico_snapshot`). Demais colunas "redundantes" mantidas por custo baixo.
 
 ## 🔧 Em Progresso / Próximos Passos
-- [ ] Reiniciar o OpenCode, confirmar o servidor MCP `postgres-dw` e executar a carga inicial AN3 no ambiente ETL com acesso à origem; validar endpoint e resultados.
+- [x] Reiniciar o OpenCode, configurar MCP `postgres-dw`, carregar fato AN3 e validar endpoint (2026-09-29).
 - [x] Configurar sessão NextAuth com validade de 12 horas (`session.maxAge`); TypeScript e build de produção aprovados.
 - [x] Popular `fato_documento_medico_paciente_dia` (42,65M linhas) — FEITO a partir do laptop (ETL `medico_pacientes`). A máquina do ETL deve rodar o modo no próximo job agendado para manter a carga (o `run_all.py` já o inclui).
 - [ ] Fase 1 — Fundacao (EM ANDAMENTO): projeto Next.js 16 criado em `web/` (app router, TS). Feito: shell com 4 visoes no padrao cyberpunk dark (abas horizontais, acento por visao), `api/health` lendo o DW real (job/config/dados), `api/admin/refresh-jobs` enfileirando job manual, next-auth v4 com Google OAuth + validacao de dominio `@portalmedico.org.br` (signIn callback). Modo dev sem credenciais Google: sessao mock.
@@ -83,7 +83,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 
 ## ⚠️ Pontos de Atencao
 - Sessão configurada com `session.maxAge` de 12 horas; sem limite absoluto adicional configurado.
-- A carga AN3 usa a linha temporal completa de `dh_documento` e requer benchmark no ETL (origem sem índice temporal; tabela ~60M documentos). O worker/ambiente ETL precisa de `BDCFM_*` e `DW_*` configurados.
+- A carga AN3 usa a linha temporal completa de `dh_documento` e requer benchmark no ETL (origem sem índice temporal; tabela ~60M documentos). O ETL aplica keepalive na conexão de origem; a dimensão de unidade usa `co_cnes VARCHAR(50)`.
 - `opencode mcp list` exibiu a URI da conexão `postgres`; rotacionar a senha de leitura `usr_select` e atualizar a entrada `postgres` sem alterar a conexão ao `bd_cfm`.
 - `npm run lint` acusa 6 erros PRE-EXISTENTES em `dashboard.tsx` (react-hooks `set-state-in-effect` em `useApi`/`LogsView`/`loadHealth` e `immutability` nos acumulados do Donut/serie) — nenhum introduzido pela sessao de 2026-09-28; build e tsc passam.
 - `usr_select` em `bd_cfm` e somente leitura; nenhuma gravacao na origem.

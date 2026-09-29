@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS prescricao.dim_especialidade (
 CREATE TABLE IF NOT EXISTS prescricao.dim_unidade (
     id_unidade_atendimento INTEGER PRIMARY KEY,
     sg_uf CHAR(2),
-    co_cnes VARCHAR(20),
+    co_cnes VARCHAR(50),
     nm_unidade TEXT
 );
 

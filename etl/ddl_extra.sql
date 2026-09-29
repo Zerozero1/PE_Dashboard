@@ -80,7 +80,10 @@ ALTER TABLE prescricao.dim_medico
     ADD COLUMN IF NOT EXISTS nm_medico VARCHAR(200);
 
 ALTER TABLE prescricao.dim_unidade
-    ADD COLUMN IF NOT EXISTS co_cnes VARCHAR(20);
+    ADD COLUMN IF NOT EXISTS co_cnes VARCHAR(50);
+
+ALTER TABLE prescricao.dim_unidade
+    ALTER COLUMN co_cnes TYPE VARCHAR(50);
 
 ALTER TABLE prescricao.dim_unidade
     ADD COLUMN IF NOT EXISTS nm_unidade TEXT;
