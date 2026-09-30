@@ -43,40 +43,37 @@ export async function GET(req: NextRequest) {
                     m.nu_crm AS crm, m.sg_uf AS crm_uf,
                     t.nm_documento AS tipo,
                     COALESCE(NULLIF(u.nm_unidade, ''), 'UNIDADE:' || f.id_unidade_atendimento::text) AS instituicao,
-                    NULLIF(u.co_cnes, '') AS cnes,
-                    f.id_unidade_atendimento,
+                     NULLIF(u.co_cnes, '') AS cnes,
+                     f.id_unidade_atendimento,
                     f.sg_uf AS uf,
                     CASE WHEN $5::int IS NULL THEN f.gap_pessoa_seg ELSE f.gap_tipo_seg END AS intervalo_seg,
-                    CASE WHEN $5::int IS NULL THEN f.docs_60s ELSE f.docs_60s_tipo END AS docs_60s,
-                    concat_ws(' + ',
-                      CASE WHEN (($5::int IS NULL AND f.gap_pessoa_seg BETWEEN 0 AND 5)
-                                 OR ($5::int IS NOT NULL AND f.gap_tipo_seg BETWEEN 0 AND 5))
-                           THEN 'intervalo ≤5s' END,
-                      CASE WHEN (($5::int IS NULL AND f.docs_60s >= 10)
-                                 OR ($5::int IS NOT NULL AND f.docs_60s_tipo >= 10))
-                           THEN 'pico ≥10/60s' END
-                    ) AS sinal
+                    CASE WHEN $5::int IS NULL THEN f.docs_300s ELSE f.docs_300s_tipo END AS docs_5min,
+                    'janela 5 min · pacientes distintos' AS sinal
                FROM prescricao.fato_an3_emissao_detalhe f
                JOIN prescricao.dim_medico m ON m.id_medico = f.id_medico
                JOIN prescricao.dim_tipo_documento t ON t.id_tipo_documento = f.id_tipo_documento
                LEFT JOIN prescricao.dim_unidade u ON u.id_unidade_atendimento = f.id_unidade_atendimento
               WHERE f.id_pessoa = $1
                 AND f.dh_documento >= $2::date
-                AND f.dh_documento < ($3::date + interval '1 day')
-                AND ($4::text IS NULL OR f.sg_uf = $4)
-                AND ($5::int IS NULL OR f.id_tipo_documento = $5)
-                AND (($5::int IS NULL AND (f.gap_pessoa_seg BETWEEN 0 AND 5 OR f.docs_60s >= 10))
-                  OR ($5::int IS NOT NULL AND (f.gap_tipo_seg BETWEEN 0 AND 5 OR f.docs_60s_tipo >= 10)))
+                 AND f.dh_documento < ($3::date + interval '1 day')
+                  AND ($4::text IS NULL OR f.sg_uf = $4)
+                  AND ($5::int IS NULL OR f.id_tipo_documento = $5)
+                 AND (($5::int IS NULL AND (
+                         f.docs_300s >= 2 AND f.janela_pessoa_mult_paciente_300s
+                      ))
+                   OR ($5::int IS NOT NULL AND (
+                         f.docs_300s_tipo >= 2 AND f.janela_tipo_mult_paciente_300s
+                      )))
            ), pagina AS (
              SELECT row_number() OVER (ORDER BY dh_documento, id_consulta_documento)::int AS sequencia,
                     to_char(dh_documento, 'YYYY-MM-DD HH24:MI:SS.MS') AS data_hora,
                     crm, crm_uf, tipo, instituicao, cnes, id_unidade_atendimento, uf,
-                    intervalo_seg, docs_60s, sinal,
+                     intervalo_seg, docs_5min, sinal,
                     count(*) OVER() AS total_eventos
                FROM sinais
            )
-         SELECT sequencia, data_hora, crm, crm_uf, tipo, instituicao, cnes,
-                id_unidade_atendimento, uf, intervalo_seg, docs_60s, sinal,
+          SELECT sequencia, data_hora, crm, crm_uf, tipo, instituicao, cnes,
+                 id_unidade_atendimento, uf, intervalo_seg, docs_5min, sinal,
                 total_eventos
            FROM pagina
           ORDER BY sequencia

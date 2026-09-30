@@ -1,12 +1,15 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-09-29 20:22 BRT_
+_Atualizado em: 2026-09-30 11:54 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões (Documentos, Medicos, Auditoria) + visao "Logs" (admin).
 
 ## ✅ Última Sessão (Resumo)
-- AN3 implementada e populada (2026-09-29): identidade por `id_pessoa`, gaps até 5s e pico móvel de documentos/60s; fato diária com 32.740.814 agregados e 62.225.200 documentos válidos (2021-10-07 a 2026-09-29). Após refreshes, AN1 tem 62.634.963 docs (inclui cancelados) e AN2 tem 42.773.157 linhas médico×paciente×dia; todas cobrem até 2026-09-29.
-- Drill-down AN3 (2026-09-29): botão à direita abre somente emissões sinalizadas em sequência cronológica, com `dh_documento`, CRM/UF, tipo, unidade, intervalo anterior e motivo. `fato_an3_emissao_detalhe`: 495.417 documentos únicos, todos sinalizados, sem dados de paciente/conteúdo. Endpoint protegido por sessão; build aprovado.
+- AN3 implementada e populada inicialmente (2026-09-29): identidade por `id_pessoa`, gaps até 5s e pico móvel de documentos/60s; fato diária com 32.740.814 agregados e 62.225.200 documentos válidos (2021-10-07 a 2026-09-29). Após refreshes, AN1 tem 62.634.963 docs (inclui cancelados) e AN2 tem 42.773.157 linhas médico×paciente×dia; todas cobrem até 2026-09-29.
+- Drill-down AN3 inicial (2026-09-29): botão à direita abre somente emissões sinalizadas em sequência cronológica, com `dh_documento`, CRM/UF, tipo, unidade, intervalo anterior e motivo. `fato_an3_emissao_detalhe`: 495.417 documentos únicos, sem dados de paciente/conteúdo. Endpoint protegido por sessão; build aprovado.
+- AN3 revisada (2026-09-30): ranking pelo maior número de documentos em janela móvel de 300s que contenha pelo menos dois `id_paciente` distintos; sem corte mínimo fixo de documentos, ordenado do maior pico ao menor. O caso de 814 solicitações repetidas para uma paciente só não conta seus 814 docs como pico multi-paciente. ETL, DDL, API, UI e documentação atualizados; schema do DW migrado para métricas/flags de 300s, sem IDs de paciente.
+- REPROCESSAMENTO AN3 5 min CONCLUÍDO (2026-09-30, a partir do laptop via credenciais dos MCP/`.env.local`): `setup.py` OK; `load_an3.py` recarregou a fato diária com **32.772.139 linhas** (3.786.654 com pico > 0) em 3.721 s; `load_an3_details.py` carregou **2.610.239 emissões sinalizadas** (candidatos = pico ≥ 10, 3.450 pessoas) em 249 s. Distribuição por pessoa: 280.740 com pico ≥ 2 (sem corte no ranking), 32.507 ≥ 5, 3.450 ≥ 10, 528 ≥ 20, 61 ≥ 50, máximo 521. Caso 814: pico multi-paciente = 0 em 2025-12-04 e sem linhas no detalhe (pico global 5, abaixo do limiar de detalhamento 10); detalhe do top1 (pico 521) tem 581 eventos. Ranking validado por SQL real; build/tsc OK.
+- Perfil temporal preliminar AN3 (2026-09-30): em 100 pessoas com maiores picos brutos prévios, 69/100 atingiram pico multi-paciente ≥10/60s, 69/100 ≥20/120s, 75/100 ≥20/300s e 73/100 ≥30/300s. Em outra amostra pseudoaleatória de 100 pessoa-dias com ≥20 documentos e pico bruto/60s <10, nenhum atingiu pico multi-paciente ≥20/300s (máximo observado: 11). São amostras, não censo. Consulta vazia anterior era explicada pelas fatos ainda não reprocessadas, com as colunas novas nos valores padrão.
 - Consistência AN1/AN2/AN3: grãos e métricas diferem por definição (AN1 por inscrição e inclui cancelados; AN2 por inscrição×paciente×dia; AN3 por pessoa/CPF e exclui cancelados). As janelas de data estão alinhadas; a origem é ativa, portanto leituras em horários distintos podem divergir ligeiramente.
 - MCP global: servidor separado `postgres-dw` via `DW_DATABASE_URL`, carregado após reinício do OpenCode; conexão `postgres` read-only de `bd_cfm` mantida.
 - Sessão do dashboard (2026-09-28): validade configurada para 12 horas via `session.maxAge` do NextAuth.
@@ -69,6 +72,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 
 ## 🔧 Em Progresso / Próximos Passos
 - [x] Reiniciar o OpenCode, configurar MCP `postgres-dw`, atualizar fatos AN1/AN2/AN3, carregar detalhe de eventos sinalizados e validar endpoint/build (2026-09-29).
+- [x] AN3 5 min: reprocessada a partir do laptop em 2026-09-30 (`setup.py`, `load_an3.py`, `load_an3_details.py`; credenciais lidas dos configs locais, sem versionamento). Fato diária e detalhe recarregados e validados; código (ETL, DDL, API, UI) validado (py_compile, tsc, build).
 - [x] Configurar sessão NextAuth com validade de 12 horas (`session.maxAge`); TypeScript e build de produção aprovados.
 - [x] Popular `fato_documento_medico_paciente_dia` (42,65M linhas) — FEITO a partir do laptop (ETL `medico_pacientes`). A máquina do ETL deve rodar o modo no próximo job agendado para manter a carga (o `run_all.py` já o inclui).
 - [ ] Fase 1 — Fundacao (EM ANDAMENTO): projeto Next.js 16 criado em `web/` (app router, TS). Feito: shell com 4 visoes no padrao cyberpunk dark (abas horizontais, acento por visao), `api/health` lendo o DW real (job/config/dados), `api/admin/refresh-jobs` enfileirando job manual, next-auth v4 com Google OAuth + validacao de dominio `@portalmedico.org.br` (signIn callback). Modo dev sem credenciais Google: sessao mock.
@@ -85,7 +89,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 
 ## ⚠️ Pontos de Atencao
 - Sessão configurada com `session.maxAge` de 12 horas; sem limite absoluto adicional configurado.
-- A carga AN3 usa a linha temporal completa de `dh_documento` e requer benchmark no ETL (origem sem índice temporal; tabela ~60M documentos). O ETL processa faixas de 10k pessoas e retenta conflitos de recuperação; o detalhe consulta somente pessoas candidatas e grava eventos sinalizados. A dimensão de unidade usa `co_cnes VARCHAR(50)`.
+- A carga AN3 usa a linha temporal completa de `dh_documento` (origem sem índice temporal; tabela ~60M documentos). O ETL processa faixas de 10k pessoas e retenta conflitos; o pico de 5 min exige pelo menos dois pacientes distintos, sem gravar `id_paciente`. Reprocessada em 2026-09-30 a partir do laptop (~62 min para a fato; ~4 min para o detalhe), usando as credenciais dos configs locais (`opencode.jsonc`/`web/.env.local`) em variáveis de ambiente temporárias, sem versionamento. O detalhe cobre picos ≥ 10/5 min (o ranking não tem corte). A dimensão de unidade usa `co_cnes VARCHAR(50)`.
 - `opencode mcp list` exibiu a URI da conexão `postgres`; rotacionar a senha de leitura `usr_select` e atualizar a entrada `postgres` sem alterar a conexão ao `bd_cfm`.
 - `npm run lint` acusa 6 erros PRE-EXISTENTES em `dashboard.tsx` (react-hooks `set-state-in-effect` em `useApi`/`LogsView`/`loadHealth` e `immutability` nos acumulados do Donut/serie) — nenhum introduzido pela sessao de 2026-09-28; build e tsc passam.
 - Deploy de produção não executado neste ambiente: Docker/`.env` ausentes e sem acesso ao servidor de aplicação; `npm run build` validado localmente.
@@ -116,6 +120,7 @@ Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a 
 
 ## 📝 Histórico de Decisões
 - 2026-09-28: Validade da sessão NextAuth reduzida do padrão de 30 dias para 12 horas (`session.maxAge`).
+- 2026-09-30: AN3 ranqueia o pico móvel de 5 min que contenha pelo menos dois pacientes distintos; sem corte mínimo de documentos, ordenado pelo pico decrescente. Emissões repetidas para um paciente não contam como pico multi-paciente.
 - 2026-09-28: Sem FKs no datamart — star schema (OLAP), relacoes logicas via chaves garantidas pelo ETL; decisao 21 registrada na secao 14 do plano e no `etl/README.md` (Modelo fisico).
 - 2026-09-21: 19 decisoes de Fase 0 registradas na secao 14 do plano (auth, ETL, dados, acesso, auditoria, exportacao, topologia, anomalias).
 - 2026-09-21: Modelagem validada via MCP; correcoes de fonte (dispensacao/auditoria) aplicadas ao plano.

@@ -163,8 +163,22 @@ CREATE TABLE IF NOT EXISTS prescricao.stg_an3_medico_unidade_tipo_dia (
     max_docs_60s BIGINT NOT NULL,
     intervalos_tipo BIGINT NOT NULL,
     intervalos_tipo_ate_5s BIGINT NOT NULL,
-    max_docs_60s_tipo BIGINT NOT NULL
+    max_docs_60s_tipo BIGINT NOT NULL,
+    intervalos_ate_5s_entre_pacientes BIGINT NOT NULL,
+    max_docs_60s_multi_paciente BIGINT NOT NULL,
+    intervalos_tipo_ate_5s_entre_pacientes BIGINT NOT NULL,
+    max_docs_60s_tipo_multi_paciente BIGINT NOT NULL,
+    max_docs_300s_multi_paciente BIGINT NOT NULL,
+    max_docs_300s_tipo_multi_paciente BIGINT NOT NULL
 );
+
+ALTER TABLE prescricao.stg_an3_medico_unidade_tipo_dia
+    ADD COLUMN IF NOT EXISTS intervalos_ate_5s_entre_pacientes BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS max_docs_60s_multi_paciente BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS intervalos_tipo_ate_5s_entre_pacientes BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS max_docs_60s_tipo_multi_paciente BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS max_docs_300s_multi_paciente BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS max_docs_300s_tipo_multi_paciente BIGINT NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS prescricao.fato_an3_medico_unidade_tipo_dia (
     dia DATE NOT NULL,
@@ -179,8 +193,22 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_an3_medico_unidade_tipo_dia (
     intervalos_tipo BIGINT NOT NULL,
     intervalos_tipo_ate_5s BIGINT NOT NULL,
     max_docs_60s_tipo BIGINT NOT NULL,
+    intervalos_ate_5s_entre_pacientes BIGINT NOT NULL,
+    max_docs_60s_multi_paciente BIGINT NOT NULL,
+    intervalos_tipo_ate_5s_entre_pacientes BIGINT NOT NULL,
+    max_docs_60s_tipo_multi_paciente BIGINT NOT NULL,
+    max_docs_300s_multi_paciente BIGINT NOT NULL,
+    max_docs_300s_tipo_multi_paciente BIGINT NOT NULL,
     PRIMARY KEY (dia, id_pessoa, sg_uf, id_unidade_atendimento, id_tipo_documento)
 );
+
+ALTER TABLE prescricao.fato_an3_medico_unidade_tipo_dia
+    ADD COLUMN IF NOT EXISTS intervalos_ate_5s_entre_pacientes BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS max_docs_60s_multi_paciente BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS intervalos_tipo_ate_5s_entre_pacientes BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS max_docs_60s_tipo_multi_paciente BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS max_docs_300s_multi_paciente BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS max_docs_300s_tipo_multi_paciente BIGINT NOT NULL DEFAULT 0;
 
 CREATE INDEX IF NOT EXISTS idx_fato_an3_data_uf_tipo
     ON prescricao.fato_an3_medico_unidade_tipo_dia (dia, sg_uf, id_tipo_documento);
@@ -199,8 +227,26 @@ CREATE TABLE IF NOT EXISTS prescricao.stg_an3_emissao_detalhe (
     gap_pessoa_seg NUMERIC(14,3),
     gap_tipo_seg NUMERIC(14,3),
     docs_60s BIGINT NOT NULL,
-    docs_60s_tipo BIGINT NOT NULL
+    docs_60s_tipo BIGINT NOT NULL,
+    gap_pessoa_entre_pacientes BOOLEAN NOT NULL,
+    gap_tipo_entre_pacientes BOOLEAN NOT NULL,
+    janela_pessoa_mult_paciente BOOLEAN NOT NULL,
+    janela_tipo_mult_paciente BOOLEAN NOT NULL,
+    docs_300s BIGINT NOT NULL,
+    docs_300s_tipo BIGINT NOT NULL,
+    janela_pessoa_mult_paciente_300s BOOLEAN NOT NULL,
+    janela_tipo_mult_paciente_300s BOOLEAN NOT NULL
 );
+
+ALTER TABLE prescricao.stg_an3_emissao_detalhe
+    ADD COLUMN IF NOT EXISTS gap_pessoa_entre_pacientes BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS gap_tipo_entre_pacientes BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS janela_pessoa_mult_paciente BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS janela_tipo_mult_paciente BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS docs_300s BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS docs_300s_tipo BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS janela_pessoa_mult_paciente_300s BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS janela_tipo_mult_paciente_300s BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS prescricao.fato_an3_emissao_detalhe (
     id_consulta_documento INTEGER PRIMARY KEY,
@@ -213,8 +259,26 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_an3_emissao_detalhe (
     gap_pessoa_seg NUMERIC(14,3),
     gap_tipo_seg NUMERIC(14,3),
     docs_60s BIGINT NOT NULL,
-    docs_60s_tipo BIGINT NOT NULL
+    docs_60s_tipo BIGINT NOT NULL,
+    gap_pessoa_entre_pacientes BOOLEAN NOT NULL,
+    gap_tipo_entre_pacientes BOOLEAN NOT NULL,
+    janela_pessoa_mult_paciente BOOLEAN NOT NULL,
+    janela_tipo_mult_paciente BOOLEAN NOT NULL,
+    docs_300s BIGINT NOT NULL,
+    docs_300s_tipo BIGINT NOT NULL,
+    janela_pessoa_mult_paciente_300s BOOLEAN NOT NULL,
+    janela_tipo_mult_paciente_300s BOOLEAN NOT NULL
 );
+
+ALTER TABLE prescricao.fato_an3_emissao_detalhe
+    ADD COLUMN IF NOT EXISTS gap_pessoa_entre_pacientes BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS gap_tipo_entre_pacientes BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS janela_pessoa_mult_paciente BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS janela_tipo_mult_paciente BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS docs_300s BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS docs_300s_tipo BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS janela_pessoa_mult_paciente_300s BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS janela_tipo_mult_paciente_300s BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE INDEX IF NOT EXISTS idx_fato_an3_detalhe_pessoa_hora
     ON prescricao.fato_an3_emissao_detalhe (id_pessoa, dh_documento, id_consulta_documento);

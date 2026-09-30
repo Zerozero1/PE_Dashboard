@@ -11,75 +11,123 @@ COLUMNS = [
     "id_consulta_documento", "id_pessoa", "id_medico", "dh_documento",
     "id_tipo_documento", "id_unidade_atendimento", "sg_uf", "gap_pessoa_seg",
     "gap_tipo_seg", "docs_60s", "docs_60s_tipo",
+    "gap_pessoa_entre_pacientes", "gap_tipo_entre_pacientes",
+    "janela_pessoa_mult_paciente", "janela_tipo_mult_paciente",
+    "docs_300s", "docs_300s_tipo",
+    "janela_pessoa_mult_paciente_300s", "janela_tipo_mult_paciente_300s",
 ]
 
 SQL_CANDIDATOS = """
-SELECT id_pessoa
-  FROM prescricao.fato_an3_medico_unidade_tipo_dia
+ SELECT id_pessoa
+   FROM prescricao.fato_an3_medico_unidade_tipo_dia
  GROUP BY id_pessoa
-HAVING sum(documentos) >= 20
-   AND (
-     max(max_docs_60s) >= 10
-     OR max(max_docs_60s_tipo) >= 10
-     OR sum(intervalos_ate_5s) >= 5
-     OR sum(intervalos_tipo_ate_5s) >= 5
-   )
+ HAVING max(max_docs_300s_multi_paciente) >= 10
+     OR max(max_docs_300s_tipo_multi_paciente) >= 10
 """
 
 SQL_DETALHES = """
-WITH medicos AS MATERIALIZED (
+ WITH medicos AS MATERIALIZED (
   SELECT id_medico,id_pessoa
     FROM prescricao.tb_medico
    WHERE id_pessoa = ANY(%s::integer[])
-), eventos AS (
-  SELECT d.id_consulta_documento,
+ ), eventos AS (
+   SELECT d.id_consulta_documento,
          d.dh_documento,
          m.id_pessoa,
+         mp.id_paciente,
          mu.id_medico,
          d.id_tipo_documento,
          mu.id_unidade_atendimento,
          COALESCE(NULLIF(ua.sg_uf, 'BR'), '--') AS sg_uf
-    FROM medicos m
-    JOIN prescricao.rl_medico_unidade_atendimento mu
-      ON mu.id_medico = m.id_medico
-    JOIN prescricao.tb_consulta c
-      ON c.id_medico_unidade_atendimento = mu.id_medico_unidade_atendimento
-    JOIN prescricao.tb_consulta_documento d
-      ON d.id_consulta = c.id_consulta
+     FROM medicos m
+     JOIN prescricao.rl_medico_unidade_atendimento mu
+       ON mu.id_medico = m.id_medico
+     JOIN prescricao.tb_consulta c
+       ON c.id_medico_unidade_atendimento = mu.id_medico_unidade_atendimento
+     LEFT JOIN prescricao.rl_medico_paciente mp
+       ON mp.id_medico_paciente = c.id_medico_paciente
+      AND mp.id_medico = m.id_medico
+     JOIN prescricao.tb_consulta_documento d
+       ON d.id_consulta = c.id_consulta
     LEFT JOIN prescricao.tb_unidade_atendimento ua
       ON ua.id_unidade_atendimento = mu.id_unidade_atendimento
    WHERE d.in_cancelado IS DISTINCT FROM 'S'
 ), sequencia AS (
-  SELECT *,
-         extract(epoch FROM dh_documento - lag(dh_documento) OVER (
-           PARTITION BY id_pessoa
-           ORDER BY dh_documento, id_consulta_documento
-         )) AS gap_pessoa_seg,
-         extract(epoch FROM dh_documento - lag(dh_documento) OVER (
-           PARTITION BY id_pessoa, id_tipo_documento
-           ORDER BY dh_documento, id_consulta_documento
-         )) AS gap_tipo_seg,
-         count(*) OVER (
-           PARTITION BY id_pessoa
-           ORDER BY dh_documento
-           RANGE BETWEEN INTERVAL '60 seconds' PRECEDING AND CURRENT ROW
-         ) AS docs_60s,
-         count(*) OVER (
-           PARTITION BY id_pessoa, id_tipo_documento
-           ORDER BY dh_documento
-           RANGE BETWEEN INTERVAL '60 seconds' PRECEDING AND CURRENT ROW
-         ) AS docs_60s_tipo
-    FROM eventos
-)
-SELECT id_consulta_documento, id_pessoa, id_medico, dh_documento,
-       id_tipo_documento, id_unidade_atendimento, sg_uf,
-       gap_pessoa_seg, gap_tipo_seg, docs_60s, docs_60s_tipo
-  FROM sequencia
- WHERE gap_pessoa_seg BETWEEN 0 AND 5
-    OR docs_60s >= 10
-    OR gap_tipo_seg BETWEEN 0 AND 5
-    OR docs_60s_tipo >= 10
- ORDER BY id_pessoa, dh_documento, id_consulta_documento
+   SELECT *,
+          extract(epoch FROM dh_documento - lag(dh_documento) OVER pessoa) AS gap_pessoa_seg,
+          lag(id_paciente) OVER pessoa AS paciente_anterior_pessoa,
+          extract(epoch FROM dh_documento - lag(dh_documento) OVER tipo) AS gap_tipo_seg,
+          lag(id_paciente) OVER tipo AS paciente_anterior_tipo,
+          count(*) OVER pessoa_60s AS docs_60s,
+          min(id_paciente) OVER pessoa_60s AS min_paciente_60s,
+          max(id_paciente) OVER pessoa_60s AS max_paciente_60s,
+          count(*) OVER tipo_60s AS docs_60s_tipo,
+          min(id_paciente) OVER tipo_60s AS min_paciente_60s_tipo,
+          max(id_paciente) OVER tipo_60s AS max_paciente_60s_tipo,
+          count(*) OVER pessoa_300s AS docs_300s,
+          min(id_paciente) OVER pessoa_300s AS min_paciente_300s,
+          max(id_paciente) OVER pessoa_300s AS max_paciente_300s,
+          count(*) OVER tipo_300s AS docs_300s_tipo,
+          min(id_paciente) OVER tipo_300s AS min_paciente_300s_tipo,
+          max(id_paciente) OVER tipo_300s AS max_paciente_300s_tipo
+     FROM eventos
+    WINDOW pessoa AS (
+             PARTITION BY id_pessoa
+             ORDER BY dh_documento, id_consulta_documento
+           ),
+           tipo AS (
+             PARTITION BY id_pessoa, id_tipo_documento
+             ORDER BY dh_documento, id_consulta_documento
+           ),
+           pessoa_60s AS (
+             PARTITION BY id_pessoa
+             ORDER BY dh_documento
+             RANGE BETWEEN INTERVAL '60 seconds' PRECEDING AND CURRENT ROW
+           ),
+            tipo_60s AS (
+              PARTITION BY id_pessoa, id_tipo_documento
+              ORDER BY dh_documento
+              RANGE BETWEEN INTERVAL '60 seconds' PRECEDING AND CURRENT ROW
+            ),
+            pessoa_300s AS (
+              PARTITION BY id_pessoa
+              ORDER BY dh_documento
+              RANGE BETWEEN INTERVAL '300 seconds' PRECEDING AND CURRENT ROW
+            ),
+            tipo_300s AS (
+              PARTITION BY id_pessoa, id_tipo_documento
+              ORDER BY dh_documento
+              RANGE BETWEEN INTERVAL '300 seconds' PRECEDING AND CURRENT ROW
+            )
+ ), avaliados AS (
+   SELECT *,
+          id_paciente IS NOT NULL
+            AND paciente_anterior_pessoa IS NOT NULL
+            AND id_paciente <> paciente_anterior_pessoa AS gap_pessoa_entre_pacientes,
+          id_paciente IS NOT NULL
+            AND paciente_anterior_tipo IS NOT NULL
+            AND id_paciente <> paciente_anterior_tipo AS gap_tipo_entre_pacientes,
+          min_paciente_60s IS NOT NULL
+            AND min_paciente_60s <> max_paciente_60s AS janela_pessoa_mult_paciente,
+          min_paciente_60s_tipo IS NOT NULL
+            AND min_paciente_60s_tipo <> max_paciente_60s_tipo AS janela_tipo_mult_paciente,
+          min_paciente_300s IS NOT NULL
+            AND min_paciente_300s <> max_paciente_300s AS janela_pessoa_mult_paciente_300s,
+          min_paciente_300s_tipo IS NOT NULL
+            AND min_paciente_300s_tipo <> max_paciente_300s_tipo AS janela_tipo_mult_paciente_300s
+     FROM sequencia
+ )
+ SELECT id_consulta_documento, id_pessoa, id_medico, dh_documento,
+        id_tipo_documento, id_unidade_atendimento, sg_uf,
+        gap_pessoa_seg, gap_tipo_seg, docs_60s, docs_60s_tipo,
+        gap_pessoa_entre_pacientes, gap_tipo_entre_pacientes,
+        janela_pessoa_mult_paciente, janela_tipo_mult_paciente,
+        docs_300s, docs_300s_tipo,
+        janela_pessoa_mult_paciente_300s, janela_tipo_mult_paciente_300s
+    FROM avaliados
+  WHERE (docs_300s >= 2 AND janela_pessoa_mult_paciente_300s)
+     OR (docs_300s_tipo >= 2 AND janela_tipo_mult_paciente_300s)
+  ORDER BY id_pessoa, dh_documento, id_consulta_documento
 """
 
 

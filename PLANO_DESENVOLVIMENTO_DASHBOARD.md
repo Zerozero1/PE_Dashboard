@@ -460,7 +460,7 @@ Notas:
 
 A aba Auditoria usa fatos agregadas do datamart; AN3 usa uma fato propria por pessoa/unidade/tipo. Nao ha auditoria do uso do dashboard (decisao 2026-09-21): as consultas executadas na aba nao sao registradas.
 
-AN1, AN2 e AN4 mantêm flags agregadas em `fato_auditoria_dia`. AN3 é calculada no ETL a partir dos horários originais e gravada em `fato_an3_medico_unidade_tipo_dia`, no grão pessoa/CPF × dia × unidade × tipo. O drill-down usa `fato_an3_emissao_detalhe`, com data/hora apenas dos documentos que participam dos sinais anômalos.
+AN1, AN2 e AN4 mantêm flags agregadas em `fato_auditoria_dia`. AN3 é calculada no ETL a partir dos horários originais e gravada em `fato_an3_medico_unidade_tipo_dia`, no grão pessoa/CPF × dia × unidade × tipo. O sinal AN3 é o pico de emissões em janela móvel de 5 minutos contendo pelo menos dois pacientes distintos; não há corte mínimo fixo de documentos. O drill-down usa `fato_an3_emissao_detalhe`, com data/hora apenas dos documentos que participam dessas janelas.
 
 Para AN1, AN2 e AN4, a média de referência (quando aplicável) é o valor agregado de todos os médicos no mesmo período; AN3 usa frequência e intervalos da própria pessoa, sem média populacional.
 
@@ -468,14 +468,14 @@ Para AN1, AN2 e AN4, a média de referência (quando aplicável) é o valor agre
 |---|---|---|---|
 | AN1 | Maiores emissores de documentos medicos | Ranking decrescente de medicos por quantidade de documentos do tipo selecionado, no periodo e UF | - |
 | AN2 | Atendimentos de pacientes unicos | Ranking decrescente de medicos por `count(DISTINCT id_paciente)` no periodo (fato `fato_documento_medico_paciente_dia`); sem media de referencia (decisao 2026-09-28) | - |
-| AN3 | Emissões de documentos em alta frequência | Por pessoa/CPF, calcula o pico móvel de documentos em 60 segundos e a proporção de intervalos de até 5 segundos, preservando instituição/unidade da emissão. Candidato: mínimo de 20 documentos e (pico ≥10/60s ou ≥5 gaps curtos que sejam ≥10% dos intervalos). A lista é ordenada pelo pico/60s. | Triagem; não confirma automação |
+| AN3 | Emissões de documentos em alta frequência | Por pessoa/CPF, calcula o maior pico móvel de documentos em 300 segundos, preservando instituição/unidade. A janela só é elegível quando contém pelo menos dois pacientes distintos; não há mínimo adicional de documentos. Com tipo selecionado, a janela é restrita ao tipo. A lista é ordenada pelo pico multi-paciente/5 min, do maior para o menor. | Triagem; não confirma automação |
 | AN4 | Documentos emitidos pelo local acima da media | Volume do local de atendimento comparado a media de todos os locais (que reflete todos os medicos) | 2x/3x/5x o desvio |
 
 Fluxo da aba:
 
 1. Usuario escolhe o tipo de anomalia, periodo, UF, tipo de documento e quantidade de registros.
 2. Clica em "Pesquisar" para disparar a consulta (a view nao carrega automaticamente).
-3. AN1 exibe o ranking de médicos; ao clicar na linha (ícone circular "›"), abre um drill-down com: donut de documentos por tipo (quantidade e % do total), evolução mensal (acumulado x mês), especialidades, situação/tipo de inscrição e total no período — tudo lido do datamart (`fato_documento_medico_tipo_dia` + dimensões). AN2 exibe ranking de médicos por pacientes únicos no período; o drill-down mostra pacientes distintos por mês, especialidades, situação/tipo de inscrição e o total de pacientes distintos (`fato_documento_medico_paciente_dia`). AN3 exibe uma tabela de pessoas/CPF ordenada pelo pico móvel de emissões em 60 segundos, com volume, gaps curtos e instituição/CNES da unidade associada ao pico; o botão de detalhe lista somente eventos sinalizados, em sequência, com data/hora, intervalo anterior e motivo do sinal. A tabela respeita o limite do combo "Registros". AN4 permanece "em breve".
+3. AN1 exibe o ranking de médicos; ao clicar na linha (ícone circular "›"), abre um drill-down com: donut de documentos por tipo (quantidade e % do total), evolução mensal (acumulado x mês), especialidades, situação/tipo de inscrição e total no período — tudo lido do datamart (`fato_documento_medico_tipo_dia` + dimensões). AN2 exibe ranking de médicos por pacientes únicos no período; o drill-down mostra pacientes distintos por mês, especialidades, situação/tipo de inscrição e o total de pacientes distintos (`fato_documento_medico_paciente_dia`). AN3 exibe pessoas/CPF ordenadas pelo maior pico de documentos em janela móvel de 5 minutos com pacientes distintos; o botão de detalhe lista os eventos da janela, em sequência, com data/hora e volume da janela, sem identificar paciente. A tabela respeita o limite do combo "Registros". AN4 permanece "em breve".
 
 Observacoes gerais:
 - Todas as consultas de tela leem apenas o datamart `prescricao_dw`; nenhuma consulta direta na origem `bd_cfm`.

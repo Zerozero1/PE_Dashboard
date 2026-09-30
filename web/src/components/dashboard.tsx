@@ -37,16 +37,14 @@ type AudAn3Row = {
   cnes: string | null;
   uf: string;
   documentos: string;
-  pico_60s: string;
-  pct_intervalos_ate_5s: string | null;
-  intervalos_ate_5s: string;
+  pico_5min: string;
   unidades: number;
 };
 
 type AudAn3Detail = {
   id_pessoa: number;
   medico: { nome: string | null; inscricoes: string | null };
-  eventos: { sequencia: number; data_hora: string; crm: string; crm_uf: string; tipo: string; instituicao: string; cnes: string | null; id_unidade_atendimento: number; uf: string; intervalo_seg: string | null; docs_60s: string; sinal: string }[];
+  eventos: { sequencia: number; data_hora: string; crm: string; crm_uf: string; tipo: string; instituicao: string; cnes: string | null; id_unidade_atendimento: number; uf: string; intervalo_seg: string | null; docs_5min: string; sinal: string }[];
   total_eventos: number;
   eventos_truncados: boolean;
 };
@@ -801,7 +799,7 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
         <article className="card" style={{ gridColumn: "span 12" }}>
           <div className="section-title">
             <h2>AN3 · Emissões de documentos em alta frequência</h2>
-            <span>ordenado pelo maior número de documentos em 60 s · limite {limite}</span>
+            <span>ordenado pelo maior pico multi-paciente em 5 min · limite {limite}</span>
           </div>
           <div className="uf-scroll" style={{ overflowX: "auto" }}>
             <table className="table">
@@ -809,8 +807,7 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
                 <tr>
                   <th>#</th><th>Inscrição(ões)</th><th>Nome</th><th>Instituição do pico</th><th>UF</th><th>Instituições</th>
                   <th style={{ textAlign: "right" }}>Documentos</th>
-                  <th style={{ textAlign: "right" }}>Pico/60 s</th>
-                  <th style={{ textAlign: "right" }}>Intervalos ≤5 s</th>
+                  <th style={{ textAlign: "right" }}>Pico/5 min<br />(≥2 pacientes)</th>
                   <th style={{ textAlign: "right" }}>Detalhe</th>
                 </tr>
               </thead>
@@ -824,8 +821,7 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
                     <td>{r.uf ?? "—"}</td>
                     <td style={{ textAlign: "right" }}>{nf.format(Number(r.unidades))}</td>
                     <td style={{ textAlign: "right" }}>{nf.format(Number(r.documentos))}</td>
-                    <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.pico_60s))}</td>
-                    <td style={{ textAlign: "right" }}>{r.pct_intervalos_ate_5s === null ? "—" : `${Number(r.pct_intervalos_ate_5s).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`}</td>
+                    <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.pico_5min))}</td>
                     <td style={{ textAlign: "right" }}>
                       <button
                         type="button"
@@ -839,16 +835,15 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
                   </tr>
                 ))}
                 {(data.an3 ?? []).length === 0 && (
-                  <tr><td colSpan={10} style={{ color: "#566271", textAlign: "center" }}>Sem emissões que atendam aos critérios no período/filtros.</td></tr>
+                  <tr><td colSpan={9} style={{ color: "#566271", textAlign: "center" }}>Sem emissões que atendam aos critérios no período/filtros.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
           <div className="sub" style={{ marginTop: 10, display: "grid", gap: 4 }}>
             <div><b>Documentos:</b> total no período/filtros. <b>Instituições:</b> CNES distintos ou unidades sem CNES associadas às emissões.</div>
-            <div><b>Pico/60 s:</b> maior quantidade em qualquer janela móvel de 60 segundos; com tipo selecionado, considera somente esse tipo.</div>
-            <div><b>Intervalos ≤5 s:</b> percentual entre emissões consecutivas com intervalo de até cinco segundos; com tipo selecionado, compara esse tipo.</div>
-            <div>Sinalização inicial: mínimo de 20 documentos e pico de 10+ em 60 s ou pelo menos 5 intervalos curtos que representem 10% ou mais. É um alerta para revisão, não uma confirmação de automação.</div>
+            <div><b>Pico/5 min:</b> maior quantidade de documentos em qualquer janela móvel de cinco minutos que inclua pelo menos dois pacientes distintos; com tipo selecionado, considera somente esse tipo.</div>
+            <div>Não há corte mínimo fixo de documentos; os médicos são ordenados pelo maior pico multi-paciente/5 min. A AN3 é um alerta para revisão, não uma prova de automação.</div>
           </div>
         </article>
       )}
@@ -925,7 +920,7 @@ function An3Drill({ row, data, erro, carregando, onClose }: {
       {!carregando && !erro && data && (
         <>
           <div className="sub" style={{ marginBottom: 10 }}>
-            {nf.format(data.total_eventos)} eventos sinalizados{data.eventos_truncados ? " · exibindo os 1.000 primeiros" : ""}. São mostrados somente documentos com intervalo ≤5 s ou em janela com 10+ documentos/60 s; data/hora conforme registrada na origem, sem conversão de fuso.
+            {nf.format(data.total_eventos)} eventos sinalizados{data.eventos_truncados ? " · exibindo os 1.000 primeiros" : ""}. São mostrados documentos em janelas móveis de 5 min com pelo menos dois pacientes distintos; data/hora conforme registrada na origem, sem conversão de fuso.
           </div>
           <div className="uf-scroll" style={{ overflowX: "auto" }}>
             <table className="table">
@@ -933,7 +928,7 @@ function An3Drill({ row, data, erro, carregando, onClose }: {
                 <tr>
                   <th>#</th><th>Data/hora</th><th>Inscrição</th><th>Documento</th><th>Instituição</th><th>UF</th>
                   <th style={{ textAlign: "right" }}>Intervalo anterior</th>
-                  <th style={{ textAlign: "right" }}>Docs/60 s</th>
+                  <th style={{ textAlign: "right" }}>Docs/5 min</th>
                   <th>Sinal</th>
                 </tr>
               </thead>
@@ -947,12 +942,12 @@ function An3Drill({ row, data, erro, carregando, onClose }: {
                     <td>{r.cnes ? `${r.instituicao} · CNES ${r.cnes}` : `${r.instituicao} · Unidade ${r.id_unidade_atendimento} · sem CNES`}</td>
                     <td>{r.uf}</td>
                     <td style={{ textAlign: "right" }}>{r.intervalo_seg === null ? "—" : `${Number(r.intervalo_seg).toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 })} s`}</td>
-                    <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.docs_60s))}</td>
+                    <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.docs_5min))}</td>
                     <td>{r.sinal}</td>
                   </tr>
                 ))}
                 {data.eventos.length === 0 && (
-                  <tr><td colSpan={9} style={{ color: "#566271", textAlign: "center" }}>Nenhum evento anômalo encontrado no período/filtros.</td></tr>
+                  <tr><td colSpan={9} style={{ color: "#566271", textAlign: "center" }}>Nenhum evento detalhado no período/filtros (o detalhamento cobre picos ≥10 documentos/5 min).</td></tr>
                 )}
               </tbody>
             </table>

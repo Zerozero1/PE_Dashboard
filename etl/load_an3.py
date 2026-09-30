@@ -14,7 +14,10 @@ COLUMNS = [
     "dia", "id_pessoa", "sg_uf", "id_unidade_atendimento",
     "id_tipo_documento", "documentos", "intervalos", "intervalos_ate_5s",
     "max_docs_60s", "intervalos_tipo", "intervalos_tipo_ate_5s",
-    "max_docs_60s_tipo",
+    "max_docs_60s_tipo", "intervalos_ate_5s_entre_pacientes",
+    "max_docs_60s_multi_paciente", "intervalos_tipo_ate_5s_entre_pacientes",
+    "max_docs_60s_tipo_multi_paciente", "max_docs_300s_multi_paciente",
+    "max_docs_300s_tipo_multi_paciente",
 ]
 
 SQL_AN3 = """
@@ -27,6 +30,7 @@ WITH medicos AS MATERIALIZED (
          d.dh_documento,
          d.dh_documento::date AS dia,
          m.id_pessoa,
+         mp.id_paciente,
          d.id_tipo_documento,
          mu.id_unidade_atendimento,
          COALESCE(NULLIF(ua.sg_uf, 'BR'), '--') AS sg_uf
@@ -35,43 +39,92 @@ WITH medicos AS MATERIALIZED (
       ON mu.id_medico = m.id_medico
     JOIN prescricao.tb_consulta c
       ON c.id_medico_unidade_atendimento = mu.id_medico_unidade_atendimento
+    LEFT JOIN prescricao.rl_medico_paciente mp
+      ON mp.id_medico_paciente = c.id_medico_paciente
+     AND mp.id_medico = m.id_medico
     JOIN prescricao.tb_consulta_documento d
       ON d.id_consulta = c.id_consulta
     LEFT JOIN prescricao.tb_unidade_atendimento ua
       ON ua.id_unidade_atendimento = mu.id_unidade_atendimento
    WHERE d.in_cancelado IS DISTINCT FROM 'S'
- ), sequencia AS (
-  SELECT *,
-         extract(epoch FROM dh_documento - lag(dh_documento) OVER (
-           PARTITION BY id_pessoa
-           ORDER BY dh_documento, id_consulta_documento
-         )) AS gap_pessoa_seg,
-         extract(epoch FROM dh_documento - lag(dh_documento) OVER (
-           PARTITION BY id_pessoa, id_tipo_documento
-           ORDER BY dh_documento, id_consulta_documento
-         )) AS gap_tipo_seg,
-         count(*) OVER (
-           PARTITION BY id_pessoa
-           ORDER BY dh_documento
-           RANGE BETWEEN INTERVAL '60 seconds' PRECEDING AND CURRENT ROW
-         ) AS docs_60s,
-         count(*) OVER (
-           PARTITION BY id_pessoa, id_tipo_documento
-           ORDER BY dh_documento
-           RANGE BETWEEN INTERVAL '60 seconds' PRECEDING AND CURRENT ROW
-         ) AS docs_60s_tipo
-    FROM eventos
-)
-SELECT dia, id_pessoa, sg_uf, id_unidade_atendimento, id_tipo_documento,
-       count(*) AS documentos,
-       count(gap_pessoa_seg) AS intervalos,
-       count(*) FILTER (WHERE gap_pessoa_seg BETWEEN 0 AND 5) AS intervalos_ate_5s,
-       max(docs_60s) AS max_docs_60s,
-       count(gap_tipo_seg) AS intervalos_tipo,
-       count(*) FILTER (WHERE gap_tipo_seg BETWEEN 0 AND 5) AS intervalos_tipo_ate_5s,
-       max(docs_60s_tipo) AS max_docs_60s_tipo
-  FROM sequencia
- GROUP BY dia, id_pessoa, sg_uf, id_unidade_atendimento, id_tipo_documento
+), sequencia AS (
+   SELECT *,
+          extract(epoch FROM dh_documento - lag(dh_documento) OVER pessoa) AS gap_pessoa_seg,
+          lag(id_paciente) OVER pessoa AS paciente_anterior_pessoa,
+          extract(epoch FROM dh_documento - lag(dh_documento) OVER tipo) AS gap_tipo_seg,
+          lag(id_paciente) OVER tipo AS paciente_anterior_tipo,
+          count(*) OVER pessoa_60s AS docs_60s,
+          min(id_paciente) OVER pessoa_60s AS min_paciente_60s,
+          max(id_paciente) OVER pessoa_60s AS max_paciente_60s,
+          count(*) OVER tipo_60s AS docs_60s_tipo,
+          min(id_paciente) OVER tipo_60s AS min_paciente_60s_tipo,
+          max(id_paciente) OVER tipo_60s AS max_paciente_60s_tipo,
+          count(*) OVER pessoa_300s AS docs_300s,
+          min(id_paciente) OVER pessoa_300s AS min_paciente_300s,
+          max(id_paciente) OVER pessoa_300s AS max_paciente_300s,
+          count(*) OVER tipo_300s AS docs_300s_tipo,
+          min(id_paciente) OVER tipo_300s AS min_paciente_300s_tipo,
+          max(id_paciente) OVER tipo_300s AS max_paciente_300s_tipo
+     FROM eventos
+    WINDOW pessoa AS (
+             PARTITION BY id_pessoa
+             ORDER BY dh_documento, id_consulta_documento
+           ),
+           tipo AS (
+             PARTITION BY id_pessoa, id_tipo_documento
+             ORDER BY dh_documento, id_consulta_documento
+           ),
+           pessoa_60s AS (
+             PARTITION BY id_pessoa
+             ORDER BY dh_documento
+             RANGE BETWEEN INTERVAL '60 seconds' PRECEDING AND CURRENT ROW
+           ),
+           tipo_60s AS (
+             PARTITION BY id_pessoa, id_tipo_documento
+             ORDER BY dh_documento
+             RANGE BETWEEN INTERVAL '60 seconds' PRECEDING AND CURRENT ROW
+           ),
+           pessoa_300s AS (
+             PARTITION BY id_pessoa
+             ORDER BY dh_documento
+             RANGE BETWEEN INTERVAL '300 seconds' PRECEDING AND CURRENT ROW
+           ),
+           tipo_300s AS (
+             PARTITION BY id_pessoa, id_tipo_documento
+             ORDER BY dh_documento
+             RANGE BETWEEN INTERVAL '300 seconds' PRECEDING AND CURRENT ROW
+           )
+ )
+ SELECT dia, id_pessoa, sg_uf, id_unidade_atendimento, id_tipo_documento,
+        count(*) AS documentos,
+        count(gap_pessoa_seg) AS intervalos,
+        count(*) FILTER (WHERE gap_pessoa_seg BETWEEN 0 AND 5) AS intervalos_ate_5s,
+        max(docs_60s) AS max_docs_60s,
+        count(gap_tipo_seg) AS intervalos_tipo,
+        count(*) FILTER (WHERE gap_tipo_seg BETWEEN 0 AND 5) AS intervalos_tipo_ate_5s,
+        max(docs_60s_tipo) AS max_docs_60s_tipo,
+        count(*) FILTER (
+          WHERE gap_pessoa_seg BETWEEN 0 AND 5
+            AND id_paciente IS NOT NULL
+            AND paciente_anterior_pessoa IS NOT NULL
+            AND id_paciente <> paciente_anterior_pessoa
+        ) AS intervalos_ate_5s_entre_pacientes,
+        max(CASE WHEN min_paciente_60s <> max_paciente_60s THEN docs_60s ELSE 0 END)
+          AS max_docs_60s_multi_paciente,
+        count(*) FILTER (
+          WHERE gap_tipo_seg BETWEEN 0 AND 5
+            AND id_paciente IS NOT NULL
+            AND paciente_anterior_tipo IS NOT NULL
+            AND id_paciente <> paciente_anterior_tipo
+        ) AS intervalos_tipo_ate_5s_entre_pacientes,
+        max(CASE WHEN min_paciente_60s_tipo <> max_paciente_60s_tipo THEN docs_60s_tipo ELSE 0 END)
+          AS max_docs_60s_tipo_multi_paciente,
+        max(CASE WHEN min_paciente_300s <> max_paciente_300s THEN docs_300s ELSE 0 END)
+          AS max_docs_300s_multi_paciente,
+        max(CASE WHEN min_paciente_300s_tipo <> max_paciente_300s_tipo THEN docs_300s_tipo ELSE 0 END)
+          AS max_docs_300s_tipo_multi_paciente
+   FROM sequencia
+  GROUP BY dia, id_pessoa, sg_uf, id_unidade_atendimento, id_tipo_documento
 """
 
 
