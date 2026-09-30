@@ -1,5 +1,7 @@
 # PE Dashboard — Aplicação Web
 
+**Versão: v1.1** (2026-09-30)
+
 Frontend/API do PE Dashboard: monolito Next.js 16 (App Router, TypeScript) que consome o datamart `prescricao_dw`.
 
 ## Executar em desenvolvimento
@@ -39,9 +41,13 @@ Sem as credenciais do Google, o modo `development` usa sessão mock (`mrichard@p
 | `GET /api/filtros` | UFs e tipos de documento para os filtros |
 | `GET /api/dashboard/documentos` | KPIs, série mensal, origem de criação por mês (`serie_origem`), por tipo, por UF, ranking de especialidades (`de`, `ate`, `uf`, `tipo`) |
 | `GET /api/dashboard/medicos` | KPIs snapshot, novos por mês, por UF, inatividade por faixa (`de`, `ate`, `uf`) |
-| `GET /api/dashboard/auditoria` | Ranking de médicos por anomalia (`anomalia`): AN1 "Maiores emissores" (`de`, `ate`, `uf`, `tipo`, `limite`) — `count` de documentos; AN2 "Atendimentos de pacientes únicos" (`de`, `ate`, `uf`, `limite`) — `count(DISTINCT id_paciente)`. `limite` clamp 1–500, default 20 |
-| `GET /api/dashboard/auditoria/medico` | Drill-down de um médico (`id_medico`, `anomalia`, `de`, `ate`, `uf`): AN1 → docs por tipo (donut) + série mensal; AN2 → pacientes distintos por mês + `total_pacientes` no período; ambos incluem especialidades e dados do médico |
+| `GET /api/dashboard/auditoria` | Ranking de médicos por anomalia (`anomalia`): AN1 "Maiores emissores" (`de`, `ate`, `uf`, `tipo`, `limite`) — `count` de documentos; AN2 "Atendimentos de pacientes únicos" (`de`, `ate`, `uf`, `limite`) — `count(DISTINCT id_paciente)`; AN3 "Emissões de documentos em um dia" (`de`, `ate`, `uf`, `limite`) — maior dia em documentos assinados, ordenado por documentos do dia; sem `de`/`ate` usa o melhor dia do histórico (`fato_medico_maior_dia`). `limite` clamp 1–500, default 20 |
+| `GET /api/dashboard/auditoria/medico` | Drill-down (`id_medico`, `anomalia`): AN1 → docs por tipo (donut) + série mensal + especialidades; AN2 → pacientes distintos por mês + `total_pacientes`; AN3 (`id_medico`, `dia`) → resumo do dia (assinados/pacientes), mix por tipo e lista de documentos assinados (`ds_qrcode`, data/hora, tipo, instituição, UF e situação; até 1.000) |
 | `POST /api/admin/refresh-jobs` | Enfileira job manual no `dashboard_refresh_job` (botão "Atualizar dados") |
+| `GET /api/admin/refresh-jobs/latest` | Último job da fila (status da carga exibido no cabeçalho) |
+| `GET` / `PUT /api/admin/refresh-config` | Horário da carga diária (restrito a `mrichard@portalmedico.org.br`) |
+| `GET /api/admin/logs` | Visão "Logs" (admin): acessos (logins) e atualizações (jobs) |
+| `POST /api/admin/logs/clear` | Limpeza dos logs por alvo (`{alvo: acessos\|jobs}`), restrita ao admin |
 
 ## Estrutura
 

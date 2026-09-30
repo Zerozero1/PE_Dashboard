@@ -1,5 +1,6 @@
 # Plano de Desenvolvimento - PE Dashboard
-_Atualizado em: 2026-09-21_
+**Versão do produto: v1.1** (2026-09-30)
+_Atualizado em: 2026-09-30_
 
 ## 1. Objetivo
 
@@ -460,7 +461,7 @@ Notas:
 
 A aba Auditoria usa fatos agregadas do datamart; a AN3 usa a fato do maior dia por médico/UF (`fato_medico_maior_dia`). Nao ha auditoria do uso do dashboard (decisao 2026-09-21): as consultas executadas na aba nao sao registradas.
 
-AN1, AN2 e AN4 mantêm flags agregadas em `fato_auditoria_dia`. A AN3 é derivada no ETL dentro do próprio DW e gravada em `fato_medico_maior_dia` (id_medico × UF → melhor dia em documentos assinados, e pacientes distintos do dia), a partir de `fato_documento_emissao` e `fato_documento_medico_paciente_dia`; a janela de 5 min foi descontinuada em 2026-09-30. Documentos não assinados são desprezados na AN3. O drill-down lê `fato_documento_emissao` (mix por tipo e lista de documentos assinados com QR code), sem identificador de paciente nem conteúdo.
+AN1, AN2 e AN4 mantêm flags agregadas em `fato_auditoria_dia`. A AN3 é derivada no ETL dentro do próprio DW e gravada em `fato_medico_maior_dia` (id_medico × UF → melhor dia em documentos assinados, e pacientes distintos do dia), a partir de `fato_documento_emissao` e `fato_documento_medico_paciente_dia`; a janela de 5 min foi descontinuada em 2026-09-30 (tabelas e scripts removidos). Documentos não assinados são desprezados na AN3. O drill-down lê `fato_documento_emissao` (mix por tipo e lista de documentos assinados com QR code), sem identificador de paciente nem conteúdo.
 
 Para AN1, AN2 e AN4, a média de referência (quando aplicável) é o valor agregado de todos os médicos no mesmo período; a AN3 compara o maior dia de emissão do próprio médico, sem média populacional.
 

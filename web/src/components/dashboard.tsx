@@ -1284,7 +1284,7 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
           </section>
         )}
         <div className="footer">
-          <span>PE Dashboard · CFM v1.0</span>
+          <span>PE Dashboard · CFM v1.1</span>
           <span>Datamart prescricao_dw · última carga: {health?.job?.finalizado_em ? new Date(health.job.finalizado_em).toLocaleString("pt-BR") : "—"}</span>
         </div>
       </main>

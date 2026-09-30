@@ -80,10 +80,6 @@ FROM agregado
 
 def main():
     dw = connect_dw()
-    cur = dw.cursor()
-    cur.execute("DELETE FROM prescricao.fato_auditoria_dia WHERE tipo_anomalia = 'AN3'")
-    dw.commit()
-    cur.close()
     log("fato_auditoria_dia: iniciando (AN1, AN2 e AN4)")
     run(dw, SQL_AN1, "AN1", "Documentos")
     run(dw, SQL_AN2, "AN2", "Atendimentos")
