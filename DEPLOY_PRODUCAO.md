@@ -13,12 +13,12 @@ em um datamart próprio (`prescricao_dw`) que alimenta três visões:
 - **Documentos médicos** — emissões por período/UF/tipo/especialidade, origem de criação
 - **Médicos** — inscrições cadastradas (CRM/UF), médicos cadastrados (CPF), novos por
   aceite do termo, inatividade por faixa de dias sem emissão
-- **Auditoria** — rankings AN1/AN2/AN3 (AN4 em construção); o drill-down AN3 mostra somente metadados das emissões sinalizadas, sem dados de pacientes ou conteúdo de documentos
+- **Auditoria** — rankings AN1/AN2/AN3 (AN4 em construção); o drill-down AN3 mostra o dia (documentos, pacientes distintos, mix por tipo e UFs), sem dados de pacientes ou conteúdo de documentos
 
 Restrições de negócio já definidas: sem exportação CSV/Excel, sem auditoria do uso do
 dashboard e sem nomes de pacientes ou conteúdo de documentos. Os rankings de auditoria
-identificam médicos por nome e inscrição; o detalhe AN3 apresenta data/hora, tipo, inscrição
-e unidade somente para eventos que satisfazem os critérios de alta frequência.
+identificam médicos por nome e inscrição; o detalhe AN3 apresenta o maior dia de emissões
+(documentos, pacientes distintos, mix por tipo e UFs), sem identificador de paciente.
 
 ## 2. Componentes e topologia
 
@@ -199,9 +199,9 @@ python setup.py          # cria estrutura (idempotente)
 python run_all.py        # carga completa; medir duração no ambiente alvo
 ```
 
-O pipeline calcula a AN3 em faixas de pessoa/CPF e carrega separadamente os eventos
-sinalizados para o drill-down (`fato_an3_emissao_detalhe`). A origem é somente leitura;
-as consultas temporais são feitas pelo ETL, não pelo servidor web.
+A AN3 (maior dia por médico) é derivada dentro do DW (`fato_medico_maior_dia`, passo
+`load_maior_dia.py`), sem varredura da origem. A origem é somente leitura; as consultas
+temporais são feitas pelo ETL, não pelo servidor web.
 
 ### 5.4 Agendamento (Task Scheduler)
 Dois agendamentos permanentes na máquina do ETL:

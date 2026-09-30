@@ -7,13 +7,10 @@ export async function GET(req: NextRequest) {
   const url = req.nextUrl;
   const idMedicoRaw = Number(url.searchParams.get("id_medico"));
   const idMedico = Number.isInteger(idMedicoRaw) ? idMedicoRaw : null;
-  const idPessoaRaw = Number(url.searchParams.get("id_pessoa"));
-  const idPessoa = Number.isInteger(idPessoaRaw) ? idPessoaRaw : null;
   const anomalia = url.searchParams.get("anomalia") ?? "AN1";
   const ate = url.searchParams.get("ate") ?? new Date().toISOString().slice(0, 10);
   const de = url.searchParams.get("de") ?? new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
   const uf = url.searchParams.get("uf") || null;
-  const tipo = url.searchParams.get("tipo") || null;
 
   try {
     if (anomalia === "AN3") {
@@ -22,75 +19,57 @@ export async function GET(req: NextRequest) {
       if (!session?.user?.email && !devMock) {
         return NextResponse.json({ erro: "Não autenticado" }, { status: 401 });
       }
-      if (idPessoa === null || idPessoa <= 0) {
-        return NextResponse.json({ erro: "id_pessoa invalido" }, { status: 400 });
+      if (idMedico === null || idMedico <= 0) {
+        return NextResponse.json({ erro: "id_medico invalido" }, { status: 400 });
+      }
+      const dia = url.searchParams.get("dia");
+      if (!dia || !/^\d{4}-\d{2}-\d{2}$/.test(dia)) {
+        return NextResponse.json({ erro: "dia invalido" }, { status: 400 });
       }
 
-      const [medico, eventos] = await Promise.all([
+      const medicoQ = await query(
+        `SELECT m.nm_medico AS nome, m.nu_crm AS crm, m.sg_uf AS crm_uf
+           FROM prescricao.dim_medico m
+          WHERE m.id_medico = $1`,
+        [idMedico]
+      );
+
+      const [resumo, porTipo, porUf] = await Promise.all([
         query(
-          `SELECT max(nm_medico) AS nome,
-                  string_agg(
-                    DISTINCT (nu_crm || '/' || btrim(sg_uf)),
-                    ', ' ORDER BY (nu_crm || '/' || btrim(sg_uf))
-                  ) AS inscricoes
-             FROM prescricao.dim_medico
-            WHERE id_pessoa = $1`,
-          [idPessoa]
+          `SELECT COALESCE(sum(f.documentos), 0)::bigint AS documentos,
+                  COALESCE((SELECT count(DISTINCT p.id_paciente)
+                              FROM prescricao.fato_documento_medico_paciente_dia p
+                             WHERE p.id_medico = $1 AND p.dia = $2), 0)::bigint AS pacientes
+             FROM prescricao.fato_documento_medico_dia f
+            WHERE f.id_medico = $1 AND f.dia = $2`,
+          [idMedico, dia]
         ),
         query(
-          `WITH sinais AS (
-             SELECT f.id_consulta_documento, f.dh_documento,
-                    m.nu_crm AS crm, m.sg_uf AS crm_uf,
-                    t.nm_documento AS tipo,
-                    COALESCE(NULLIF(u.nm_unidade, ''), 'UNIDADE:' || f.id_unidade_atendimento::text) AS instituicao,
-                     NULLIF(u.co_cnes, '') AS cnes,
-                     f.id_unidade_atendimento,
-                    f.sg_uf AS uf,
-                    CASE WHEN $5::int IS NULL THEN f.gap_pessoa_seg ELSE f.gap_tipo_seg END AS intervalo_seg,
-                    CASE WHEN $5::int IS NULL THEN f.docs_300s ELSE f.docs_300s_tipo END AS docs_5min,
-                    'janela 5 min · pacientes distintos' AS sinal
-               FROM prescricao.fato_an3_emissao_detalhe f
-               JOIN prescricao.dim_medico m ON m.id_medico = f.id_medico
-               JOIN prescricao.dim_tipo_documento t ON t.id_tipo_documento = f.id_tipo_documento
-               LEFT JOIN prescricao.dim_unidade u ON u.id_unidade_atendimento = f.id_unidade_atendimento
-              WHERE f.id_pessoa = $1
-                AND f.dh_documento >= $2::date
-                 AND f.dh_documento < ($3::date + interval '1 day')
-                  AND ($4::text IS NULL OR f.sg_uf = $4)
-                  AND ($5::int IS NULL OR f.id_tipo_documento = $5)
-                 AND (($5::int IS NULL AND (
-                         f.docs_300s >= 2 AND f.janela_pessoa_mult_paciente_300s
-                      ))
-                   OR ($5::int IS NOT NULL AND (
-                         f.docs_300s_tipo >= 2 AND f.janela_tipo_mult_paciente_300s
-                      )))
-           ), pagina AS (
-             SELECT row_number() OVER (ORDER BY dh_documento, id_consulta_documento)::int AS sequencia,
-                    to_char(dh_documento, 'YYYY-MM-DD HH24:MI:SS.MS') AS data_hora,
-                    crm, crm_uf, tipo, instituicao, cnes, id_unidade_atendimento, uf,
-                     intervalo_seg, docs_5min, sinal,
-                    count(*) OVER() AS total_eventos
-               FROM sinais
-           )
-          SELECT sequencia, data_hora, crm, crm_uf, tipo, instituicao, cnes,
-                 id_unidade_atendimento, uf, intervalo_seg, docs_5min, sinal,
-                total_eventos
-           FROM pagina
-          ORDER BY sequencia
-          LIMIT $6`,
-          [idPessoa, de, ate, uf, tipo, 1000]
+          `SELECT t.nm_documento AS tipo, sum(f.documentos)::bigint AS documentos
+             FROM prescricao.fato_documento_medico_tipo_dia f
+             JOIN prescricao.dim_tipo_documento t ON t.id_tipo_documento = f.id_tipo_documento
+            WHERE f.id_medico = $1 AND f.dia = $2
+            GROUP BY t.nm_documento
+            ORDER BY documentos DESC`,
+          [idMedico, dia]
+        ),
+        query(
+          `SELECT f.sg_uf AS uf, sum(f.documentos)::bigint AS documentos
+             FROM prescricao.fato_documento_medico_dia f
+            WHERE f.id_medico = $1 AND f.dia = $2
+            GROUP BY f.sg_uf
+            ORDER BY documentos DESC`,
+          [idMedico, dia]
         ),
       ]);
 
-      const totalEventos = Number(eventos.rows[0]?.total_eventos ?? 0);
-      const eventosSemTotal = eventos.rows.map(({ total_eventos: _total, ...row }) => row);
-
       return NextResponse.json({
-        id_pessoa: idPessoa,
-        medico: medico.rows[0] ?? { nome: null, inscricoes: null },
-        eventos: eventosSemTotal,
-        total_eventos: totalEventos,
-        eventos_truncados: totalEventos > eventos.rows.length,
+        id_medico: idMedico,
+        dia,
+        medico: medicoQ.rows[0] ?? { nome: null, crm: null, crm_uf: null },
+        resumo: resumo.rows[0] ?? { documentos: "0", pacientes: "0" },
+        por_tipo: porTipo.rows,
+        por_uf: porUf.rows,
       });
     }
 

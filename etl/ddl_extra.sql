@@ -293,3 +293,23 @@ CREATE TABLE IF NOT EXISTS prescricao.stg_documento_medico_paciente_dia (
     id_paciente INTEGER NOT NULL,
     PRIMARY KEY (dia, sg_uf, id_medico, id_paciente)
 );
+
+CREATE TABLE IF NOT EXISTS prescricao.stg_medico_maior_dia (
+    id_medico INTEGER NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    dia DATE NOT NULL,
+    documentos BIGINT NOT NULL,
+    pacientes BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS prescricao.fato_medico_maior_dia (
+    id_medico INTEGER NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    dia DATE NOT NULL,
+    documentos BIGINT NOT NULL,
+    pacientes BIGINT NOT NULL,
+    PRIMARY KEY (id_medico, sg_uf)
+);
+
+CREATE INDEX IF NOT EXISTS idx_medico_maior_dia_docs
+    ON prescricao.fato_medico_maior_dia (documentos DESC);

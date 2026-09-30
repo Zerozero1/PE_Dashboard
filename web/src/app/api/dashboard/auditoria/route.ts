@@ -46,62 +46,50 @@ export async function GET(req: NextRequest) {
     }
 
     if (anomalia === "AN3") {
+      const deRaw = url.searchParams.get("de");
+      const ateRaw = url.searchParams.get("ate");
+      if (deRaw && ateRaw) {
+        const rows = await query(
+          `WITH por_dia AS (
+             SELECT id_medico, dia, sum(documentos)::bigint AS documentos
+               FROM prescricao.fato_documento_medico_dia
+              WHERE dia BETWEEN $1 AND $2
+                AND ($3::text IS NULL OR sg_uf = $3)
+              GROUP BY id_medico, dia
+           ), melhor AS (
+             SELECT DISTINCT ON (id_medico) id_medico, dia, documentos
+               FROM por_dia ORDER BY id_medico, documentos DESC, dia
+           )
+           SELECT b.id_medico, m.nu_crm AS crm, m.sg_uf AS crm_uf, m.nm_medico AS nome,
+                  to_char(b.dia, 'YYYY-MM-DD') AS dia, b.documentos,
+                  COALESCE((SELECT count(DISTINCT p.id_paciente)
+                              FROM prescricao.fato_documento_medico_paciente_dia p
+                             WHERE p.id_medico = b.id_medico AND p.dia = b.dia
+                               AND ($3::text IS NULL OR p.sg_uf = $3)), 0)::bigint AS pacientes
+             FROM melhor b
+             JOIN prescricao.dim_medico m ON m.id_medico = b.id_medico
+            ORDER BY b.documentos DESC, pacientes DESC
+            LIMIT $4`,
+          [deRaw, ateRaw, uf, limite]
+        );
+        return NextResponse.json({ de: deRaw, ate: ateRaw, an3: rows.rows });
+      }
       const rows = await query(
-        `WITH pessoa_unidade AS (
-           SELECT f.id_pessoa,
-                  COALESCE('CNES:' || NULLIF(u.co_cnes, ''), 'UNIDADE:' || f.id_unidade_atendimento::text) AS instituicao_key,
-                   NULLIF(u.co_cnes, '') AS cnes,
-                   MAX(NULLIF(u.nm_unidade, '')) AS instituicao,
-                   MAX(f.sg_uf) AS uf,
-                   sum(f.documentos)::bigint AS documentos,
-                   max(CASE WHEN $4::int IS NULL THEN f.max_docs_300s_multi_paciente ELSE f.max_docs_300s_tipo_multi_paciente END)::bigint AS pico_5min
-             FROM prescricao.fato_an3_medico_unidade_tipo_dia f
-             LEFT JOIN prescricao.dim_unidade u ON u.id_unidade_atendimento = f.id_unidade_atendimento
-            WHERE f.dia BETWEEN $1 AND $2
-              AND ($3::text IS NULL OR f.sg_uf = $3)
-              AND ($4::int IS NULL OR f.id_tipo_documento = $4)
-            GROUP BY f.id_pessoa,
-                     COALESCE('CNES:' || NULLIF(u.co_cnes, ''), 'UNIDADE:' || f.id_unidade_atendimento::text),
-                     NULLIF(u.co_cnes, '')
-         ), por_pessoa AS (
-            SELECT id_pessoa,
-                   sum(documentos)::bigint AS documentos,
-                   max(pico_5min)::bigint AS pico_5min,
-                   count(*)::int AS unidades
-             FROM pessoa_unidade
-            GROUP BY id_pessoa
-         ), candidatos AS (
-            SELECT *
-              FROM por_pessoa
-             WHERE pico_5min >= 2
-         ), unidade_pico AS (
-         SELECT DISTINCT ON (id_pessoa)
-                  id_pessoa, instituicao_key, cnes, instituicao, uf
-             FROM pessoa_unidade
-             ORDER BY id_pessoa, pico_5min DESC, documentos DESC
-         ), inscricoes AS (
-           SELECT id_pessoa,
-                  max(nm_medico) AS nome,
-                  string_agg(
-                    DISTINCT (nu_crm || '/' || btrim(sg_uf)),
-                    ', ' ORDER BY (nu_crm || '/' || btrim(sg_uf))
-                  ) AS inscricoes
-             FROM prescricao.dim_medico
-            WHERE id_pessoa IS NOT NULL
-            GROUP BY id_pessoa
+        `WITH por_medico AS (
+           SELECT DISTINCT ON (id_medico) id_medico, sg_uf, dia, documentos, pacientes
+             FROM prescricao.fato_medico_maior_dia
+            WHERE ($1::text IS NULL OR sg_uf = $1)
+            ORDER BY id_medico, documentos DESC, dia
          )
-         SELECT c.id_pessoa, i.nome, i.inscricoes,
-                COALESCE(u.instituicao, u.instituicao_key) AS instituicao,
-                u.instituicao_key, u.cnes, u.uf,
-                 c.documentos, c.pico_5min, c.unidades
-           FROM candidatos c
-           LEFT JOIN inscricoes i ON i.id_pessoa = c.id_pessoa
-           LEFT JOIN unidade_pico u ON u.id_pessoa = c.id_pessoa
-           ORDER BY c.pico_5min DESC, c.documentos DESC
-          LIMIT $5`,
-        [de, ate, uf, tipo, limite]
+         SELECT p.id_medico, m.nu_crm AS crm, m.sg_uf AS crm_uf, m.nm_medico AS nome,
+                to_char(p.dia, 'YYYY-MM-DD') AS dia, p.documentos, p.pacientes
+           FROM por_medico p
+           JOIN prescricao.dim_medico m ON m.id_medico = p.id_medico
+          ORDER BY p.documentos DESC, p.pacientes DESC
+          LIMIT $2`,
+        [uf, limite]
       );
-      return NextResponse.json({ de, ate, an3: rows.rows });
+      return NextResponse.json({ de: null, ate: null, an3: rows.rows });
     }
 
     return NextResponse.json({ de, ate, info: "em breve" });

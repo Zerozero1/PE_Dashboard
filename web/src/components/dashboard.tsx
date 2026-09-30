@@ -29,24 +29,22 @@ type DocsData = {
 };
 
 type AudAn3Row = {
-  id_pessoa: number;
+  id_medico: number;
+  crm: string;
+  crm_uf: string;
   nome: string | null;
-  inscricoes: string | null;
-  instituicao: string;
-  instituicao_key: string;
-  cnes: string | null;
-  uf: string;
+  dia: string;
   documentos: string;
-  pico_5min: string;
-  unidades: number;
+  pacientes: string;
 };
 
 type AudAn3Detail = {
-  id_pessoa: number;
-  medico: { nome: string | null; inscricoes: string | null };
-  eventos: { sequencia: number; data_hora: string; crm: string; crm_uf: string; tipo: string; instituicao: string; cnes: string | null; id_unidade_atendimento: number; uf: string; intervalo_seg: string | null; docs_5min: string; sinal: string }[];
-  total_eventos: number;
-  eventos_truncados: boolean;
+  id_medico: number;
+  dia: string;
+  medico: { nome: string | null; crm: string | null; crm_uf: string | null };
+  resumo: { documentos: string; pacientes: string };
+  por_tipo: { tipo: string; documentos: string }[];
+  por_uf: { uf: string; documentos: string }[];
 };
 
 type MedData = {
@@ -670,7 +668,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
 const ANOMALIAS: [string, string][] = [
   ["AN1", "AN1 · Maiores emissores de documentos médicos"],
   ["AN2", "AN2 · Atendimentos de pacientes únicos"],
-  ["AN3", "AN3 · Emissões de documentos em alta frequência"],
+  ["AN3", "AN3 · Emissões de documentos em um dia"],
   ["AN4", "AN4 · Documentos emitidos pelo local acima da média"],
 ];
 
@@ -698,7 +696,8 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
     setAn3Detalhe(null);
     setAn3Erro(null);
     if (anomalia !== "AN1" && anomalia !== "AN2" && anomalia !== "AN3") { setData(null); setErro(null); return; }
-    const qs = `anomalia=${anomalia}&de=${de}&ate=${ate}&uf=${uf}&tipo=${tipo}&limite=${limite}`;
+    const historicoCompleto = anomalia === "AN3" && dias === "todos";
+    const qs = `anomalia=${anomalia}${historicoCompleto ? "" : `&de=${de}&ate=${ate}`}&uf=${uf}&tipo=${tipo}&limite=${limite}`;
     setCarregando(true);
     setErro(null);
     try {
@@ -747,11 +746,8 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
     setAn3Carregando(true);
     const qs = new URLSearchParams({
       anomalia: "AN3",
-      id_pessoa: String(row.id_pessoa),
-      de,
-      ate,
-      uf,
-      tipo,
+      id_medico: String(row.id_medico),
+      dia: row.dia,
     });
     try {
       const r = await fetch(`/api/dashboard/auditoria/medico?${qs}`);
@@ -785,7 +781,7 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
           </select>
         </label>
         <button className="btn primary" onClick={pesquisar} disabled={carregando}>Pesquisar</button>
-        <div className="meta">{de} → {ate} · {anomalia}</div>
+        <div className="meta">{anomalia === "AN3" && dias === "todos" ? "histórico completo" : `${de} → ${ate}`} · {anomalia}</div>
       </div>
       {carregando && <Processando />}
       {erro && <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>}
@@ -798,36 +794,35 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
       {!carregando && anomalia === "AN3" && data && (
         <article className="card" style={{ gridColumn: "span 12" }}>
           <div className="section-title">
-            <h2>AN3 · Emissões de documentos em alta frequência</h2>
-            <span>ordenado pelo maior pico multi-paciente em 5 min · limite {limite}</span>
+            <h2>AN3 · Emissões de documentos em um dia</h2>
+            <span>ordenado pelo maior volume de documentos em um único dia · limite {limite}</span>
           </div>
           <div className="uf-scroll" style={{ overflowX: "auto" }}>
             <table className="table">
               <thead>
                 <tr>
-                  <th>#</th><th>Inscrição(ões)</th><th>Nome</th><th>Instituição do pico</th><th>UF</th><th>Instituições</th>
-                  <th style={{ textAlign: "right" }}>Documentos</th>
-                  <th style={{ textAlign: "right" }}>Pico/5 min<br />(≥2 pacientes)</th>
+                  <th>#</th><th>CRM</th><th>UF</th><th>Nome</th><th>Dia</th>
+                  <th style={{ textAlign: "right" }}>Documentos no dia</th>
+                  <th style={{ textAlign: "right" }}>Pacientes no dia</th>
                   <th style={{ textAlign: "right" }}>Detalhe</th>
                 </tr>
               </thead>
               <tbody>
                 {(data.an3 ?? []).map((r, i) => (
-                  <tr key={r.id_pessoa}>
+                  <tr key={r.id_medico}>
                     <td>{i + 1}</td>
-                    <td>{r.inscricoes ?? "—"}</td>
+                    <td>{r.crm}</td>
+                    <td>{r.crm_uf ?? "—"}</td>
                     <td>{r.nome ?? "—"}</td>
-                    <td>{r.cnes ? `${r.instituicao} · CNES ${r.cnes}` : `${r.instituicao} · ${r.instituicao_key} · sem CNES`}</td>
-                    <td>{r.uf ?? "—"}</td>
-                    <td style={{ textAlign: "right" }}>{nf.format(Number(r.unidades))}</td>
-                    <td style={{ textAlign: "right" }}>{nf.format(Number(r.documentos))}</td>
-                    <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.pico_5min))}</td>
+                    <td>{r.dia}</td>
+                    <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.documentos))}</td>
+                    <td style={{ textAlign: "right" }}>{nf.format(Number(r.pacientes))}</td>
                     <td style={{ textAlign: "right" }}>
                       <button
                         type="button"
                         className="drill-ico"
-                        title="Detalhar emissões"
-                        aria-label={`Detalhar emissões de ${r.nome ?? "médico"}`}
+                        title="Detalhar o dia"
+                        aria-label={`Detalhar o dia de ${r.nome ?? "médico"}`}
                         style={{ padding: 0, fontFamily: "inherit" }}
                         onClick={() => abrirAn3(r)}
                       >›</button>
@@ -835,15 +830,15 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
                   </tr>
                 ))}
                 {(data.an3 ?? []).length === 0 && (
-                  <tr><td colSpan={9} style={{ color: "#566271", textAlign: "center" }}>Sem emissões que atendam aos critérios no período/filtros.</td></tr>
+                  <tr><td colSpan={8} style={{ color: "#566271", textAlign: "center" }}>Sem registros no período/filtros.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
           <div className="sub" style={{ marginTop: 10, display: "grid", gap: 4 }}>
-            <div><b>Documentos:</b> total no período/filtros. <b>Instituições:</b> CNES distintos ou unidades sem CNES associadas às emissões.</div>
-            <div><b>Pico/5 min:</b> maior quantidade de documentos em qualquer janela móvel de cinco minutos que inclua pelo menos dois pacientes distintos; com tipo selecionado, considera somente esse tipo.</div>
-            <div>Não há corte mínimo fixo de documentos; os médicos são ordenados pelo maior pico multi-paciente/5 min. A AN3 é um alerta para revisão, não uma prova de automação.</div>
+            <div><b>Documentos no dia:</b> total emitido pelo médico no dia de maior volume (Todos = melhor dia do histórico; 7/30/90 dias = melhor dia dentro da janela).</div>
+            <div><b>Pacientes no dia:</b> pacientes distintos atendidos nesse mesmo dia. <b>Detalhe:</b> abre o mix por tipo e as UFs do dia.</div>
+            <div>Sem corte mínimo de documentos — a lista é ordenada do maior dia para o menor. O filtro de tipo de documento não se aplica à AN3. É um alerta para revisão, não uma prova de automação.</div>
           </div>
         </article>
       )}
@@ -906,12 +901,13 @@ function An3Drill({ row, data, erro, carregando, onClose }: {
   carregando: boolean;
   onClose: () => void;
 }) {
+  const maxTipo = Math.max(1, ...(data?.por_tipo ?? []).map((t) => Number(t.documentos)));
   return (
     <article className="card" style={{ gridColumn: "span 12" }}>
       <div className="section-title">
         <div>
           <h2>{row.nome ?? "Médico"}</h2>
-          <span>{data?.medico.inscricoes ?? row.inscricoes ?? "Inscrição não disponível"}</span>
+          <span>CRM {data?.medico.crm ?? row.crm}/{data?.medico.crm_uf ?? row.crm_uf} · dia {data?.dia ?? row.dia}</span>
         </div>
         <button className="btn" onClick={onClose} style={{ padding: "4px 9px", fontSize: 10 }}>Fechar ✕</button>
       </div>
@@ -920,37 +916,50 @@ function An3Drill({ row, data, erro, carregando, onClose }: {
       {!carregando && !erro && data && (
         <>
           <div className="sub" style={{ marginBottom: 10 }}>
-            {nf.format(data.total_eventos)} eventos sinalizados{data.eventos_truncados ? " · exibindo os 1.000 primeiros" : ""}. São mostrados documentos em janelas móveis de 5 min com pelo menos dois pacientes distintos; data/hora conforme registrada na origem, sem conversão de fuso.
+            <b>{nf.format(Number(data.resumo.documentos))}</b> documentos e <b>{nf.format(Number(data.resumo.pacientes))}</b> pacientes distintos nesse dia.
           </div>
-          <div className="uf-scroll" style={{ overflowX: "auto" }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>#</th><th>Data/hora</th><th>Inscrição</th><th>Documento</th><th>Instituição</th><th>UF</th>
-                  <th style={{ textAlign: "right" }}>Intervalo anterior</th>
-                  <th style={{ textAlign: "right" }}>Docs/5 min</th>
-                  <th>Sinal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.eventos.map((r) => (
-                  <tr key={`${r.sequencia}-${r.data_hora}`}>
-                    <td>{nf.format(r.sequencia)}</td>
-                    <td>{r.data_hora}</td>
-                    <td>{r.crm}/{r.crm_uf}</td>
-                    <td>{r.tipo}</td>
-                    <td>{r.cnes ? `${r.instituicao} · CNES ${r.cnes}` : `${r.instituicao} · Unidade ${r.id_unidade_atendimento} · sem CNES`}</td>
-                    <td>{r.uf}</td>
-                    <td style={{ textAlign: "right" }}>{r.intervalo_seg === null ? "—" : `${Number(r.intervalo_seg).toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 })} s`}</td>
-                    <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.docs_5min))}</td>
-                    <td>{r.sinal}</td>
-                  </tr>
-                ))}
-                {data.eventos.length === 0 && (
-                  <tr><td colSpan={9} style={{ color: "#566271", textAlign: "center" }}>Nenhum evento detalhado no período/filtros (o detalhamento cobre picos ≥10 documentos/5 min).</td></tr>
-                )}
-              </tbody>
-            </table>
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 280 }}>
+              <div className="section-title" style={{ marginBottom: 6 }}><h2 style={{ fontSize: 12 }}>Por tipo de documento</h2></div>
+              <table className="table" style={{ fontSize: 10.5 }}>
+                <thead><tr><th>Documento</th><th style={{ textAlign: "right" }}>Docs</th><th style={{ width: "34%" }} /></tr></thead>
+                <tbody>
+                  {data.por_tipo.map((t) => (
+                    <tr key={t.tipo}>
+                      <td>{t.tipo}</td>
+                      <td style={{ textAlign: "right" }}>{nf.format(Number(t.documentos))}</td>
+                      <td>
+                        <div className="bar-track" style={{ height: 5 }}>
+                          <i className="bar-fill" style={{ width: `${(Number(t.documentos) / maxTipo) * 100}%`, background: "var(--va)" }} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {data.por_tipo.length === 0 && (
+                    <tr><td colSpan={3} style={{ color: "#566271", textAlign: "center" }}>Sem documentos no dia.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ flex: 1, minWidth: 320 }}>
+              <div className="section-title" style={{ marginBottom: 6 }}><h2 style={{ fontSize: 12 }}>UFs no dia</h2></div>
+              <div className="uf-scroll" style={{ maxHeight: 260, overflowY: "auto" }}>
+                <table className="table" style={{ fontSize: 10.5 }}>
+                  <thead><tr><th>UF</th><th style={{ textAlign: "right" }}>Documentos</th></tr></thead>
+                  <tbody>
+                    {data.por_uf.map((u, i) => (
+                      <tr key={`${u.uf}-${i}`}>
+                        <td>{u.uf}</td>
+                        <td style={{ textAlign: "right" }}>{nf.format(Number(u.documentos))}</td>
+                      </tr>
+                    ))}
+                    {data.por_uf.length === 0 && (
+                      <tr><td colSpan={2} style={{ color: "#566271", textAlign: "center" }}>Sem documentos no dia.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </>
       )}
