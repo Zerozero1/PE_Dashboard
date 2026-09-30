@@ -34,31 +34,38 @@ export async function GET(req: NextRequest) {
         [idMedico]
       );
 
-      const [resumo, porTipo, porUf] = await Promise.all([
+      const [resumo, porTipo, documentos] = await Promise.all([
         query(
-          `SELECT COALESCE(sum(f.documentos), 0)::bigint AS documentos,
+          `SELECT (SELECT count(*) FROM prescricao.fato_documento_emissao f
+                    WHERE f.id_medico = $1 AND f.dia = $2 AND f.in_assinado = 'S')::bigint AS documentos,
                   COALESCE((SELECT count(DISTINCT p.id_paciente)
                               FROM prescricao.fato_documento_medico_paciente_dia p
-                             WHERE p.id_medico = $1 AND p.dia = $2), 0)::bigint AS pacientes
-             FROM prescricao.fato_documento_medico_dia f
-            WHERE f.id_medico = $1 AND f.dia = $2`,
+                             WHERE p.id_medico = $1 AND p.dia = $2), 0)::bigint AS pacientes`,
           [idMedico, dia]
         ),
         query(
-          `SELECT t.nm_documento AS tipo, sum(f.documentos)::bigint AS documentos
-             FROM prescricao.fato_documento_medico_tipo_dia f
+          `SELECT t.nm_documento AS tipo, count(*)::bigint AS documentos
+             FROM prescricao.fato_documento_emissao f
              JOIN prescricao.dim_tipo_documento t ON t.id_tipo_documento = f.id_tipo_documento
-            WHERE f.id_medico = $1 AND f.dia = $2
+            WHERE f.id_medico = $1 AND f.dia = $2 AND f.in_assinado = 'S'
             GROUP BY t.nm_documento
             ORDER BY documentos DESC`,
           [idMedico, dia]
         ),
         query(
-          `SELECT f.sg_uf AS uf, sum(f.documentos)::bigint AS documentos
-             FROM prescricao.fato_documento_medico_dia f
-            WHERE f.id_medico = $1 AND f.dia = $2
-            GROUP BY f.sg_uf
-            ORDER BY documentos DESC`,
+          `SELECT f.ds_qrcode,
+                  to_char(f.dh_documento, 'YYYY-MM-DD HH24:MI:SS.MS') AS data_hora,
+                  t.nm_documento AS tipo,
+                  COALESCE(NULLIF(u.nm_unidade, ''), 'UNIDADE:' || f.id_unidade_atendimento::text) AS instituicao,
+                  NULLIF(u.co_cnes, '') AS cnes,
+                  f.sg_uf AS uf,
+                  f.in_assinado, f.in_cancelado
+             FROM prescricao.fato_documento_emissao f
+             JOIN prescricao.dim_tipo_documento t ON t.id_tipo_documento = f.id_tipo_documento
+             LEFT JOIN prescricao.dim_unidade u ON u.id_unidade_atendimento = f.id_unidade_atendimento
+            WHERE f.id_medico = $1 AND f.dia = $2 AND f.in_assinado = 'S'
+            ORDER BY f.dh_documento, f.id_consulta_documento
+            LIMIT 1000`,
           [idMedico, dia]
         ),
       ]);
@@ -69,7 +76,7 @@ export async function GET(req: NextRequest) {
         medico: medicoQ.rows[0] ?? { nome: null, crm: null, crm_uf: null },
         resumo: resumo.rows[0] ?? { documentos: "0", pacientes: "0" },
         por_tipo: porTipo.rows,
-        por_uf: porUf.rows,
+        documentos: documentos.rows,
       });
     }
 

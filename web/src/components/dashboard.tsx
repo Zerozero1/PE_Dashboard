@@ -44,7 +44,7 @@ type AudAn3Detail = {
   medico: { nome: string | null; crm: string | null; crm_uf: string | null };
   resumo: { documentos: string; pacientes: string };
   por_tipo: { tipo: string; documentos: string }[];
-  por_uf: { uf: string; documentos: string }[];
+  documentos: { ds_qrcode: string | null; data_hora: string; tipo: string; instituicao: string; cnes: string | null; uf: string; in_assinado: string; in_cancelado: string }[];
 };
 
 type MedData = {
@@ -836,9 +836,8 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
             </table>
           </div>
           <div className="sub" style={{ marginTop: 10, display: "grid", gap: 4 }}>
-            <div><b>Documentos no dia:</b> total emitido pelo médico no dia de maior volume (Todos = melhor dia do histórico; 7/30/90 dias = melhor dia dentro da janela).</div>
-            <div><b>Pacientes no dia:</b> pacientes distintos atendidos nesse mesmo dia. <b>Detalhe:</b> abre o mix por tipo e as UFs do dia.</div>
-            <div>Sem corte mínimo de documentos — a lista é ordenada do maior dia para o menor. O filtro de tipo de documento não se aplica à AN3. É um alerta para revisão, não uma prova de automação.</div>
+            <div><b>Documentos no dia:</b> total de documentos <b>assinados</b> emitidos pelo médico no dia de maior volume (Todos = melhor dia do histórico; 7/30/90 dias = melhor dia dentro da janela). <b>Detalhe:</b> abre o mix por tipo e a lista de documentos do dia (QR code, hora, tipo, instituição, UF e situação).</div>
+            <div><b>Pacientes no dia:</b> pacientes distintos atendidos nesse mesmo dia.</div>
           </div>
         </article>
       )}
@@ -916,49 +915,59 @@ function An3Drill({ row, data, erro, carregando, onClose }: {
       {!carregando && !erro && data && (
         <>
           <div className="sub" style={{ marginBottom: 10 }}>
-            <b>{nf.format(Number(data.resumo.documentos))}</b> documentos e <b>{nf.format(Number(data.resumo.pacientes))}</b> pacientes distintos nesse dia.
+            <b>{nf.format(Number(data.resumo.documentos))}</b> documentos assinados e <b>{nf.format(Number(data.resumo.pacientes))}</b> pacientes distintos nesse dia.
           </div>
-          <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: 280 }}>
-              <div className="section-title" style={{ marginBottom: 6 }}><h2 style={{ fontSize: 12 }}>Por tipo de documento</h2></div>
+          <div style={{ marginBottom: 12 }}>
+            <div className="section-title" style={{ marginBottom: 6 }}><h2 style={{ fontSize: 12 }}>Por tipo de documento</h2></div>
+            <table className="table" style={{ fontSize: 10.5 }}>
+              <thead><tr><th>Documento</th><th style={{ textAlign: "right" }}>Docs</th><th style={{ width: "34%" }} /></tr></thead>
+              <tbody>
+                {data.por_tipo.map((t) => (
+                  <tr key={t.tipo}>
+                    <td>{t.tipo}</td>
+                    <td style={{ textAlign: "right" }}>{nf.format(Number(t.documentos))}</td>
+                    <td>
+                      <div className="bar-track" style={{ height: 5 }}>
+                        <i className="bar-fill" style={{ width: `${(Number(t.documentos) / maxTipo) * 100}%`, background: "var(--va)" }} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {data.por_tipo.length === 0 && (
+                  <tr><td colSpan={3} style={{ color: "#566271", textAlign: "center" }}>Sem documentos no dia.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <div className="section-title" style={{ marginBottom: 6 }}>
+              <h2 style={{ fontSize: 12 }}>Documentos emitidos</h2>
+              <span>{Number(data.resumo.documentos) > data.documentos.length ? `exibindo os ${nf.format(data.documentos.length)} primeiros` : "todos os documentos do dia"}</span>
+            </div>
+            <div className="uf-scroll" style={{ maxHeight: 320, overflowY: "auto" }}>
               <table className="table" style={{ fontSize: 10.5 }}>
-                <thead><tr><th>Documento</th><th style={{ textAlign: "right" }}>Docs</th><th style={{ width: "34%" }} /></tr></thead>
+                <thead>
+                  <tr>
+                    <th>#</th><th>QR code</th><th>Data/hora</th><th>Documento</th><th>Instituição</th><th>UF</th><th>Situação</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {data.por_tipo.map((t) => (
-                    <tr key={t.tipo}>
-                      <td>{t.tipo}</td>
-                      <td style={{ textAlign: "right" }}>{nf.format(Number(t.documentos))}</td>
-                      <td>
-                        <div className="bar-track" style={{ height: 5 }}>
-                          <i className="bar-fill" style={{ width: `${(Number(t.documentos) / maxTipo) * 100}%`, background: "var(--va)" }} />
-                        </div>
-                      </td>
+                  {data.documentos.map((d, i) => (
+                    <tr key={`${d.ds_qrcode ?? "sem-qr"}-${i}`}>
+                      <td>{i + 1}</td>
+                      <td style={{ fontFamily: "ui-monospace, monospace", wordBreak: "break-all" }}>{d.ds_qrcode ?? "—"}</td>
+                      <td>{d.data_hora}</td>
+                      <td>{d.tipo}</td>
+                      <td>{d.cnes ? `${d.instituicao} · CNES ${d.cnes}` : `${d.instituicao} · sem CNES`}</td>
+                      <td>{d.uf}</td>
+                      <td>{d.in_cancelado === "S" ? <span style={{ color: "var(--red)" }}>Cancelado</span> : d.in_assinado === "S" ? "Assinado" : "Não assinado"}</td>
                     </tr>
                   ))}
-                  {data.por_tipo.length === 0 && (
-                    <tr><td colSpan={3} style={{ color: "#566271", textAlign: "center" }}>Sem documentos no dia.</td></tr>
+                  {data.documentos.length === 0 && (
+                    <tr><td colSpan={7} style={{ color: "#566271", textAlign: "center" }}>Sem documentos no dia.</td></tr>
                   )}
                 </tbody>
               </table>
-            </div>
-            <div style={{ flex: 1, minWidth: 320 }}>
-              <div className="section-title" style={{ marginBottom: 6 }}><h2 style={{ fontSize: 12 }}>UFs no dia</h2></div>
-              <div className="uf-scroll" style={{ maxHeight: 260, overflowY: "auto" }}>
-                <table className="table" style={{ fontSize: 10.5 }}>
-                  <thead><tr><th>UF</th><th style={{ textAlign: "right" }}>Documentos</th></tr></thead>
-                  <tbody>
-                    {data.por_uf.map((u, i) => (
-                      <tr key={`${u.uf}-${i}`}>
-                        <td>{u.uf}</td>
-                        <td style={{ textAlign: "right" }}>{nf.format(Number(u.documentos))}</td>
-                      </tr>
-                    ))}
-                    {data.por_uf.length === 0 && (
-                      <tr><td colSpan={2} style={{ color: "#566271", textAlign: "center" }}>Sem documentos no dia.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
             </div>
           </div>
         </>

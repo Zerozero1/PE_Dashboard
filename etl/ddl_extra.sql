@@ -313,3 +313,22 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_medico_maior_dia (
 
 CREATE INDEX IF NOT EXISTS idx_medico_maior_dia_docs
     ON prescricao.fato_medico_maior_dia (documentos DESC);
+
+CREATE TABLE IF NOT EXISTS prescricao.fato_documento_emissao (
+    id_consulta_documento INTEGER PRIMARY KEY,
+    dia DATE NOT NULL,
+    dh_documento TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    id_medico INTEGER NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_tipo_documento INTEGER NOT NULL,
+    id_unidade_atendimento INTEGER NOT NULL,
+    in_assinado CHAR(1) NOT NULL,
+    in_cancelado CHAR(1) NOT NULL,
+    ds_qrcode VARCHAR(100)
+);
+
+ALTER TABLE prescricao.fato_documento_emissao
+    ADD COLUMN IF NOT EXISTS ds_qrcode VARCHAR(100);
+
+CREATE INDEX IF NOT EXISTS idx_doc_emissao_medico_dia_hora
+    ON prescricao.fato_documento_emissao (id_medico, dia, dh_documento);

@@ -26,6 +26,7 @@ def main():
         ("fato pacientes", "load_fatos pacientes"),
         ("medicos (snapshot/novos)", "load_medicos"),
         ("AN3 maior dia (emissoes por dia)", "load_maior_dia"),
+        ("documentos emitidos (drill AN3)", "load_documentos"),
         ("anomalias", "load_anomalias"),
     ]
     for nome, cmd in steps:

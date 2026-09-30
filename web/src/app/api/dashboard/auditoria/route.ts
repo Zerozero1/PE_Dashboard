@@ -51,9 +51,10 @@ export async function GET(req: NextRequest) {
       if (deRaw && ateRaw) {
         const rows = await query(
           `WITH por_dia AS (
-             SELECT id_medico, dia, sum(documentos)::bigint AS documentos
-               FROM prescricao.fato_documento_medico_dia
+             SELECT id_medico, dia, count(*)::bigint AS documentos
+               FROM prescricao.fato_documento_emissao
               WHERE dia BETWEEN $1 AND $2
+                AND in_assinado = 'S'
                 AND ($3::text IS NULL OR sg_uf = $3)
               GROUP BY id_medico, dia
            ), melhor AS (

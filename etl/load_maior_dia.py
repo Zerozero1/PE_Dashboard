@@ -8,10 +8,15 @@ STAGING = "prescricao.stg_medico_maior_dia"
 FACT = "prescricao.fato_medico_maior_dia"
 
 SQL_CONSTRUIR = """
-WITH melhor AS (
+WITH por_dia AS (
+  SELECT id_medico, sg_uf, dia, count(*)::bigint AS documentos
+    FROM prescricao.fato_documento_emissao
+   WHERE in_assinado = 'S'
+   GROUP BY id_medico, sg_uf, dia
+), melhor AS (
   SELECT DISTINCT ON (id_medico, sg_uf)
          id_medico, sg_uf, dia, documentos
-    FROM prescricao.fato_documento_medico_dia
+    FROM por_dia
    ORDER BY id_medico, sg_uf, documentos DESC, dia
 ), pacientes AS (
   SELECT id_medico, sg_uf, dia, count(*)::bigint AS pacientes
