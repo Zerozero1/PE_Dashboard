@@ -6,7 +6,7 @@ Painel analítico web restrito ao domínio `@portalmedico.org.br` (Google OAuth)
 
 ## Visões
 
-- **Documentos médicos** — emissões por período, UF, tipo e especialidade; origem de criação (Web/Web mobile/iOS/Android); mapa e rankings.
+- **Documentos médicos** — emissões por período, UF, tipo e especialidade; origem de criação (Web/Web mobile/iOS/Android) e versão do app; mapa e rankings.
 - **Médicos** — inscrições cadastradas (CRM/UF), médicos cadastrados (CPF único), novos por mês, inatividade por faixa sem emissão.
 - **Auditoria** — AN1 "Emissões de documentos no período", AN2 "Atendimentos a pacientes distintos no período", AN3 "Maior volume diário de emissões a pacientes distintos no período" (maior dia em documentos assinados; drill-down lista os documentos com QR code) e AN4 "Pacientes distintos por instituição no período" (CNES; drill com evolução mensal e unidades) — sem identificadores de paciente.
 

@@ -206,6 +206,25 @@ CREATE INDEX IF NOT EXISTS idx_medico_unidade_unidade
 
 -- Snapshots all-time para o modo "Todos" dos rankings da Auditoria (evitam
 -- varreduras de 30-60M linhas no periodo completo).
+CREATE TABLE IF NOT EXISTS prescricao.stg_documento_versao_dia (
+    dia DATE NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    ds_versao_sistema VARCHAR(50) NOT NULL,
+    documentos BIGINT NOT NULL,
+    PRIMARY KEY (dia, sg_uf, ds_versao_sistema)
+);
+
+CREATE TABLE IF NOT EXISTS prescricao.fato_documento_versao_dia (
+    dia DATE NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    ds_versao_sistema VARCHAR(50) NOT NULL,
+    documentos BIGINT NOT NULL,
+    PRIMARY KEY (dia, sg_uf, ds_versao_sistema)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fato_documento_versao_dia_uf
+    ON prescricao.fato_documento_versao_dia (sg_uf, dia);
+
 CREATE TABLE IF NOT EXISTS prescricao.snap_medico_tipo (
     id_medico INTEGER NOT NULL,
     sg_uf CHAR(2) NOT NULL,

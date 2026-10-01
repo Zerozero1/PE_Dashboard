@@ -32,7 +32,7 @@ $env:DW_HOST='172.16.7.112'; $env:DW_DB='prescricao_dw'; $env:DW_USER='usr_presc
 |---|---|
 | `setup.py` | Aplica `schema.sql` + `ddl_extra.sql` (idempotente). Criar/atualizar estrutura no DW. |
 | `load_dims.py` | Carrega dimensões: dim_data, dim_uf, dim_tipo_documento, dim_medico, dim_especialidade, dim_unidade. |
-| `load_fatos.py <modo>` | Fatos de documentos, em modos: `docs`, `origem`, `especialidade`, `unidade`, `medico`, `medico_tipo`, `pacientes`, `medico_pacientes`, `unidade_pacientes`, `medico_unidade`. |
+| `load_fatos.py <modo>` | Fatos de documentos, em modos: `docs`, `origem`, `versao`, `especialidade`, `unidade`, `medico`, `medico_tipo`, `pacientes`, `medico_pacientes`, `unidade_pacientes`, `medico_unidade`. |
 | `load_medicos.py` | `fato_medico_snapshot` (inscrições CRM/UF e CPFs únicos com aceite, por UF + total global `--`) + `fato_medico_dia.novos_aceite_termo` + `medicos_com_emissao` (derivado do DW). |
 | `load_maior_dia.py` | Constrói `fato_medico_maior_dia` (melhor dia por médico/UF em documentos **assinados**, com pacientes distintos do dia) a partir de `fato_documento_emissao` — alimenta a AN3 diária. |
 | `load_documentos.py` | Carrega `fato_documento_emissao` (um registro por documento assinado ou não: data/hora, médico, UF, tipo, unidade, situação e `ds_qrcode`) — alimenta a lista de documentos do drill da AN3. Carga cheia na primeira execução e incremental depois (revisa os últimos 5M ids); extração em lotes de 2M ids com stream ordenado e retry por lote. |
@@ -80,6 +80,7 @@ Dimensões: `dim_data`, `dim_uf`, `dim_tipo_documento`, `dim_medico`, `dim_espec
 Fatos:
 - `fato_documento_dia` (dia, sg_uf, id_tipo_documento, documentos, assinados, cancelados)
 - `fato_documento_origem_dia` (dia, sg_uf, ds_origem_criacao, documentos) — origem de criação: WEB, WEB-MOBILE, IOS, ANDROID ou NAO_INFORMADO; campo majoritariamente NULL até meados de 2025 (~70% do total), preenchido sistematicamente só nos últimos meses
+- `fato_documento_versao_dia` (dia, sg_uf, ds_versao_sistema, documentos) — versão do app por dia×UF (vazio → `NAO_INFORMADO`); alimenta a tabela "Emissões por versão do app" (total por versão no período)
 - `fato_documento_especialidade_dia` (dia, sg_uf, id_medico_especialidade, documentos)
 - `fato_documento_unidade_dia` (dia, sg_uf, id_unidade_atendimento, documentos)
 - `fato_documento_medico_dia` (dia, sg_uf, id_medico, documentos)
@@ -99,11 +100,11 @@ Fatos:
 - `snap_medico_paciente` (id_medico, sg_uf, pacientes) — pacientes distintos all-time (linhas reais de UF + linha global `'**'`); ranking AN2 no modo "Todos"
 - `snap_instituicao` (chave, instituicao, cnes, uf, unidades, medicos, pacientes) — instituições no modo "Todos" (AN4), já com vínculos ativos de médicos
 
-Staging: `stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_especialidade_dia`, `stg_documento_unidade_dia`, `stg_documento_medico_dia`, `stg_documento_medico_tipo_dia`, `stg_documento_medico_paciente_dia`, `stg_documento_unidade_paciente_dia`, `stg_medico_unidade`, `stg_medico_maior_dia`.
+Staging: `stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_versao_dia`, `stg_documento_especialidade_dia`, `stg_documento_unidade_dia`, `stg_documento_medico_dia`, `stg_documento_medico_tipo_dia`, `stg_documento_medico_paciente_dia`, `stg_documento_unidade_paciente_dia`, `stg_medico_unidade`, `stg_medico_maior_dia`.
 
 Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 
-Índices secundários: `fato_documento_dia(sg_uf,dia)`, `fato_documento_origem_dia(sg_uf,dia)`, `fato_documento_medico_dia(id_medico,dia)`, `fato_documento_medico_dia(sg_uf,dia)` (inatividade com filtro de UF), `fato_documento_medico_tipo_dia(id_tipo_documento,sg_uf,dia)`, `fato_documento_medico_tipo_dia(id_medico,dia)`, `fato_documento_medico_paciente_dia(id_medico,dia)`, `fato_documento_medico_paciente_dia(sg_uf,dia)`, `fato_documento_especialidade_dia(id_medico_especialidade,dia)`, `fato_documento_unidade_dia(id_unidade_atendimento,dia)`, `fato_medico_dia(sg_uf,dia)`, `fato_medico_maior_dia(documentos DESC)`, `fato_documento_emissao(id_medico,dia,dh_documento)`, `fato_documento_emissao(dia,in_assinado) INCLUDE (id_medico,sg_uf)` (caminho 7/30/90 dias da AN3 via Index Only Scan), `fato_documento_emissao(id_unidade_atendimento,dia) INCLUDE (id_tipo_documento) WHERE in_assinado='S'` (rosca por tipo do drill AN4), `fato_documento_unidade_paciente_dia(id_unidade_atendimento,dia)`, `fato_medico_unidade(id_unidade_atendimento,in_ativo)`, `dim_medico(sg_uf)`, `dim_medico(id_pessoa)`, `dashboard_refresh_job(status)`.
+Índices secundários: `fato_documento_dia(sg_uf,dia)`, `fato_documento_origem_dia(sg_uf,dia)`, `fato_documento_versao_dia(sg_uf,dia)`, `fato_documento_medico_dia(id_medico,dia)`, `fato_documento_medico_dia(sg_uf,dia)` (inatividade com filtro de UF), `fato_documento_medico_tipo_dia(id_tipo_documento,sg_uf,dia)`, `fato_documento_medico_tipo_dia(id_medico,dia)`, `fato_documento_medico_paciente_dia(id_medico,dia)`, `fato_documento_medico_paciente_dia(sg_uf,dia)`, `fato_documento_especialidade_dia(id_medico_especialidade,dia)`, `fato_documento_unidade_dia(id_unidade_atendimento,dia)`, `fato_medico_dia(sg_uf,dia)`, `fato_medico_maior_dia(documentos DESC)`, `fato_documento_emissao(id_medico,dia,dh_documento)`, `fato_documento_emissao(dia,in_assinado) INCLUDE (id_medico,sg_uf)` (caminho 7/30/90 dias da AN3 via Index Only Scan), `fato_documento_emissao(id_unidade_atendimento,dia) INCLUDE (id_tipo_documento) WHERE in_assinado='S'` (rosca por tipo do drill AN4), `fato_documento_unidade_paciente_dia(id_unidade_atendimento,dia)`, `fato_medico_unidade(id_unidade_atendimento,in_ativo)`, `dim_medico(sg_uf)`, `dim_medico(id_pessoa)`, `dashboard_refresh_job(status)`.
 
 ## Definições de negócio aplicadas
 

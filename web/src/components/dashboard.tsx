@@ -23,6 +23,7 @@ type DocsData = {
   };
   serie_mensal: { mes: string; emitidos: string }[];
   serie_origem: { mes: string; origem: string; documentos: string }[];
+  totais_versao: { versao: string; documentos: string }[];
   por_tipo: { tipo: string; docs: string }[];
   por_uf: { uf: string; docs: string }[];
   ranking_especialidade: { especialidade: string; docs: string }[];
@@ -471,6 +472,8 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       }),
     }))
     .filter((s) => s.valores.some((v) => (v ?? 0) > 0));
+  const totalVersao = data.totais_versao.reduce((a, v) => a + Number(v.documentos), 0);
+  const pctVersao = (v: number) => (totalVersao > 0 ? `${((v / totalVersao) * 100).toFixed(1).replace(".", ",")}%` : "0,0%");
   const totalUf = data.por_uf.reduce((a, u) => a + Number(u.docs), 0);
   const pctUf = (v: number, t: number) => `${(t > 0 ? ((v / t) * 100).toFixed(1) : "0.0").replace(".", ",")}%`;
   const milUf = (v: number) => Math.round(v / 1000).toLocaleString("pt-BR");
@@ -530,6 +533,31 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 230 }}>
           <Donut rows={donutOrigem} cores={donutOrigem.map((r) => r.cor)} agruparOutros={false} pctDec={1} />
         </div>
+      </article>
+
+      <article className="card" style={{ gridColumn: "span 12" }}>
+        <div className="section-title">
+          <h2>Emissões por versão do app</h2>
+          <span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}{filtradosSemTipo && " · "}{filtradosSemTipo && <span className="tag">F</span>}</span>
+        </div>
+        <div className="uf-scroll" style={{ maxHeight: 300, overflowY: "auto" }}>
+          <table className="table" style={{ fontSize: 10.5 }}>
+            <thead><tr><th>Versão</th><th style={{ textAlign: "right" }}>Documentos</th><th style={{ textAlign: "right" }}>%</th></tr></thead>
+            <tbody>
+              {data.totais_versao.map((v) => (
+                <tr key={v.versao}>
+                  <td style={{ fontFamily: "ui-monospace, monospace" }}>{v.versao}</td>
+                  <td style={{ textAlign: "right" }}>{nf.format(Number(v.documentos))}</td>
+                  <td style={{ textAlign: "right" }}>{pctVersao(Number(v.documentos))}</td>
+                </tr>
+              ))}
+              {data.totais_versao.length === 0 && (
+                <tr><td colSpan={3} style={{ color: "#566271", textAlign: "center" }}>Sem dados no período/filtros.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="sub" style={{ marginTop: 4 }}>Total por versão no período selecionado. Documentos sem versão registrada não são exibidos.</div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 7" }}>

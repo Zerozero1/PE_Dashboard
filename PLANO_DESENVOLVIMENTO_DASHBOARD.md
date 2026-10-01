@@ -305,6 +305,7 @@ Referencia visual:
 - Distribuicao por UF e tipo de documento.
 - Emissoes por periodo.
 - Distribuicao por tipo de documento.
+- Emissões por versão do app (tabela com o total por versão no período selecionado).
 - Documentos por especialidade.
 
 Filtros:

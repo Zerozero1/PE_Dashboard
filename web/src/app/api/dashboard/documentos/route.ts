@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const p = [de, ate, uf, tipo];
 
   try {
-    const [kpis, serie, porTipo, porUf, esp, origem] = await Promise.all([
+    const [kpis, serie, porTipo, porUf, esp, origem, versao] = await Promise.all([
       query(
         `SELECT coalesce(sum(f.documentos),0) AS emitidos,
                 coalesce(sum(f.assinados),0) AS assinados,
@@ -69,6 +69,15 @@ export async function GET(req: NextRequest) {
            GROUP BY 1, 2 ORDER BY 1, 2`,
         [de, ate, uf]
       ),
+      query(
+        `SELECT f.ds_versao_sistema AS versao, sum(f.documentos)::bigint AS documentos
+           FROM prescricao.fato_documento_versao_dia f
+          WHERE f.dia BETWEEN $1 AND $2
+            AND ($3::text IS NULL OR f.sg_uf = $3)
+            AND f.ds_versao_sistema <> 'NAO_INFORMADO'
+          GROUP BY 1 ORDER BY documentos DESC`,
+        [de, ate, uf]
+      ),
     ]);
 
     const k = kpis.rows[0];
@@ -86,6 +95,7 @@ export async function GET(req: NextRequest) {
       },
       serie_mensal: serie.rows,
       serie_origem: origem.rows,
+      totais_versao: versao.rows,
       por_tipo: porTipo.rows,
       por_uf: porUf.rows,
       ranking_especialidade: esp.rows,
