@@ -516,6 +516,36 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
         <Donut rows={data.por_tipo.map((t) => ({ label: t.tipo, v: Number(t.docs) }))} />
       </article>
 
+      <article className="card" style={{ gridColumn: "span 7" }}>
+        <div className="section-title"><h2>Documentos emitidos por UF</h2>{filtrados && <span className="tag">F</span>}</div>
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <div style={{ flex: 1.1, minWidth: 0 }}>
+            <MapBr note={false} rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.docs) }))} />
+          </div>
+          <div className="uf-scroll" style={{ flex: 1, maxHeight: 292, overflowY: "auto", paddingRight: 4 }}>
+            <table className="table" style={{ fontSize: 10 }}>
+              <thead><tr><th>UF</th><th style={{ textAlign: "right" }}>Mil</th><th style={{ textAlign: "right" }}>% total</th></tr></thead>
+              <tbody>
+                {data.por_uf.map((u) => (
+                  <tr key={u.uf}>
+                    <td>{u.uf}</td>
+                    <td style={{ textAlign: "right" }}>{milUf(Number(u.docs))}</td>
+                    <td style={{ textAlign: "right" }}>
+                      {pctUf(Number(u.docs), totalUf)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </article>
+
+      <article className="card" style={{ gridColumn: "span 5" }}>
+        <div className="section-title"><h2>Documentos por especialidade</h2>{filtradosSemTipo && <span className="tag">F</span>}</div>
+        <RankRows showPct rows={data.ranking_especialidade.map((e) => ({ name: e.especialidade, v: Number(e.docs) }))} />
+      </article>
+
       <article className="card" style={{ gridColumn: "span 8" }}>
         <div className="section-title">
           <h2>Emissões por plataforma</h2>
@@ -566,35 +596,6 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
         {data.ranking_medicamentos.length === 0 && <div className="sub">Sem receitas no período/filtros.</div>}
       </article>
 
-      <article className="card" style={{ gridColumn: "span 7" }}>
-        <div className="section-title"><h2>Documentos emitidos por UF</h2>{filtrados && <span className="tag">F</span>}</div>
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-          <div style={{ flex: 1.1, minWidth: 0 }}>
-            <MapBr note={false} rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.docs) }))} />
-          </div>
-          <div className="uf-scroll" style={{ flex: 1, maxHeight: 292, overflowY: "auto", paddingRight: 4 }}>
-            <table className="table" style={{ fontSize: 10 }}>
-              <thead><tr><th>UF</th><th style={{ textAlign: "right" }}>Mil</th><th style={{ textAlign: "right" }}>% total</th></tr></thead>
-              <tbody>
-                {data.por_uf.map((u) => (
-                  <tr key={u.uf}>
-                    <td>{u.uf}</td>
-                    <td style={{ textAlign: "right" }}>{milUf(Number(u.docs))}</td>
-                    <td style={{ textAlign: "right" }}>
-                      {pctUf(Number(u.docs), totalUf)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </article>
-
-      <article className="card" style={{ gridColumn: "span 5" }}>
-        <div className="section-title"><h2>Documentos por especialidade</h2>{filtradosSemTipo && <span className="tag">F</span>}</div>
-        <RankRows showPct rows={data.ranking_especialidade.map((e) => ({ name: e.especialidade, v: Number(e.docs) }))} />
-      </article>
       <LegendaFiltro />
     </section>
   );
