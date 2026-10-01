@@ -1,7 +1,7 @@
 import sys
 import time
 
-from common import connect_dw, connect_origin, log, upsert_rows
+from common import connect_dw, connect_origin, log
 from config import BATCH_SIZE
 
 SQL_DOCS = """
@@ -118,21 +118,6 @@ WHERE d.id_consulta_documento BETWEEN %s AND %s
 GROUP BY 1, 2, 3, 4
 """
 
-SQL_PACIENTES = """
-SELECT d.dh_documento::date AS dia,
-       CASE WHEN ua.sg_uf = 'BR' THEN '--' ELSE COALESCE(ua.sg_uf, '--') END AS sg_uf,
-       count(DISTINCT mp.id_paciente) AS pacientes_distintos
-FROM prescricao.tb_consulta_documento d
-LEFT JOIN prescricao.tb_consulta c ON c.id_consulta = d.id_consulta
-LEFT JOIN prescricao.rl_medico_unidade_atendimento mu
-       ON mu.id_medico_unidade_atendimento = c.id_medico_unidade_atendimento
-LEFT JOIN prescricao.tb_unidade_atendimento ua
-       ON ua.id_unidade_atendimento = mu.id_unidade_atendimento
-LEFT JOIN prescricao.rl_medico_paciente mp
-       ON mp.id_medico_paciente = c.id_medico_paciente
-GROUP BY 1, 2
-"""
-
 SQL_MEDICO_PACIENTE = """
 SELECT DISTINCT d.dh_documento::date AS dia,
        CASE WHEN ua.sg_uf = 'BR' THEN '--' ELSE COALESCE(ua.sg_uf, '--') END AS sg_uf,
@@ -243,20 +228,6 @@ def batch_loop(origin, dw, sql, stg, columns, conflict, fact, metric_idx,
     return total
 
 
-def single_pass(origin, dw, sql, table, columns, conflict):
-    log(f"{table}: consulta unica de agregacao (varredura completa, pode demorar)...")
-    t0 = time.time()
-    cur = origin.cursor()
-    cur.execute("SET statement_timeout = 0")
-    cur.execute("SET work_mem = '256MB'")
-    cur.execute(sql)
-    rows = cur.fetchall()
-    cur.close()
-    if rows:
-        upsert_rows(dw, table, columns, rows, conflict)
-    log(f"{table}: {len(rows):,} linhas em {time.time()-t0:.0f}s")
-
-
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else "docs"
     origin = connect_origin()
@@ -318,11 +289,6 @@ def main():
             ["dia", "sg_uf", "id_unidade_atendimento"],
             "prescricao.fato_documento_unidade_dia", 3)
         log(f"fato_documento_unidade_dia: concluido — {total:,} documentos")
-
-    elif mode == "pacientes":
-        single_pass(
-            origin, dw, SQL_PACIENTES, "prescricao.fato_documento_paciente_dia",
-            ["dia", "sg_uf", "pacientes_distintos"], ["dia", "sg_uf"])
 
     elif mode == "medico":
         log("fato_documento_medico_dia: iniciando")

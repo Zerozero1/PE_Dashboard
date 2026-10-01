@@ -6,7 +6,7 @@ from common import connect_dw, log
 def main():
     dw = connect_dw()
     cur = dw.cursor()
-    for fname in ("schema.sql", "ddl_extra.sql"):
+    for fname in ("schema.sql", "ddl_extra.sql", "seed_de_para_medicamento.sql"):
         with open(fname, encoding="utf-8") as f:
             cur.execute(f.read())
     dw.commit()

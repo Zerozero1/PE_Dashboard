@@ -326,6 +326,18 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_receita_medicamento_mes (
 CREATE INDEX IF NOT EXISTS idx_fato_receita_medicamento_mes_uf
     ON prescricao.fato_receita_medicamento_mes (sg_uf, mes);
 
+-- De-para curado texto->principio ativo (Fase 2 do ranking de medicamentos);
+-- semeado por seed_de_para_medicamento.sql (aplicado pelo setup.py).
+CREATE TABLE IF NOT EXISTS prescricao.de_para_medicamento (
+    medicamento VARCHAR(255) PRIMARY KEY,
+    principio_ativo VARCHAR(120) NOT NULL
+);
+
+-- Limpeza 2026-10-01: fato e flag AN2 nao exibidos na UI (AN2 usa
+-- fato_documento_medico_paciente_dia + snap_medico_paciente). Aplicado pelo
+-- setup.py na maquina do ETL apos o pull (o codigo novo nao usa a tabela).
+DROP TABLE IF EXISTS prescricao.fato_documento_paciente_dia;
+
 -- Snapshot all-time do ranking de medicamentos (modo "Todos"): top 100 por
 -- combinacao de filtros — '**' = todas as UFs; id_tipo_documento 0 = todos.
 CREATE TABLE IF NOT EXISTS prescricao.snap_medicamento_top (

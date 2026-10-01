@@ -213,14 +213,17 @@ function useApi<T>(path: string, active: boolean) {
   useEffect(() => {
     if (!active) return;
     let ok = true;
-    setCarregando(true);
-    setErro(null);
-    fetch(path)
-      .then((r) => r.json())
-      .then((d) => { if (ok) setData(d); })
-      .catch((e) => { if (ok) setErro(String(e)); })
-      .finally(() => { if (ok) setCarregando(false); });
-    return () => { ok = false; };
+    const run = () => {
+      setCarregando(true);
+      setErro(null);
+      fetch(path)
+        .then((r) => r.json())
+        .then((d) => { if (ok) setData(d); })
+        .catch((e) => { if (ok) setErro(String(e)); })
+        .finally(() => { if (ok) setCarregando(false); });
+    };
+    const t = setTimeout(run, 0);
+    return () => { ok = false; clearTimeout(t); };
   }, [path, active]);
   return { data, erro, carregando };
 }
@@ -351,19 +354,6 @@ function LinesChart({ meses, series }: { meses: string[]; series: { nome: string
   );
 }
 
-function Bars({ rows }: { rows: { x: string; v: number }[] }) {
-  const max = Math.max(...rows.map((r) => r.v), 1);
-  return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 150, paddingTop: 8 }}>
-      {rows.map((r) => (
-        <div key={r.x} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", height: "100%" }}>
-          <div style={{ height: `${(r.v / max) * 100}%`, background: "var(--va)", border: "1px solid var(--va)", borderRadius: "3px 3px 0 0", minHeight: 2, opacity: .75 }} title={`${r.x}: ${nf.format(r.v)}`} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function Donut({ rows, cores, agruparOutros = true, pctDec = 0 }: { rows: { label: string; v: number }[]; cores?: string[]; agruparOutros?: boolean; pctDec?: number }) {
   const total = rows.reduce((a, b) => a + b.v, 0);
   const sorted = cores ? rows : [...rows].sort((a, b) => b.v - a.v);
@@ -372,11 +362,11 @@ function Donut({ rows, cores, agruparOutros = true, pctDec = 0 }: { rows: { labe
   const data = resto.length > 0 ? [...principais, { label: "Outros", v: resto.reduce((a, b) => a + b.v, 0) }] : principais;
   const coresPadrao = ["var(--va)", "var(--va2)", "#9a7cff", "#ffb454", "#ff647c", "#7db9e8", "#f2c94c", "#34d399", "#f472b6", "#a3e635", "#c084fc", "#fdba74"];
   const paleta = cores ?? coresPadrao;
-  let acc = 0;
+  const prefixo = data.map((_, i) => data.slice(0, i).reduce((a, b) => a + b.v, 0));
   const stops = data.map((r, i) => {
-    const start = (acc / total) * 100;
-    acc += r.v;
-    return `${paleta[i % paleta.length]} ${start}% ${(acc / total) * 100}%`;
+    const start = (prefixo[i] / total) * 100;
+    const end = ((prefixo[i] + r.v) / total) * 100;
+    return `${paleta[i % paleta.length]} ${start}% ${end}%`;
   }).join(", ");
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -439,17 +429,16 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
   const [dias, setDias] = useState<"todos" | string>("todos");
   const [uf, setUf] = useState("");
   const [tipo, setTipo] = useState("");
+  const [agruparPrincipio, setAgruparPrincipio] = useState(false);
   const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
-  const qs = `de=${de}&ate=${ate}&uf=${uf}&tipo=${tipo}`;
+  const qs = `de=${de}&ate=${ate}&uf=${uf}&tipo=${tipo}${agruparPrincipio ? "&agrupar=principio" : ""}`;
   const { data, erro, carregando } = useApi<DocsData>(`/api/dashboard/documentos?${qs}`, active);
   if (erro) return <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>;
   if (!data) return <div className="card" style={{ gridColumn: "span 12", color: "#566271" }}>Carregando…</div>;
   const k = data.kpis;
-  let acumulado = 0;
-  const serieAcumulada = data.serie_mensal.map((s) => {
-    acumulado += Number(s.emitidos);
-    return { x: s.mes, v: acumulado };
-  });
+  const prefixoMensal = data.serie_mensal.reduce<number[]>(
+    (xs, s) => [...xs, (xs[xs.length - 1] ?? 0) + Number(s.emitidos)], []);
+  const serieAcumulada = data.serie_mensal.map((s, i) => ({ x: s.mes, v: prefixoMensal[i] }));
   const mensal = data.serie_mensal.map((s) => Number(s.emitidos));
   const ultimo = data.serie_mensal[data.serie_mensal.length - 1];
   const [uy, um] = ultimo ? ultimo.mes.split("-") : ["", ""];
@@ -508,7 +497,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
         <div className="chart">
           <BarChart rows={serieAcumulada} bars={mensal} />
         </div>
-        <div className="sub" style={{ marginTop: 4 }}>Total emitido em {ultimoLabel}: <b style={{ color: "var(--va)" }}>{nf.format(Number(ultimo?.emitidos ?? 0))}</b> · Acumulado: {nf.format(acumulado)}</div>
+        <div className="sub" style={{ marginTop: 4 }}>Total emitido em {ultimoLabel}: <b style={{ color: "var(--va)" }}>{nf.format(Number(ultimo?.emitidos ?? 0))}</b> · Acumulado: {nf.format(prefixoMensal[prefixoMensal.length - 1] ?? 0)}</div>
       </article>
 
       <article className="card side-chart">
@@ -591,7 +580,14 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
       </article>
 
       <article className="card" style={{ gridColumn: "span 5" }}>
-        <div className="section-title"><h2>Medicamentos prescritos</h2>{filtrados && <span className="tag">F</span>}</div>
+        <div className="section-title">
+          <h2>Medicamentos prescritos</h2>
+          <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "#8d99a7", cursor: "pointer", textTransform: "none", letterSpacing: 0 }}>
+            <input type="checkbox" checked={agruparPrincipio} onChange={(e) => setAgruparPrincipio(e.target.checked)} style={{ accentColor: "var(--va)" }} />
+            agrupar por princípio ativo
+          </label>
+          {filtrados && <span className="tag">F</span>}
+        </div>
         <RankRows rows={data.ranking_medicamentos.map((m) => ({ name: m.medicamento, v: Number(m.itens) }))} />
         {data.ranking_medicamentos.length === 0 && <div className="sub">Sem receitas no período/filtros.</div>}
       </article>
@@ -611,11 +607,9 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
   if (!data) return <div className="card" style={{ gridColumn: "span 12", color: "#566271" }}>Carregando…</div>;
   const k = data.kpis;
   const faixas = ["31-60", "61-90", "91-120", "120+"];
-  let acumuladoNovos = 0;
-  const novosAcumulados = data.novos_mensal.map((s) => {
-    acumuladoNovos += Number(s.novos);
-    return { x: s.mes, v: acumuladoNovos };
-  });
+  const prefixoNovos = data.novos_mensal.reduce<number[]>(
+    (xs, s) => [...xs, (xs[xs.length - 1] ?? 0) + Number(s.novos)], []);
+  const novosAcumulados = data.novos_mensal.map((s, i) => ({ x: s.mes, v: prefixoNovos[i] }));
   const novosMensal = data.novos_mensal.map((s) => Number(s.novos));
   const totalInsc = data.por_uf.reduce((a, u) => a + Number(u.inscricoes_cadastradas), 0);
   const pctInsc = (v: number) => `${(totalInsc > 0 ? ((v / totalInsc) * 100).toFixed(1) : "0.0").replace(".", ",")}%`;
@@ -660,7 +654,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
         <div className="chart">
           <BarChart rows={novosAcumulados} bars={novosMensal} tick={10} />
         </div>
-        <div className="sub" style={{ marginTop: 4 }}>Novos médicos por mês · Acumulado: <b style={{ color: "var(--va)" }}>{nf.format(acumuladoNovos)}</b></div>
+        <div className="sub" style={{ marginTop: 4 }}>Novos médicos por mês · Acumulado: <b style={{ color: "var(--va)" }}>{nf.format(prefixoNovos[prefixoNovos.length - 1] ?? 0)}</b></div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 6" }}>
@@ -1238,7 +1232,9 @@ function LogsView({ active }: { active: boolean }) {
   }, []);
 
   useEffect(() => {
-    if (active) carregar();
+    if (!active) return;
+    const t = setTimeout(carregar, 0);
+    return () => clearTimeout(t);
   }, [active, carregar]);
 
   const excluir = async (alvo: string) => {
@@ -1441,9 +1437,9 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
   }, []);
 
   useEffect(() => {
-    loadHealth();
+    const t = setTimeout(loadHealth, 0);
     const id = setInterval(loadHealth, 30000);
-    return () => clearInterval(id);
+    return () => { clearTimeout(t); clearInterval(id); };
   }, [loadHealth]);
 
   const refresh = async () => {

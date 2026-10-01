@@ -21,6 +21,41 @@ export async function GET(req: NextRequest) {
   const { de, ate, uf, tipo } = filtro(req.nextUrl);
   const p = [de, ate, uf, tipo];
   const todos = de <= TODOS_DE;
+  const agrupar = req.nextUrl.searchParams.get("agrupar") === "principio";
+
+  let medSql: string;
+  let medParams: (string | null)[];
+  if (todos) {
+    medSql = agrupar
+      ? `SELECT COALESCE(d.principio_ativo, t.medicamento) AS medicamento, sum(t.itens)::bigint AS itens
+           FROM prescricao.snap_medicamento_top t
+           LEFT JOIN prescricao.de_para_medicamento d ON d.medicamento = t.medicamento
+          WHERE t.sg_uf = COALESCE($1::text, '**')
+            AND t.id_tipo_documento = COALESCE($2::int, 0)
+          GROUP BY 1 ORDER BY itens DESC LIMIT 15`
+      : `SELECT t.medicamento, t.itens
+           FROM prescricao.snap_medicamento_top t
+          WHERE t.sg_uf = COALESCE($1::text, '**')
+            AND t.id_tipo_documento = COALESCE($2::int, 0)
+          ORDER BY t.posicao LIMIT 15`;
+    medParams = [uf, tipo];
+  } else {
+    medSql = agrupar
+      ? `SELECT COALESCE(d.principio_ativo, f.medicamento) AS medicamento, sum(f.itens)::bigint AS itens
+           FROM prescricao.fato_receita_medicamento_mes f
+           LEFT JOIN prescricao.de_para_medicamento d ON d.medicamento = f.medicamento
+          WHERE f.mes BETWEEN to_char($1::date,'YYYY-MM')::char(7) AND to_char($2::date,'YYYY-MM')::char(7)
+            AND ($3::text IS NULL OR f.sg_uf = $3)
+            AND ($4::int IS NULL OR f.id_tipo_documento = $4)
+          GROUP BY 1 ORDER BY itens DESC LIMIT 15`
+      : `SELECT f.medicamento, sum(f.itens)::bigint AS itens
+           FROM prescricao.fato_receita_medicamento_mes f
+          WHERE f.mes BETWEEN to_char($1::date,'YYYY-MM')::char(7) AND to_char($2::date,'YYYY-MM')::char(7)
+            AND ($3::text IS NULL OR f.sg_uf = $3)
+            AND ($4::int IS NULL OR f.id_tipo_documento = $4)
+          GROUP BY 1 ORDER BY itens DESC LIMIT 15`;
+    medParams = p;
+  }
 
   try {
     const [kpis, serie, porTipo, porUf, esp, origem, versao, medicamentos] = await Promise.all([
@@ -81,24 +116,7 @@ export async function GET(req: NextRequest) {
           GROUP BY 1 ORDER BY documentos DESC`,
         [de, ate, uf]
       ),
-      todos
-        ? query(
-            `SELECT t.medicamento, t.itens
-               FROM prescricao.snap_medicamento_top t
-              WHERE t.sg_uf = COALESCE($1::text, '**')
-                AND t.id_tipo_documento = COALESCE($2::int, 0)
-              ORDER BY t.posicao LIMIT 15`,
-            [uf, tipo]
-          )
-        : query(
-            `SELECT f.medicamento, sum(f.itens)::bigint AS itens
-               FROM prescricao.fato_receita_medicamento_mes f
-              WHERE f.mes BETWEEN to_char($1::date,'YYYY-MM')::char(7) AND to_char($2::date,'YYYY-MM')::char(7)
-                AND ($3::text IS NULL OR f.sg_uf = $3)
-                AND ($4::int IS NULL OR f.id_tipo_documento = $4)
-              GROUP BY 1 ORDER BY itens DESC LIMIT 15`,
-            p
-          ),
+      query(medSql, medParams),
     ]);
 
     const k = kpis.rows[0];

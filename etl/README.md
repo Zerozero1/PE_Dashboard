@@ -30,14 +30,14 @@ $env:DW_HOST='172.16.7.112'; $env:DW_DB='prescricao_dw'; $env:DW_USER='usr_presc
 
 | Script | Função |
 |---|---|
-| `setup.py` | Aplica `schema.sql` + `ddl_extra.sql` (idempotente). Criar/atualizar estrutura no DW. |
+| `setup.py` | Aplica `schema.sql` + `ddl_extra.sql` + o seed `seed_de_para_medicamento.sql` (idempotente). Criar/atualizar estrutura no DW. |
 | `load_dims.py` | Carrega dimensões: dim_data, dim_uf, dim_tipo_documento, dim_medico, dim_especialidade, dim_unidade. |
-| `load_fatos.py <modo>` | Fatos de documentos, em modos: `docs`, `origem`, `versao`, `receitas`, `especialidade`, `unidade`, `medico`, `medico_tipo`, `pacientes`, `medico_pacientes`, `unidade_pacientes`, `medico_unidade`. |
+| `load_fatos.py <modo>` | Fatos de documentos, em modos: `docs`, `origem`, `versao`, `receitas`, `especialidade`, `unidade`, `medico`, `medico_tipo`, `medico_pacientes`, `unidade_pacientes`, `medico_unidade`. |
 | `load_medicos.py` | `fato_medico_snapshot` (inscrições CRM/UF e CPFs únicos com aceite, por UF + total global `--`) + `fato_medico_dia.novos_aceite_termo` + `medicos_com_emissao` (derivado do DW). |
 | `load_maior_dia.py` | Constrói `fato_medico_maior_dia` (melhor dia por médico/UF em documentos **assinados**, com pacientes distintos do dia) a partir de `fato_documento_emissao` — alimenta a AN3 diária. |
 | `load_documentos.py` | Carrega `fato_documento_emissao` (um registro por documento assinado ou não: data/hora, médico, UF, tipo, unidade, situação e `ds_qrcode`) — alimenta a lista de documentos do drill da AN3. Carga cheia na primeira execução e incremental depois (revisa os últimos 5M ids); extração em lotes de 2M ids com stream ordenado e retry por lote. |
 | `load_snapshots.py` | Reconstrói os snapshots all-time da Auditoria (`snap_medico_tipo`, `snap_medico_paciente`, `snap_instituicao`) usados no modo "Todos" dos rankings AN1/AN2/AN4 (evita varreduras de 30-60M linhas por consulta) e o `snap_medicamento_top` (top 100 do ranking de medicamentos por UF×tipo). |
-| `load_anomalias.py` | `fato_auditoria_dia`: flags diárias AN1 e AN2 calculadas no DW (AN3 usa `fato_medico_maior_dia`; AN4 usa `fato_documento_unidade_paciente_dia` no ranking). |
+| `load_anomalias.py` | `fato_auditoria_dia`: flag diária AN1 calculada no DW (AN2 usa `snap_medico_paciente`/`fato_documento_medico_paciente_dia`; AN3 usa `fato_medico_maior_dia`; AN4 usa `fato_documento_unidade_paciente_dia` no ranking). |
 | `run_all.py` | Pipeline completo e idempotente (dims → fatos → maior dia → documentos emitidos → anomalias). |
 | `jobs.py` | Orquestração via fila `dashboard_refresh_job` (ver abaixo). |
 | `validate.py` / `status_dw.py` / `audit_counts.py` / `list_indexes.py` | Conferências: totais, cobertura, contagens da origem vs DW, índices. |
@@ -65,11 +65,11 @@ python jobs.py enqueue-manual <email>  # cria job manual (botão "Atualizar dado
 - **Documentos emitidos (`load_documentos.py`)**: extração por id_consulta_documento em modo streaming **ordenado por id** (cursor nomeado, blocos de 50 mil com upsert); a primeira carga percorre toda a tabela e as seguintes revisam os últimos 5M ids (cobre mudanças de assinatura/cancelamento recentes). Sem paciente e sem conteúdo; `ds_qrcode` identifica o documento no drill.
 - **Staging + rebuild**: cada lote agrega no SQL da origem e grava em `stg_documento_*`; ao final, a fato é reconstruída com `SUM ... GROUP BY` (rebuild_fact). Necessário porque uma chave (dia×UF×tipo) aparece em vários lotes — upsert direto por lote sobrescrevia e perdia dados (~970k docs; corrigido em 2026-09-22). **O staging é truncado ao fim de cada rebuild** (2026-10-01) para não reter ~12 GB de dados duplicados. Staging de fatos de **soma** é intencionalmente **sem chave/unique**: as duplicatas de chave entre lotes se acumulam e o `SUM` do rebuild as consolida; uma PK descartaria os lotes seguintes em silêncio (`ON CONFLICT DO NOTHING`) — bug corrigido em 2026-10-01 nas fatos de versão do app e receita-medicamento (o staging de grão distinto, como `stg_documento_medico_paciente_dia`, mantém PK para dedup).
 - **Snapshots "Todos" (`load_snapshots.py`)**: `snap_medico_tipo`, `snap_medico_paciente` e `snap_instituicao` agregam all-time os fatos diários e sustentam os rankings AN1/AN2/AN4 quando nenhuma janela de datas é enviada (a UI omite `de`/`ate` com o período "Todos"). Medições: AN2 >120 s → 48 ms; AN1 13,4 s → 1,5 s; AN4 52 s → 0,04 ms. O `snap_medicamento_top` guarda o **top 100 por combinação** (global/UF/tipo/UF+tipo; sentinelas `'**'` e `0`) — o modo "Todos" do ranking de medicamentos responde por posição em ~1 ms, contra ~15 s da varredura direta dos 60 meses. Janelas de 7/30/60/90/120 dias continuam calculadas na hora sobre os fatos diários (ex.: AN2 em 120 dias ≈ 7,3 s; medicamentos em 30 dias ≈ 1,1 s, com cast `::char(7)` no predicado de `mes` para usar a PK).
-- **Varreduras completas** (`single_pass`, sem lote) apenas para distinct: pacientes por dia×UF (~55 s), com `statement_timeout=0` e `work_mem=256MB`.
 - **`medico_pacientes`** (grão médico×paciente×dia, para `count(DISTINCT id_paciente)`): lote por faixa de id com `SELECT DISTINCT` na origem; grava em `stg_documento_medico_paciente_dia` com dedup via PK (`ON CONFLICT DO NOTHING`); ao final, a fato é reconstruída com `INSERT ... SELECT` (sem `SUM` — distinct não é aditivo entre lotes/dias).
 - **`unidade_pacientes`** (grão unidade×paciente×dia, para a AN4): mesmo padrão do `medico_pacientes`, restrito a documentos **assinados**; grava em `stg_documento_unidade_paciente_dia` e reconstrói `fato_documento_unidade_paciente_dia`.
 - **`medico_unidade`** (snapshot de vínculos): lê `rl_medico_unidade_atendimento` (≈580k linhas) e reconstrói `fato_medico_unidade` (médico × unidade, `in_ativo`, `dt_cadastro`) — alimenta a coluna "Médicos" da AN4 e o drill (rosca por tipo vem de `fato_documento_emissao`).
 - **`receitas`** (ranking de medicamentos): lote por faixa de `id_receita` (2M), agregação na origem em grão mês×UF×tipo×texto normalizado (maiúsculas/espaços, até 255 caracteres; vazio/NULL → `NAO_INFORMADO`) e rebuild da `fato_receita_medicamento_mes` com `SUM` por chave. Não há catálogo oficial de medicamentos na origem (texto livre por médico) — o ranking agrupa pelo texto informado.
+- **De-para de medicamentos (Fase 2)**: `de_para_medicamento` (texto → princípio ativo canônico) é semeada por `seed_de_para_medicamento.sql` (aplicada pelo `setup.py`; ~580 mapeamentos cobrindo os textos de maior volume — variações de sal, marcas conhecidas e erros de escrita). O endpoint do ranking aceita `agrupar=principio` (LEFT JOIN; textos não mapeados caem no próprio texto), resolvendo marca×genérico (ex.: MOUNJARO/TIRZEPATIDA → TIRZEPATIDA).
 - **Especialidade**: deriva do cadastro do médico que assina (`tb_medico_especialidade` via `rl_medico_unidade_atendimento.id_medico`, `in_ativo='S'`) — não de `rl_med_especialidade_consulta` (vínculo da consulta, com outliers de até 104 especialidades).
 
 ## Modelo físico (schema `prescricao` do DW)
@@ -83,12 +83,12 @@ Fatos:
 - `fato_documento_origem_dia` (dia, sg_uf, ds_origem_criacao, documentos) — origem de criação: WEB, WEB-MOBILE, IOS, ANDROID ou NAO_INFORMADO; campo majoritariamente NULL até meados de 2025 (~70% do total), preenchido sistematicamente só nos últimos meses
 - `fato_documento_versao_dia` (dia, sg_uf, ds_versao_sistema, documentos) — versão do app por dia×UF (vazio → `NAO_INFORMADO`); alimenta a tabela "Emissões por versão do app" (total por versão no período)
 - `fato_receita_medicamento_mes` (mes, sg_uf, id_tipo_documento, medicamento, itens) — itens de receita por medicamento (texto normalizado) em grão mensal; alimenta o ranking "Medicamentos prescritos"
+- `de_para_medicamento` (medicamento, principio_ativo) — de-para curado (seed) para o toggle "agrupar por princípio ativo" do ranking de medicamentos
 - `fato_documento_especialidade_dia` (dia, sg_uf, id_medico_especialidade, documentos)
 - `fato_documento_unidade_dia` (dia, sg_uf, id_unidade_atendimento, documentos)
 - `fato_documento_medico_dia` (dia, sg_uf, id_medico, documentos)
 - `fato_documento_medico_tipo_dia` (dia, sg_uf, id_medico, id_tipo_documento, documentos) — médico × tipo de documento; alimenta AN1 (emissões no período) e o drill-down por tipo
 - `fato_documento_medico_paciente_dia` (dia, sg_uf, id_medico, id_paciente) — grão médico×paciente×dia; alimenta AN2 (`count(DISTINCT id_paciente)` no período) e o drill-down de pacientes
-- `fato_documento_paciente_dia` (dia, sg_uf, pacientes_distintos)
 - `fato_medico_dia` (dia, sg_uf, novos_aceite_termo, medicos_com_emissao; inclui linhas `sg_uf='--'` com distinct global por dia)
 - `fato_medico_snapshot` (sg_uf, inscricoes_cadastradas, medicos_ativos, atualizado_em; inclui `sg_uf='--'` com totais globais)
 - `fato_medico_emissao_mes` (mes, sg_uf, cpfs_distintos) — CPFs distintos com emissão por mês (por UF + global `--`); alimenta o gráfico "Médicos com emissão por mês"

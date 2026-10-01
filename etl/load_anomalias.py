@@ -39,29 +39,16 @@ WHERE esperado IS NOT NULL AND esperado > 0
   AND docs/esperado >= 2
 """
 
-SQL_AN2 = """
-WITH diario AS (
-  SELECT dia, sum(pacientes_distintos)::numeric AS pac
-  FROM prescricao.fato_documento_paciente_dia GROUP BY dia
-), media AS (
-  SELECT dia, pac,
-         avg(pac) OVER (ORDER BY dia ROWS BETWEEN 30 PRECEDING AND 1 PRECEDING) AS esperado
-  FROM diario
-)
-SELECT dia, pac, esperado,
-       CASE WHEN pac/esperado >= 5 THEN 5
-            WHEN pac/esperado >= 3 THEN 3
-            WHEN pac/esperado >= 2 THEN 2 END AS sev
-FROM media
-WHERE esperado IS NOT NULL AND esperado > 0
-  AND pac/esperado >= 2
-"""
-
 def main():
     dw = connect_dw()
-    log("fato_auditoria_dia: iniciando (AN1 e AN2)")
+    log("fato_auditoria_dia: iniciando (AN1)")
     run(dw, SQL_AN1, "AN1", "Documentos")
-    run(dw, SQL_AN2, "AN2", "Atendimentos")
+    cur = dw.cursor()
+    cur.execute(
+        "DELETE FROM prescricao.fato_auditoria_dia "
+        "WHERE tipo_anomalia IN ('AN2', 'AN3')")
+    dw.commit()
+    cur.close()
     dw.close()
     log("fato_auditoria_dia: concluido")
 

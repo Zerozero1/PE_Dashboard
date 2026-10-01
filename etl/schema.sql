@@ -75,13 +75,6 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_documento_especialidade_dia (
     PRIMARY KEY (dia, sg_uf, id_medico_especialidade)
 );
 
-CREATE TABLE IF NOT EXISTS prescricao.fato_documento_paciente_dia (
-    dia DATE NOT NULL,
-    sg_uf CHAR(2) NOT NULL,
-    pacientes_distintos BIGINT NOT NULL,
-    PRIMARY KEY (dia, sg_uf)
-);
-
 CREATE TABLE IF NOT EXISTS prescricao.fato_medico_dia (
     dia DATE NOT NULL,
     sg_uf CHAR(2) NOT NULL,

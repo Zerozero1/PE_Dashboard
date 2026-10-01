@@ -3,8 +3,8 @@
 Ordem: dimensoes -> fato docs -> origem-criacao -> versao do app
        -> receita-medicamento -> especialidade -> unidade
        -> medico-dia -> medico-tipo -> medico-pacientes -> unidade-pacientes
-       -> pacientes -> medicos (snapshot/novos) -> AN3 maior dia
-       -> documentos emitidos -> anomalias (AN1/AN2).
+       -> medicos (snapshot/novos) -> AN3 maior dia
+       -> documentos emitidos -> anomalias (AN1).
 
 Uso: python run_all.py   (requer variaveis de ambiente; ver README.md)
 """
@@ -31,7 +31,6 @@ def main():
         ("fato unidade-pacientes", "load_fatos unidade_pacientes"),
         ("fato medico-unidade (vinculos)", "load_fatos medico_unidade"),
         ("snapshots AN1/AN2/AN4", "load_snapshots"),
-        ("fato pacientes", "load_fatos pacientes"),
         ("medicos (snapshot/novos)", "load_medicos"),
         ("AN3 maior dia (emissoes por dia)", "load_maior_dia"),
         ("documentos emitidos (drill AN3)", "load_documentos"),

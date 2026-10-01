@@ -217,7 +217,7 @@ Trade-off:
   - assinados (`in_assinado='S'`)
   - cancelados (`in_cancelado='S'`)
   - nao_assinados = documentos - assinados (derivado)
-- complementares: `fato_documento_especialidade_dia`, `fato_documento_unidade_dia`, `fato_documento_medico_dia`, `fato_documento_paciente_dia`, `fato_documento_medico_paciente_dia` (dia+UF+medico+paciente — alimenta a AN2, `count(DISTINCT id_paciente)`), `fato_documento_origem_dia` (dia + UF + `ds_origem_criacao` — WEB/WEB-MOBILE/IOS/ANDROID/NAO_INFORMADO; alimenta o grafico de evolucao dos dispositivos)
+- complementares: `fato_documento_especialidade_dia`, `fato_documento_unidade_dia`, `fato_documento_medico_dia`, `fato_documento_medico_paciente_dia` (dia+UF+medico+paciente — alimenta a AN2, `count(DISTINCT id_paciente)`), `fato_documento_origem_dia` (dia + UF + `ds_origem_criacao` — WEB/WEB-MOBILE/IOS/ANDROID/NAO_INFORMADO; alimenta o grafico de evolucao dos dispositivos)
 
 `fato_medico_dia`
 - grao: dia + UF + especialidade + situacao
@@ -306,7 +306,7 @@ Referencia visual:
 - Emissoes por periodo.
 - Distribuicao por tipo de documento.
 - Emissões por versão do app (tabela com o total por versão no período selecionado).
-- Medicamentos prescritos (top 15 por itens de receita; grão mensal; texto do médico normalizado).
+- Medicamentos prescritos (top 15 por itens de receita; grão mensal; texto do médico normalizado; opção "agrupar por princípio ativo" com de-para curado).
 - Documentos por especialidade.
 
 Filtros:

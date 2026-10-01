@@ -7,7 +7,7 @@ TABLES = [
     "dim_especialidade", "dim_unidade",
     "fato_documento_dia", "fato_documento_especialidade_dia",
     "fato_documento_unidade_dia", "fato_documento_medico_dia",
-    "fato_documento_paciente_dia", "fato_medico_dia",
+    "fato_medico_dia",
     "fato_medico_snapshot",
     "fato_auditoria_dia", "dashboard_refresh_config",
     "dashboard_refresh_job",

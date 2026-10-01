@@ -248,3 +248,47 @@ válida (cargas idempotentes via upsert); o job diário roda o `run_all` complet
 - [ ] ETL: env vars configuradas, `run_all.py` validado, scheduler/worker agendados
 - [ ] Backup do `prescricao_dw` definido
 - [ ] Rollback testado (reverter versão web sem afetar o DW)
+
+## 9. Checklist de atualização — v1.3 (commit `7937a50` ou superior)
+
+> Atualização de um ambiente **já em produção** (o DW é o mesmo de produção e já foi
+> migrado/populado: fatos `fato_receita_medicamento_mes` e `fato_documento_versao_dia`,
+> snapshots `snap_medicamento_top` etc. — **nada a fazer no banco**).
+
+**Pré-condições**
+
+- [ ] Acesso ao servidor web e à máquina do ETL
+- [ ] Executar o deploy do **ETL antes do job agendado das 02:00**
+
+**A) Servidor web (Next.js)**
+
+- [ ] `git status` limpo e `git pull` até o commit `7937a50` (ou superior)
+- [ ] `cd web` → `npm ci`
+- [ ] `npm run build` (sem erros; `npm run lint` sem erros)
+- [ ] **Reiniciar o serviço** (PM2/NSSM)
+- [ ] Conferir: rodapé "PE Dashboard · CFM **v1.3**"; cards "Emissões por versão do app"
+      e "Medicamentos prescritos" (com opção "agrupar por princípio ativo"); "Documentos
+      emitidos por UF" + "Documentos por especialidade" logo abaixo de "Emissões por mês"
+      + "Distribuição por tipo"
+
+**B) Máquina do ETL (Python)**
+
+- [ ] `git status` — se houver alterações locais, **não forçar**: avaliar/stash e avisar
+- [ ] `git pull` até `7937a50` (ou superior)
+- [ ] `python setup.py` (idempotente: aplica DDL, o seed `seed_de_para_medicamento.sql`
+      e o `DROP` de limpeza da `fato_documento_paciente_dia` — tabela legada que o
+      código novo não usa mais)
+- [ ] **Reiniciar o worker e o scheduler** (`jobs.py`) — o Python só carrega o código
+      novo ao reiniciar
+- [ ] Validar no DW após a primeira carga nova:
+  - [ ] `fato_documento_medico_paciente_dia` com `min(dia) = 2021-10-07` (**não truncou**)
+  - [ ] `fato_receita_medicamento_mes` ≈ 53,4M itens
+  - [ ] `fato_documento_versao_dia` ≈ 62,8M documentos
+  - [ ] `fato_auditoria_dia` sem linhas AN2/AN3 (apenas AN1)
+
+**C) Atenções**
+
+- [ ] Não rodar cargas manuais em paralelo com o job agendado
+- [ ] O `run_all` ficou ~10 min mais longo (novo passo `receitas`)
+- [ ] Rollback: web = voltar commit + build + restart; ETL = parar worker + voltar commit.
+      As tabelas novas são aditivas — o DW não precisa de rollback
