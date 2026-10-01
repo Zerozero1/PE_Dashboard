@@ -188,15 +188,39 @@ LEFT JOIN prescricao.rl_medico_unidade_atendimento mu
        ON mu.id_medico_unidade_atendimento = c.id_medico_unidade_atendimento
 LEFT JOIN prescricao.tb_unidade_atendimento ua
        ON ua.id_unidade_atendimento = mu.id_unidade_atendimento
-GROUP BY 1, 2
+    GROUP BY 1, 2
+"""
+
+SQL_RECEITAS = """
+SELECT to_char(d.dh_documento, 'YYYY-MM') AS mes,
+       CASE WHEN ua.sg_uf = 'BR' THEN '--' ELSE COALESCE(ua.sg_uf, '--') END AS sg_uf,
+       d.id_tipo_documento,
+       left(COALESCE(NULLIF(upper(btrim(
+            regexp_replace(m.ds_medicamento, '[[:space:]]+', ' ', 'g'))), ''),
+            'NAO_INFORMADO'), 255) AS medicamento,
+       count(*) AS itens
+FROM prescricao.tb_receita r
+JOIN prescricao.tb_medicamento m
+       ON m.id_medicamento = r.id_medicamento
+JOIN prescricao.tb_consulta_documento d
+       ON d.id_consulta_documento = r.id_consulta_documento
+LEFT JOIN prescricao.tb_consulta c ON c.id_consulta = d.id_consulta
+LEFT JOIN prescricao.rl_medico_unidade_atendimento mu
+       ON mu.id_medico_unidade_atendimento = c.id_medico_unidade_atendimento
+LEFT JOIN prescricao.tb_unidade_atendimento ua
+       ON ua.id_unidade_atendimento = mu.id_unidade_atendimento
+WHERE r.id_receita BETWEEN %s AND %s
+GROUP BY 1, 2, 3, 4
 """
 
 
-def batch_loop(origin, dw, sql, stg, columns, conflict, fact, metric_idx):
+def batch_loop(origin, dw, sql, stg, columns, conflict, fact, metric_idx,
+               id_table="prescricao.tb_consulta_documento",
+               id_col="id_consulta_documento"):
     from common import append_rows, rebuild_fact, truncate_table
     truncate_table(dw, stg)
     cur = origin.cursor()
-    cur.execute("SELECT max(id_consulta_documento) FROM prescricao.tb_consulta_documento")
+    cur.execute(f"SELECT max({id_col}) FROM {id_table}")
     max_id = cur.fetchone()[0]
     total = 0
     start = 1
@@ -256,6 +280,16 @@ def main():
             ["dia", "sg_uf", "ds_versao_sistema"],
             "prescricao.fato_documento_versao_dia", 3)
         log(f"fato_documento_versao_dia: concluido — {total:,} documentos")
+
+    elif mode == "receitas":
+        log("fato_receita_medicamento_mes: iniciando (lotes por id_receita)")
+        total = batch_loop(
+            origin, dw, SQL_RECEITAS, "prescricao.stg_receita_medicamento_mes",
+            ["mes", "sg_uf", "id_tipo_documento", "medicamento", "itens"],
+            ["mes", "sg_uf", "id_tipo_documento", "medicamento"],
+            "prescricao.fato_receita_medicamento_mes", 4,
+            id_table="prescricao.tb_receita", id_col="id_receita")
+        log(f"fato_receita_medicamento_mes: concluido — {total:,} itens")
 
     elif mode == "origem":
         log("fato_documento_origem_dia: iniciando")

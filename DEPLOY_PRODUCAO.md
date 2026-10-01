@@ -12,7 +12,7 @@ em um datamart próprio (`prescricao_dw`) que alimenta três visões:
 
 **Versão do produto: v1.2** (2026-10-01)
 
-- **Documentos médicos** — emissões por período/UF/tipo/especialidade, origem de criação e versão do app
+- **Documentos médicos** — emissões por período/UF/tipo/especialidade, origem de criação, versão do app e medicamentos prescritos
 - **Médicos** — inscrições cadastradas (CRM/UF), médicos cadastrados (CPF), novos por
   aceite do termo, inatividade por faixa de dias sem emissão
 - **Auditoria** — rankings AN1/AN2/AN3/AN4; os drill-downs mostram o dia do médico (AN3, com lista de documentos por QR code) e a instituição (AN4, evolução mensal e unidades), sem dados de pacientes ou conteúdo de documentos

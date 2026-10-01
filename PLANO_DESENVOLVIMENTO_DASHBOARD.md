@@ -306,6 +306,7 @@ Referencia visual:
 - Emissoes por periodo.
 - Distribuicao por tipo de documento.
 - Emissões por versão do app (tabela com o total por versão no período selecionado).
+- Medicamentos prescritos (top 15 por itens de receita; grão mensal; texto do médico normalizado).
 - Documentos por especialidade.
 
 Filtros:

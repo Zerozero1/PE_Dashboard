@@ -206,12 +206,14 @@ CREATE INDEX IF NOT EXISTS idx_medico_unidade_unidade
 
 -- Snapshots all-time para o modo "Todos" dos rankings da Auditoria (evitam
 -- varreduras de 30-60M linhas no periodo completo).
+-- Staging de fatos de soma: SEM chave/unique — as duplicatas de chave entre
+-- lotes sao esperadas e somadas no rebuild_fact (uma PK descartaria lotes
+-- silenciosamente via ON CONFLICT DO NOTHING).
 CREATE TABLE IF NOT EXISTS prescricao.stg_documento_versao_dia (
     dia DATE NOT NULL,
     sg_uf CHAR(2) NOT NULL,
     ds_versao_sistema VARCHAR(50) NOT NULL,
-    documentos BIGINT NOT NULL,
-    PRIMARY KEY (dia, sg_uf, ds_versao_sistema)
+    documentos BIGINT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS prescricao.fato_documento_versao_dia (
@@ -300,3 +302,37 @@ CREATE INDEX IF NOT EXISTS idx_doc_emissao_unidade_dia
     ON prescricao.fato_documento_emissao (id_unidade_atendimento, dia)
     INCLUDE (id_tipo_documento)
     WHERE in_assinado = 'S';
+
+-- Ranking de medicamentos prescritos (grao mensal). O texto do medicamento e
+-- normalizado (maiusculas/espacos) e truncado em 255 caracteres; nao ha
+-- catalogo oficial de medicamentos na origem (texto por medico).
+CREATE TABLE IF NOT EXISTS prescricao.stg_receita_medicamento_mes (
+    mes CHAR(7) NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_tipo_documento INTEGER NOT NULL,
+    medicamento VARCHAR(255) NOT NULL,
+    itens BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS prescricao.fato_receita_medicamento_mes (
+    mes CHAR(7) NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_tipo_documento INTEGER NOT NULL,
+    medicamento VARCHAR(255) NOT NULL,
+    itens BIGINT NOT NULL,
+    PRIMARY KEY (mes, sg_uf, id_tipo_documento, medicamento)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fato_receita_medicamento_mes_uf
+    ON prescricao.fato_receita_medicamento_mes (sg_uf, mes);
+
+-- Snapshot all-time do ranking de medicamentos (modo "Todos"): top 100 por
+-- combinacao de filtros — '**' = todas as UFs; id_tipo_documento 0 = todos.
+CREATE TABLE IF NOT EXISTS prescricao.snap_medicamento_top (
+    sg_uf CHAR(2) NOT NULL,
+    id_tipo_documento INTEGER NOT NULL,
+    posicao SMALLINT NOT NULL,
+    medicamento VARCHAR(255) NOT NULL,
+    itens BIGINT NOT NULL,
+    PRIMARY KEY (sg_uf, id_tipo_documento, posicao)
+);

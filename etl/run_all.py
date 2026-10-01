@@ -1,6 +1,7 @@
 """Pipeline completo do ETL (idempotente).
 
-Ordem: dimensoes -> fato docs -> origem-criacao -> especialidade -> unidade
+Ordem: dimensoes -> fato docs -> origem-criacao -> versao do app
+       -> receita-medicamento -> especialidade -> unidade
        -> medico-dia -> medico-tipo -> medico-pacientes -> unidade-pacientes
        -> pacientes -> medicos (snapshot/novos) -> AN3 maior dia
        -> documentos emitidos -> anomalias (AN1/AN2).
@@ -21,6 +22,7 @@ def main():
         ("fato docs", "load_fatos docs"),
         ("fato origem-criacao", "load_fatos origem"),
         ("fato versao do app", "load_fatos versao"),
+        ("fato receita-medicamento", "load_fatos receitas"),
         ("fato especialidade", "load_fatos especialidade"),
         ("fato unidade", "load_fatos unidade"),
         ("fato medico-dia", "load_fatos medico"),

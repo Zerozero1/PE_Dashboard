@@ -15,12 +15,15 @@ const WHERE_DOC = `
     AND ($4::int IS NULL OR f.id_tipo_documento = $4)
 `;
 
+const TODOS_DE = "2021-10-01";
+
 export async function GET(req: NextRequest) {
   const { de, ate, uf, tipo } = filtro(req.nextUrl);
   const p = [de, ate, uf, tipo];
+  const todos = de <= TODOS_DE;
 
   try {
-    const [kpis, serie, porTipo, porUf, esp, origem, versao] = await Promise.all([
+    const [kpis, serie, porTipo, porUf, esp, origem, versao, medicamentos] = await Promise.all([
       query(
         `SELECT coalesce(sum(f.documentos),0) AS emitidos,
                 coalesce(sum(f.assinados),0) AS assinados,
@@ -78,6 +81,24 @@ export async function GET(req: NextRequest) {
           GROUP BY 1 ORDER BY documentos DESC`,
         [de, ate, uf]
       ),
+      todos
+        ? query(
+            `SELECT t.medicamento, t.itens
+               FROM prescricao.snap_medicamento_top t
+              WHERE t.sg_uf = COALESCE($1::text, '**')
+                AND t.id_tipo_documento = COALESCE($2::int, 0)
+              ORDER BY t.posicao LIMIT 15`,
+            [uf, tipo]
+          )
+        : query(
+            `SELECT f.medicamento, sum(f.itens)::bigint AS itens
+               FROM prescricao.fato_receita_medicamento_mes f
+              WHERE f.mes BETWEEN to_char($1::date,'YYYY-MM')::char(7) AND to_char($2::date,'YYYY-MM')::char(7)
+                AND ($3::text IS NULL OR f.sg_uf = $3)
+                AND ($4::int IS NULL OR f.id_tipo_documento = $4)
+              GROUP BY 1 ORDER BY itens DESC LIMIT 15`,
+            p
+          ),
     ]);
 
     const k = kpis.rows[0];
@@ -99,6 +120,7 @@ export async function GET(req: NextRequest) {
       por_tipo: porTipo.rows,
       por_uf: porUf.rows,
       ranking_especialidade: esp.rows,
+      ranking_medicamentos: medicamentos.rows,
     });
   } catch (e) {
     return NextResponse.json({ erro: String(e) }, { status: 500 });

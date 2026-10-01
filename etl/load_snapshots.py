@@ -69,6 +69,37 @@ def main():
     log(f"snap_instituicao: {cur.rowcount:,} linhas")
     dw.commit()
 
+    cur.execute("TRUNCATE prescricao.snap_medicamento_top")
+    base = (
+        "SELECT sg_uf, id_tipo_documento, medicamento, sum(itens)::bigint AS itens "
+        "  FROM prescricao.fato_receita_medicamento_mes GROUP BY 1, 2, 3"
+    )
+    combos = [
+        ("UF+tipo", f"SELECT sg_uf, id_tipo_documento, medicamento, itens FROM ({base}) b"),
+        ("UF", f"SELECT sg_uf, 0 AS id_tipo_documento, medicamento, "
+               f"sum(itens)::bigint AS itens FROM ({base}) b GROUP BY 1, 3"),
+        ("tipo", f"SELECT '**'::char(2) AS sg_uf, id_tipo_documento, medicamento, "
+                 f"sum(itens)::bigint AS itens FROM ({base}) b GROUP BY 2, 3"),
+        ("global", f"SELECT '**'::char(2) AS sg_uf, 0 AS id_tipo_documento, medicamento, "
+                   f"sum(itens)::bigint AS itens FROM ({base}) b GROUP BY 3"),
+    ]
+    for nome, sql in combos:
+        part = (["sg_uf", "id_tipo_documento"] if nome == "UF+tipo"
+                else ["sg_uf"] if nome == "UF"
+                else ["id_tipo_documento"] if nome == "tipo" else [])
+        cur.execute(
+            "INSERT INTO prescricao.snap_medicamento_top "
+            "(sg_uf, id_tipo_documento, posicao, medicamento, itens) "
+            "SELECT sg_uf, id_tipo_documento, posicao, medicamento, itens FROM ("
+            "  SELECT sg_uf, id_tipo_documento, medicamento, itens,"
+            "         row_number() OVER ("
+            + ("PARTITION BY " + ", ".join(part) if part else "")
+            + " ORDER BY itens DESC) AS posicao FROM (" + sql + ") c"
+            ") d WHERE posicao <= 100"
+        )
+        log(f"snap_medicamento_top ({nome}): {cur.rowcount:,} linhas")
+        dw.commit()
+
     cur.close()
     dw.close()
     log(f"snapshots: concluido em {time.time()-t0:.0f}s")
