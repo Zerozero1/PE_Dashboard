@@ -36,9 +36,9 @@ web/              aplicação Next.js (App Router, TypeScript)
   src/components/ visões e gráficos (SVG/CSS, sem lib de gráficos)
 etl/              ETL Python (dims → fatos → anomalias) + orquestração
   load_dims.py    dimensões
-  load_fatos.py   fatos de documentos (docs, origem, especialidade, unidade, medico, medico_tipo, pacientes, medico_pacientes)
+  load_fatos.py   fatos de documentos (docs, origem, versao, receitas, especialidade, unidade, medico, medico_tipo, medico_pacientes, unidade_pacientes, medico_unidade)
   load_medicos.py médicos (snapshot, novos, emissão)
-  load_anomalias.py  anomalias AN1–AN2
+  load_anomalias.py  anomalia AN1 (flag diária)
   jobs.py         worker/scheduler (fila dashboard_refresh_job)
 docker-compose.yml  web + etl-worker + etl-scheduler
 ```

@@ -37,7 +37,7 @@ $env:DW_HOST='172.16.7.112'; $env:DW_DB='prescricao_dw'; $env:DW_USER='usr_presc
 | `load_maior_dia.py` | Constrói `fato_medico_maior_dia` (melhor dia por médico/UF em documentos **assinados**, com pacientes distintos do dia) a partir de `fato_documento_emissao` — alimenta a AN3 diária. |
 | `load_documentos.py` | Carrega `fato_documento_emissao` (um registro por documento assinado ou não: data/hora, médico, UF, tipo, unidade, situação e `ds_qrcode`) — alimenta a lista de documentos do drill da AN3. Carga cheia na primeira execução e incremental depois (revisa os últimos 5M ids); extração em lotes de 2M ids com stream ordenado e retry por lote. |
 | `load_snapshots.py` | Reconstrói os snapshots all-time da Auditoria (`snap_medico_tipo`, `snap_medico_paciente`, `snap_instituicao`) usados no modo "Todos" dos rankings AN1/AN2/AN4 (evita varreduras de 30-60M linhas por consulta) e o `snap_medicamento_top` (top 100 do ranking de medicamentos por UF×tipo). |
-| `load_anomalias.py` | `fato_auditoria_dia`: flag diária AN1 calculada no DW (AN2 usa `snap_medico_paciente`/`fato_documento_medico_paciente_dia`; AN3 usa `fato_medico_maior_dia`; AN4 usa `fato_documento_unidade_paciente_dia` no ranking). |
+| `load_anomalias.py` | `fato_auditoria_dia`: flag diária AN1 calculada no DW (os rankings AN2/AN3/AN4 vêm de `fato_documento_medico_paciente_dia`/`snap_*`, `fato_medico_maior_dia` e `fato_documento_unidade_paciente_dia`). |
 | `run_all.py` | Pipeline completo e idempotente (dims → fatos → maior dia → documentos emitidos → anomalias). |
 | `jobs.py` | Orquestração via fila `dashboard_refresh_job` (ver abaixo). |
 | `validate.py` / `status_dw.py` / `audit_counts.py` / `list_indexes.py` | Conferências: totais, cobertura, contagens da origem vs DW, índices. |
@@ -97,13 +97,13 @@ Fatos:
 - `fato_medico_unidade` (id_medico, id_unidade_atendimento, in_ativo, dt_cadastro) — snapshot dos vínculos médico–unidade; alimenta a coluna "Médicos" (vínculos ativos) da AN4
 - `fato_medico_maior_dia` (id_medico, sg_uf, dia, documentos, pacientes) — melhor dia por médico/UF em documentos e pacientes distintos do dia; alimenta a AN3 diária
 - `fato_documento_emissao` (id_consulta_documento, dia, dh_documento, id_medico, sg_uf, id_tipo_documento, id_unidade_atendimento, in_assinado, in_cancelado, ds_qrcode) — um registro por documento; alimenta a lista de documentos do drill da AN3 (sem paciente/conteúdo)
-- `fato_auditoria_dia` (dia, tipo_anomalia, dimensao_afetada, valor_observado, valor_esperado, desvio, severidade; AN1 e AN2)
+- `fato_auditoria_dia` (dia, tipo_anomalia, dimensao_afetada, valor_observado, valor_esperado, desvio, severidade; apenas AN1)
 - `snap_medico_tipo` (id_medico, sg_uf, id_tipo_documento, documentos) — total all-time por médico/UF/tipo; ranking AN1 no modo "Todos"
 - `snap_medico_paciente` (id_medico, sg_uf, pacientes) — pacientes distintos all-time (linhas reais de UF + linha global `'**'`); ranking AN2 no modo "Todos"
 - `snap_instituicao` (chave, instituicao, cnes, uf, unidades, medicos, pacientes) — instituições no modo "Todos" (AN4), já com vínculos ativos de médicos
 - `snap_medicamento_top` (sg_uf, id_tipo_documento, posicao, medicamento, itens) — top 100 do ranking de medicamentos no modo "Todos" por combinação de filtros (`'**'` = todas as UFs; `0` = todos os tipos)
 
-Staging: `stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_versao_dia`, `stg_documento_especialidade_dia`, `stg_documento_unidade_dia`, `stg_documento_medico_dia`, `stg_documento_medico_tipo_dia`, `stg_documento_medico_paciente_dia`, `stg_documento_unidade_paciente_dia`, `stg_medico_unidade`, `stg_medico_maior_dia`.
+Staging: `stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_versao_dia`, `stg_documento_especialidade_dia`, `stg_documento_unidade_dia`, `stg_documento_medico_dia`, `stg_documento_medico_tipo_dia`, `stg_documento_medico_paciente_dia`, `stg_documento_unidade_paciente_dia`, `stg_medico_unidade`, `stg_medico_maior_dia`, `stg_receita_medicamento_mes`.
 
 Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 

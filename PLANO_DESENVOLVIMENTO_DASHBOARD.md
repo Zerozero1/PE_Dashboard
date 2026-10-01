@@ -383,7 +383,7 @@ Nota historica (fonte temporal): o evento real de dispensacao vinha de `tb_histo
 
 Sem imagem de referencia. DECISOES (2026-09-21):
 - Nao usar a tabela de auditoria da base relacional (`tl_prescricao_auditoria` sem SELECT para `usr_select`; tabela antiga inviavel).
-- AN1 e AN2 permanecem agregadas (flags diárias em `fato_auditoria_dia`). A AN3 (maior volume diário de emissões a pacientes distintos no período) mostra o maior dia de cada médico em documentos assinados (não assinados são desprezados), com a contagem de pacientes distintos do dia; o detalhe abre o mix por tipo e a lista de documentos emitidos (QR code, data/hora, tipo, instituição, UF e situação). A AN4 (pacientes distintos por instituição no período) ranqueia instituições (CNES; sem CNES, a unidade) por pacientes distintos atendidos com documentos assinados; o detalhe abre a evolução mensal e as unidades do grupo. Sem identificador de paciente ou conteúdo do documento.
+- A AN1 permanece agregada (flag diária em `fato_auditoria_dia`; a AN2 é ranking por período sobre `fato_documento_medico_paciente_dia`). A AN3 (maior volume diário de emissões a pacientes distintos no período) mostra o maior dia de cada médico em documentos assinados (não assinados são desprezados), com a contagem de pacientes distintos do dia; o detalhe abre o mix por tipo e a lista de documentos emitidos (QR code, data/hora, tipo, instituição, UF e situação). A AN4 (pacientes distintos por instituição no período) ranqueia instituições (CNES; sem CNES, a unidade) por pacientes distintos atendidos com documentos assinados; o detalhe abre a evolução mensal e as unidades do grupo. Sem identificador de paciente ou conteúdo do documento.
 - Sem exportacao na visao de auditoria (exportacao nao permitida em todo o MVP).
 
 A visão é alimentada por fatos do datamart (documentos, atendimentos, locais e o maior dia por médico da AN3). A média de referência, quando aplicável às anomalias, usa todos os médicos; a AN3 avalia o maior dia de emissão do próprio médico.
@@ -451,7 +451,7 @@ Notas:
 | 12 | Medicos | Matriz/tabela | Inatividade por faixa de dias sem emissao (30/60/90/120) | fato_medico_extremos_emissao | Ultima emissao por pessoa (CPF) | U | Regra operacional: ultima emissao; alterado para pessoa em 2026-09-23 |
 | 12a | Medicos | Linha/barras | Medicos com emissao por mes (CPFs distintos) | fato_medico_emissao_mes | Distinct por mes (por UF + global) | P,U | Total do periodo via fato_medico_extremos_emissao (2026-09-23) |
 | 13–19 | Dispensacoes | — | REMOVIDAS (2026-09-23): visao Dispensacoes descontinuada | — | — | — | — |
-| 20 | Auditoria | Linha/barras | Anomalias detectadas por dia | fato_auditoria_dia (AN1/AN2), fato_medico_maior_dia (AN3), fato_documento_unidade_paciente_dia (AN4) | Contagem por dia | P(curto),TD,DIM | Detalhe do dia sem paciente; exige filtros obrigatórios |
+| 20 | Auditoria | Linha/barras | Anomalias detectadas por dia | fato_auditoria_dia (AN1), fato_documento_medico_paciente_dia (AN2), fato_medico_maior_dia (AN3), fato_documento_unidade_paciente_dia (AN4) | Contagem por dia | P(curto),TD,DIM | Detalhe do dia sem paciente; exige filtros obrigatórios |
 | 21 | Auditoria | Ranking (barras) | Tipos de anomalia mais frequentes, com severidade | fato_auditoria_dia | Contagem por tipo_anomalia | P,TD | Severidade por desvio (2x/3x/5x) |
 | 22 | Auditoria | Ranking (barras) | Dimensoes afetadas mais frequentes | fato_auditoria_dia | Contagem por dimensao_afetada | P,DIM | |
 | 23 | Auditoria | Tabela paginada | Detalhe agregado dia x dimensao x tipo: valor observado, media esperada e desvio | fato_auditoria_dia | Soma por dia+dimensao+tipo | P,TD,DIM | |
@@ -463,9 +463,9 @@ Notas:
 
 A aba Auditoria usa fatos agregadas do datamart; a AN3 usa a fato do maior dia por médico/UF (`fato_medico_maior_dia`). Nao ha auditoria do uso do dashboard (decisao 2026-09-21): as consultas executadas na aba nao sao registradas.
 
-AN1 e AN2 mantêm flags agregadas em `fato_auditoria_dia`. A AN3 é derivada no ETL dentro do próprio DW e gravada em `fato_medico_maior_dia` (id_medico × UF → melhor dia em documentos assinados, e pacientes distintos do dia), a partir de `fato_documento_emissao` e `fato_documento_medico_paciente_dia`; a janela de 5 min foi descontinuada em 2026-09-30 (tabelas e scripts removidos). A AN4 é carregada em `fato_documento_unidade_paciente_dia` (unidade × paciente × dia, somente assinados) e ranqueia instituições por pacientes distintos. Documentos não assinados são desprezados nas AN3/AN4. Os drill-downs leem `fato_documento_emissao` (AN3) e a própria fato da AN4/`dim_unidade` (instituição), sem identificador de paciente nem conteúdo.
+A AN1 mantém flag agregada em `fato_auditoria_dia`; a AN2 é ranking por período sobre `fato_documento_medico_paciente_dia` (no modo "Todos", `snap_medico_paciente`). A AN3 é derivada no ETL dentro do próprio DW e gravada em `fato_medico_maior_dia` (id_medico × UF → melhor dia em documentos assinados, e pacientes distintos do dia), a partir de `fato_documento_emissao` e `fato_documento_medico_paciente_dia`; a janela de 5 min foi descontinuada em 2026-09-30 (tabelas e scripts removidos). A AN4 é carregada em `fato_documento_unidade_paciente_dia` (unidade × paciente × dia, somente assinados) e ranqueia instituições por pacientes distintos. Documentos não assinados são desprezados nas AN3/AN4. Os drill-downs leem `fato_documento_emissao` (AN3) e a própria fato da AN4/`dim_unidade` (instituição), sem identificador de paciente nem conteúdo.
 
-Para AN1 e AN2, a média de referência (quando aplicável) é o valor agregado de todos os médicos no mesmo período; AN3 e AN4 são rankings por período, sem média populacional.
+Os rankings não usam média de referência: a AN1 soma documentos do período e a AN2 conta pacientes distintos; AN3 e AN4 são rankings por período.
 
 | Codigo | Anomalia | Como e calculada | Severidade |
 |---|---|---|---|
@@ -753,7 +753,7 @@ Objetivo:
 - Implementar auditoria com seguranca e filtros restritivos.
 
 Atividades (status):
-- Criar fatos agregadas de auditoria (anomalias). (FEITO: AN1–AN4; AN1/AN2 com flags diárias e severidade 2x/3x/5x; AN3/AN4 rankings por período)
+- Criar fatos agregadas de auditoria (anomalias). (FEITO: AN1–AN4; AN1 com flag diária e severidade 2x/3x/5x; AN2/AN3/AN4 rankings por período)
 - Criar tela com filtros obrigatorios. (FEITO: periodo + tipo de anomalia)
 
 Validacao:

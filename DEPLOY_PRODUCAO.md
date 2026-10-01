@@ -290,5 +290,8 @@ válida (cargas idempotentes via upsert); o job diário roda o `run_all` complet
 
 - [ ] Não rodar cargas manuais em paralelo com o job agendado
 - [ ] O `run_all` ficou ~10 min mais longo (novo passo `receitas`)
+- [ ] **Deploy via Docker (seção 4.0):** `git pull` + `docker compose up -d --build` recria `web`,
+      `etl-worker` e `etl-scheduler` com o código novo (substitui os passos de build/restart das
+      seções A e B); uma vez, `docker compose exec etl-worker python setup.py` (seed + `DROP` de limpeza)
 - [ ] Rollback: web = voltar commit + build + restart; ETL = parar worker + voltar commit.
       As tabelas novas são aditivas — o DW não precisa de rollback
