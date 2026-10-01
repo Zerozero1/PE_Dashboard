@@ -223,10 +223,15 @@ function useApi<T>(path: string, active: boolean) {
   return { data, erro, carregando };
 }
 
-function Processando() {
+function Processando({ onCancel }: { onCancel?: () => void }) {
   return (
     <div className="processing" style={{ gridColumn: "span 12" }}>
       <i className="spinner" /> Processando…
+      {onCancel && (
+        <button className="btn" type="button" onClick={onCancel} style={{ padding: "3px 10px", fontSize: 10 }} title="Interromper a consulta em andamento">
+          Cancelar
+        </button>
+      )}
     </div>
   );
 }
@@ -850,7 +855,7 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
         <Sel label="Tipo de anomalia" value={anomalia} onChange={setAnomalia} options={ANOMALIAS} />
-        <Sel label="Período" value={dias} onChange={setDias} options={[["todos", "Todos"], ["7", "7 dias"], ["30", "30 dias"], ["90", "90 dias"]]} />
+        <Sel label="Período" value={dias} onChange={setDias} options={[["todos", "Todos"], ["7", "7 dias"], ["30", "30 dias"], ["60", "60 dias"], ["90", "90 dias"], ["120", "120 dias"]]} />
         <Sel label="UF" value={uf} onChange={setUf} options={[["", "Todas"], ...(filtros?.ufs.map((u) => [u, u] as [string, string]) ?? [])]} />
         <Sel label="Tipo de documento" value={tipo} onChange={setTipo} options={[["", "Todos"], ...(filtros?.tipos.map((t) => [String(t.id), t.nome] as [string, string]) ?? [])]} />
         <label className="filter">
@@ -862,14 +867,9 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
           </select>
         </label>
         <button className="btn primary" onClick={pesquisar} disabled={carregando}>Pesquisar</button>
-        {carregando && (
-          <button className="btn" type="button" onClick={cancelar} title="Interromper a consulta em andamento">
-            Cancelar
-          </button>
-        )}
         <div className="meta">{anomalia === "AN3" && dias === "todos" ? "histórico completo" : `${de} → ${ate}`} · {anomalia}</div>
       </div>
-      {carregando && <Processando />}
+      {carregando && <Processando onCancel={cancelar} />}
       {erro && <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>}
       {!carregando && anomalia !== "AN1" && anomalia !== "AN2" && anomalia !== "AN3" && anomalia !== "AN4" && (
         <article className="card" style={{ gridColumn: "span 12" }}>
@@ -922,7 +922,7 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
             </table>
           </div>
           <div className="sub" style={{ marginTop: 10, display: "grid", gap: 4 }}>
-            <div><b>Documentos no dia:</b> total de documentos <b>assinados</b> emitidos pelo médico no dia de maior volume (Todos = melhor dia do histórico; 7/30/90 dias = melhor dia dentro da janela). <b>Detalhe:</b> abre o mix por tipo e a lista de documentos do dia (QR code, hora, tipo, instituição, UF e situação).</div>
+            <div><b>Documentos no dia:</b> total de documentos <b>assinados</b> emitidos pelo médico no dia de maior volume (Todos = melhor dia do histórico; 7/30/60/90/120 dias = melhor dia dentro da janela). <b>Detalhe:</b> abre o mix por tipo e a lista de documentos do dia (QR code, hora, tipo, instituição, UF e situação).</div>
             <div><b>Pacientes no dia:</b> pacientes distintos atendidos nesse mesmo dia.</div>
           </div>
         </article>
@@ -1489,7 +1489,7 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
           </section>
         )}
         <div className="footer">
-          <span>PE Dashboard · CFM v1.1</span>
+          <span>PE Dashboard · CFM v1.2</span>
           <span>Datamart prescricao_dw · última carga: {health?.job?.finalizado_em ? new Date(health.job.finalizado_em).toLocaleString("pt-BR") : "—"}</span>
         </div>
       </main>

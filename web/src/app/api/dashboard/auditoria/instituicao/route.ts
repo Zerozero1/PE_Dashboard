@@ -9,14 +9,20 @@ export async function GET(req: NextRequest) {
 
   let filtro: string;
   let params: (string | number)[];
-  if (/^CNES:/.test(chave)) {
-    filtro = "NULLIF(u.co_cnes, '') = $3";
-    params = [de, ate, chave.slice("CNES:".length)];
-  } else if (/^UNIDADE:\d+$/.test(chave)) {
+  let cnesChave: string | null = null;
+  if (/^UNIDADE:\d+$/.test(chave)) {
     filtro = "f.id_unidade_atendimento = $3";
     params = [de, ate, Number(chave.slice("UNIDADE:".length))];
   } else {
-    return NextResponse.json({ erro: "chave invalida" }, { status: 400 });
+    const cnes = /^CNES:/.test(chave)
+      ? chave.slice("CNES:".length)
+      : (/^\d+$/.test(chave) ? chave : null);
+    if (cnes === null) {
+      return NextResponse.json({ erro: "chave invalida" }, { status: 400 });
+    }
+    cnesChave = cnes;
+    filtro = "NULLIF(u.co_cnes, '') = $3";
+    params = [de, ate, cnes];
   }
 
   try {
@@ -72,7 +78,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       chave,
       instituicao: nomeGrupo,
-      cnes: /^CNES:/.test(chave) ? chave.slice("CNES:".length) : (unidades.rows[0]?.cnes ?? null),
+      cnes: cnesChave ?? (unidades.rows[0]?.cnes ?? null),
       uf: r.uf ?? null,
       total_pacientes: r.pacientes ?? "0",
       total_unidades: r.unidades ?? 0,

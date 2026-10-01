@@ -1,6 +1,6 @@
 # PE Dashboard — Aplicação Web
 
-**Versão: v1.1** (2026-09-30)
+**Versão: v1.2** (2026-10-01)
 
 Frontend/API do PE Dashboard: monolito Next.js 16 (App Router, TypeScript) que consome o datamart `prescricao_dw`.
 
@@ -43,7 +43,7 @@ Sem as credenciais do Google, o modo `development` usa sessão mock (`mrichard@p
 | `GET /api/dashboard/medicos` | KPIs snapshot, novos por mês, por UF, inatividade por faixa (`de`, `ate`, `uf`) |
 | `GET /api/dashboard/auditoria` | Ranking de médicos por anomalia (`anomalia`): AN1 "Emissões de documentos no período" (`de`, `ate`, `uf`, `tipo`, `limite`) — `count` de documentos; AN2 "Atendimentos a pacientes distintos no período" (`de`, `ate`, `uf`, `limite`) — `count(DISTINCT id_paciente)`; AN3 "Maior volume diário de emissões a pacientes distintos no período" (`de`, `ate`, `uf`, `limite`) — maior dia em documentos assinados, ordenado por documentos do dia; sem `de`/`ate` usa o melhor dia do histórico (`fato_medico_maior_dia`); AN4 "Pacientes distintos por instituição no período" (`de`, `ate`, `uf`, `limite`) — instituições (CNES; sem CNES, a unidade) ordenadas por pacientes distintos com documentos assinados, com nº de unidades e médicos vinculados (vínculos ativos). `limite` clamp 1–500, default 20 |
 | `GET /api/dashboard/auditoria/medico` | Drill-down (`id_medico`, `anomalia`): AN1 → docs por tipo (donut) + série mensal + especialidades; AN2 → pacientes distintos por mês + `total_pacientes`; AN3 (`id_medico`, `dia`) → resumo do dia (assinados/pacientes), mix por tipo e lista de documentos assinados (`ds_qrcode`, data/hora, tipo, instituição, UF e situação; até 1.000) |
-| `GET /api/dashboard/auditoria/instituicao` | Drill-down da AN4 (`chave` = `CNES:...` ou `UNIDADE:...`, `de`, `ate`): total de pacientes distintos, documentos por tipo (rosca), evolução mensal e unidades do grupo (até 50) |
+| `GET /api/dashboard/auditoria/instituicao` | Drill-down da AN4 (`chave` = CNES puro, `CNES:...` ou `UNIDADE:...`, `de`, `ate`): total de pacientes distintos, documentos por tipo (rosca), evolução mensal e unidades do grupo (até 50) |
 | `POST /api/admin/refresh-jobs` | Enfileira job manual no `dashboard_refresh_job` (botão "Atualizar dados") |
 | `GET /api/admin/refresh-jobs/latest` | Último job da fila (status da carga exibido no cabeçalho) |
 | `GET` / `PUT /api/admin/refresh-config` | Horário da carga diária (restrito a `mrichard@portalmedico.org.br`) |
