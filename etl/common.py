@@ -71,4 +71,6 @@ def rebuild_fact(conn, fact, columns, stg, conflict_cols):
     cur = conn.cursor()
     cur.execute(sql)
     conn.commit()
+    cur.execute(f"TRUNCATE {stg}")
+    conn.commit()
     cur.close()

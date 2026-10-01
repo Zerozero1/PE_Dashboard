@@ -204,6 +204,36 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_medico_unidade (
 CREATE INDEX IF NOT EXISTS idx_medico_unidade_unidade
     ON prescricao.fato_medico_unidade (id_unidade_atendimento, in_ativo);
 
+-- Snapshots all-time para o modo "Todos" dos rankings da Auditoria (evitam
+-- varreduras de 30-60M linhas no periodo completo).
+CREATE TABLE IF NOT EXISTS prescricao.snap_medico_tipo (
+    id_medico INTEGER NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_tipo_documento INTEGER NOT NULL,
+    documentos BIGINT NOT NULL,
+    PRIMARY KEY (id_medico, sg_uf, id_tipo_documento)
+);
+
+CREATE TABLE IF NOT EXISTS prescricao.snap_medico_paciente (
+    id_medico INTEGER NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    pacientes BIGINT NOT NULL,
+    PRIMARY KEY (id_medico, sg_uf)
+);
+
+CREATE TABLE IF NOT EXISTS prescricao.snap_instituicao (
+    chave VARCHAR(40) PRIMARY KEY,
+    instituicao VARCHAR(255),
+    cnes VARCHAR(20),
+    uf CHAR(2),
+    unidades INTEGER NOT NULL,
+    medicos INTEGER NOT NULL,
+    pacientes BIGINT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_snap_instituicao_pacientes
+    ON prescricao.snap_instituicao (pacientes DESC);
+
 CREATE TABLE IF NOT EXISTS prescricao.stg_medico_maior_dia (
     id_medico INTEGER NOT NULL,
     sg_uf CHAR(2) NOT NULL,

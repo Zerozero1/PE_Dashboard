@@ -738,8 +738,8 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
     setAn4Detalhe(null);
     setAn4Erro(null);
     if (anomalia !== "AN1" && anomalia !== "AN2" && anomalia !== "AN3" && anomalia !== "AN4") { setData(null); setErro(null); return; }
-    const historicoCompleto = anomalia === "AN3" && dias === "todos";
-    const qs = `anomalia=${anomalia}${historicoCompleto ? "" : `&de=${de}&ate=${ate}`}&uf=${uf}&tipo=${tipo}&limite=${limite}`;
+    const semPeriodo = dias === "todos";
+    const qs = `anomalia=${anomalia}${semPeriodo ? "" : `&de=${de}&ate=${ate}`}&uf=${uf}&tipo=${tipo}&limite=${limite}`;
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -867,7 +867,7 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
           </select>
         </label>
         <button className="btn primary" onClick={pesquisar} disabled={carregando}>Pesquisar</button>
-        <div className="meta">{anomalia === "AN3" && dias === "todos" ? "histórico completo" : `${de} → ${ate}`} · {anomalia}</div>
+        <div className="meta">{dias === "todos" ? "histórico completo" : `${de} → ${ate}`} · {anomalia}</div>
       </div>
       {carregando && <Processando onCancel={cancelar} />}
       {erro && <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>}

@@ -316,6 +316,7 @@ def main():
         cur2.execute(
             "INSERT INTO prescricao.fato_documento_medico_paciente_dia "
             "SELECT dia, sg_uf, id_medico, id_paciente FROM " + stg)
+        cur2.execute(f"TRUNCATE {stg}")
         dw.commit()
         cur2.close()
         log(f"fato_documento_medico_paciente_dia: concluido — {total:,} linhas")
@@ -352,6 +353,7 @@ def main():
         cur2.execute(
             "INSERT INTO prescricao.fato_documento_unidade_paciente_dia "
             "SELECT dia, sg_uf, id_unidade_atendimento, id_paciente FROM " + stg)
+        cur2.execute(f"TRUNCATE {stg}")
         dw.commit()
         cur2.close()
         log(f"fato_documento_unidade_paciente_dia: concluido — {total:,} linhas")
@@ -375,6 +377,7 @@ def main():
         cur2.execute(
             "INSERT INTO prescricao.fato_medico_unidade "
             "SELECT id_medico, id_unidade_atendimento, in_ativo, dt_cadastro FROM " + stg)
+        cur2.execute(f"TRUNCATE {stg}")
         dw.commit()
         cur2.close()
         log(f"fato_medico_unidade: concluido — {len(rows):,} linhas")

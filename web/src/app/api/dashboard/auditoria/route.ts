@@ -12,7 +12,26 @@ export async function GET(req: NextRequest) {
   const limite = Number.isFinite(limiteRaw) ? Math.min(Math.max(Math.trunc(limiteRaw), 1), 500) : 20;
 
   try {
+    const deRaw = url.searchParams.get("de");
+    const ateRaw = url.searchParams.get("ate");
+    const todos = !deRaw || !ateRaw;
+
     if (anomalia === "AN1") {
+      if (todos) {
+        const rows = await query(
+          `SELECT m.id_medico, m.nu_crm AS crm, m.sg_uf AS crm_uf, m.nm_medico AS nome,
+                  sum(s.documentos)::bigint AS docs
+             FROM prescricao.snap_medico_tipo s
+             JOIN prescricao.dim_medico m ON m.id_medico = s.id_medico
+            WHERE ($1::text IS NULL OR s.sg_uf = $1)
+              AND ($2::int IS NULL OR s.id_tipo_documento = $2)
+            GROUP BY m.id_medico, m.nu_crm, m.sg_uf, m.nm_medico
+            ORDER BY docs DESC
+            LIMIT $3`,
+          [uf, tipo, limite]
+        );
+        return NextResponse.json({ de: null, ate: null, an1: rows.rows });
+      }
       const rows = await query(
         `SELECT m.id_medico, m.nu_crm AS crm, m.sg_uf AS crm_uf, m.nm_medico AS nome,
                 sum(f.documentos) AS docs
@@ -30,6 +49,19 @@ export async function GET(req: NextRequest) {
     }
 
     if (anomalia === "AN2") {
+      if (todos) {
+        const rows = await query(
+          `SELECT m.id_medico, m.nu_crm AS crm, m.sg_uf AS crm_uf, m.nm_medico AS nome,
+                  s.pacientes
+             FROM prescricao.snap_medico_paciente s
+             JOIN prescricao.dim_medico m ON m.id_medico = s.id_medico
+            WHERE s.sg_uf = CASE WHEN $1::text IS NULL THEN '**' ELSE $1 END
+            ORDER BY s.pacientes DESC
+            LIMIT $2`,
+          [uf, limite]
+        );
+        return NextResponse.json({ de: null, ate: null, an2: rows.rows });
+      }
       const rows = await query(
         `SELECT m.id_medico, m.nu_crm AS crm, m.sg_uf AS crm_uf, m.nm_medico AS nome,
                 count(DISTINCT f.id_paciente)::bigint AS pacientes
@@ -94,6 +126,18 @@ export async function GET(req: NextRequest) {
     }
 
     if (anomalia === "AN4") {
+      if (todos) {
+        const rows = await query(
+          `SELECT s.chave, COALESCE(s.instituicao, s.chave) AS instituicao, s.cnes, s.uf,
+                  s.unidades, s.medicos, s.pacientes
+             FROM prescricao.snap_instituicao s
+            WHERE ($1::text IS NULL OR s.uf = $1)
+            ORDER BY s.pacientes DESC
+            LIMIT $2`,
+          [uf, limite]
+        );
+        return NextResponse.json({ de: null, ate: null, an4: rows.rows });
+      }
       const rows = await query(
         `WITH por_instituicao AS (
            SELECT COALESCE(NULLIF(u.co_cnes, ''), 'UNIDADE:' || f.id_unidade_atendimento::text) AS chave,
