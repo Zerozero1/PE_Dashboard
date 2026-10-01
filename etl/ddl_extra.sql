@@ -166,6 +166,44 @@ CREATE TABLE IF NOT EXISTS prescricao.stg_documento_medico_paciente_dia (
     PRIMARY KEY (dia, sg_uf, id_medico, id_paciente)
 );
 
+CREATE TABLE IF NOT EXISTS prescricao.stg_documento_unidade_paciente_dia (
+    dia DATE NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_unidade_atendimento INTEGER NOT NULL,
+    id_paciente INTEGER NOT NULL,
+    PRIMARY KEY (dia, sg_uf, id_unidade_atendimento, id_paciente)
+);
+
+CREATE TABLE IF NOT EXISTS prescricao.fato_documento_unidade_paciente_dia (
+    dia DATE NOT NULL,
+    sg_uf CHAR(2) NOT NULL,
+    id_unidade_atendimento INTEGER NOT NULL,
+    id_paciente INTEGER NOT NULL,
+    PRIMARY KEY (dia, sg_uf, id_unidade_atendimento, id_paciente)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fato_unid_pac_unidade_dia
+    ON prescricao.fato_documento_unidade_paciente_dia (id_unidade_atendimento, dia);
+
+CREATE TABLE IF NOT EXISTS prescricao.stg_medico_unidade (
+    id_medico INTEGER NOT NULL,
+    id_unidade_atendimento INTEGER NOT NULL,
+    in_ativo CHAR(1) NOT NULL,
+    dt_cadastro DATE,
+    PRIMARY KEY (id_medico, id_unidade_atendimento)
+);
+
+CREATE TABLE IF NOT EXISTS prescricao.fato_medico_unidade (
+    id_medico INTEGER NOT NULL,
+    id_unidade_atendimento INTEGER NOT NULL,
+    in_ativo CHAR(1) NOT NULL,
+    dt_cadastro DATE,
+    PRIMARY KEY (id_medico, id_unidade_atendimento)
+);
+
+CREATE INDEX IF NOT EXISTS idx_medico_unidade_unidade
+    ON prescricao.fato_medico_unidade (id_unidade_atendimento, in_ativo);
+
 CREATE TABLE IF NOT EXISTS prescricao.stg_medico_maior_dia (
     id_medico INTEGER NOT NULL,
     sg_uf CHAR(2) NOT NULL,
@@ -208,3 +246,8 @@ CREATE INDEX IF NOT EXISTS idx_doc_emissao_medico_dia_hora
 CREATE INDEX IF NOT EXISTS idx_doc_emissao_dia_assinado
     ON prescricao.fato_documento_emissao (dia, in_assinado)
     INCLUDE (id_medico, sg_uf);
+
+CREATE INDEX IF NOT EXISTS idx_doc_emissao_unidade_dia
+    ON prescricao.fato_documento_emissao (id_unidade_atendimento, dia)
+    INCLUDE (id_tipo_documento)
+    WHERE in_assinado = 'S';

@@ -8,7 +8,7 @@ Painel analítico web restrito ao domínio `@portalmedico.org.br` (Google OAuth)
 
 - **Documentos médicos** — emissões por período, UF, tipo e especialidade; origem de criação (Web/Web mobile/iOS/Android); mapa e rankings.
 - **Médicos** — inscrições cadastradas (CRM/UF), médicos cadastrados (CPF único), novos por mês, inatividade por faixa sem emissão.
-- **Auditoria** — AN1 "Maiores emissores de documentos médicos", AN2 "Atendimentos de pacientes únicos" e AN3 "Emissões de documentos em um dia" (maior dia em documentos assinados, com pacientes distintos do dia; drill-down lista os documentos com QR code, sem identificadores de paciente); AN4 em construção.
+- **Auditoria** — AN1 "Emissões de documentos no período", AN2 "Atendimentos a pacientes distintos no período", AN3 "Maior volume diário de emissões a pacientes distintos no período" (maior dia em documentos assinados; drill-down lista os documentos com QR code) e AN4 "Pacientes distintos por instituição no período" (CNES; drill com evolução mensal e unidades) — sem identificadores de paciente.
 
 ## Arquitetura
 
@@ -38,7 +38,7 @@ etl/              ETL Python (dims → fatos → anomalias) + orquestração
   load_dims.py    dimensões
   load_fatos.py   fatos de documentos (docs, origem, especialidade, unidade, medico, medico_tipo, pacientes, medico_pacientes)
   load_medicos.py médicos (snapshot, novos, emissão)
-  load_anomalias.py  anomalias AN1–AN4
+  load_anomalias.py  anomalias AN1–AN2
   jobs.py         worker/scheduler (fila dashboard_refresh_job)
 docker-compose.yml  web + etl-worker + etl-scheduler
 ```

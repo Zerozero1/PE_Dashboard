@@ -57,33 +57,11 @@ WHERE esperado IS NOT NULL AND esperado > 0
   AND pac/esperado >= 2
 """
 
-SQL_AN4 = """
-WITH por_unidade_dia AS (
-  SELECT dia, id_unidade_atendimento, sum(documentos)::numeric AS docs
-  FROM prescricao.fato_documento_unidade_dia GROUP BY dia, id_unidade_atendimento
-), media AS (
-  SELECT dia, id_unidade_atendimento, docs,
-         avg(docs) OVER (ORDER BY dia ROWS BETWEEN 30 PRECEDING AND 1 PRECEDING) AS esperado
-  FROM por_unidade_dia
-), agregado AS (
-  SELECT dia, max(docs) AS pico, max(esperado) AS esperado
-  FROM media
-  WHERE esperado IS NOT NULL AND esperado > 0 AND docs/esperado >= 2
-  GROUP BY dia
-)
-SELECT dia, pico, esperado,
-       CASE WHEN pico/esperado >= 5 THEN 5
-            WHEN pico/esperado >= 3 THEN 3 ELSE 2 END AS sev
-FROM agregado
-"""
-
-
 def main():
     dw = connect_dw()
-    log("fato_auditoria_dia: iniciando (AN1, AN2 e AN4)")
+    log("fato_auditoria_dia: iniciando (AN1 e AN2)")
     run(dw, SQL_AN1, "AN1", "Documentos")
     run(dw, SQL_AN2, "AN2", "Atendimentos")
-    run(dw, SQL_AN4, "AN4", "Local")
     dw.close()
     log("fato_auditoria_dia: concluido")
 

@@ -93,6 +93,39 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ de: null, ate: null, an3: rows.rows });
     }
 
+    if (anomalia === "AN4") {
+      const rows = await query(
+        `WITH por_instituicao AS (
+           SELECT COALESCE(NULLIF(u.co_cnes, ''), 'UNIDADE:' || f.id_unidade_atendimento::text) AS chave,
+                  NULLIF(u.co_cnes, '') AS cnes,
+                  MAX(NULLIF(u.nm_unidade, '')) AS instituicao,
+                  MAX(f.sg_uf) AS uf,
+                  count(DISTINCT f.id_unidade_atendimento)::int AS unidades,
+                  count(DISTINCT f.id_paciente)::bigint AS pacientes
+             FROM prescricao.fato_documento_unidade_paciente_dia f
+             LEFT JOIN prescricao.dim_unidade u ON u.id_unidade_atendimento = f.id_unidade_atendimento
+            WHERE f.dia BETWEEN $1 AND $2
+              AND ($3::text IS NULL OR f.sg_uf = $3)
+            GROUP BY 1, 2
+         ), medicos_instituicao AS (
+           SELECT COALESCE(NULLIF(u.co_cnes, ''), 'UNIDADE:' || mu.id_unidade_atendimento::text) AS chave,
+                  count(DISTINCT mu.id_medico)::int AS medicos
+             FROM prescricao.fato_medico_unidade mu
+             LEFT JOIN prescricao.dim_unidade u ON u.id_unidade_atendimento = mu.id_unidade_atendimento
+            WHERE mu.in_ativo = 'S'
+            GROUP BY 1
+         )
+         SELECT i.chave, COALESCE(i.instituicao, i.chave) AS instituicao, i.cnes, i.uf,
+                i.unidades, COALESCE(m.medicos, 0)::int AS medicos, i.pacientes
+           FROM por_instituicao i
+           LEFT JOIN medicos_instituicao m ON m.chave = i.chave
+          ORDER BY i.pacientes DESC
+          LIMIT $4`,
+        [de, ate, uf, limite]
+      );
+      return NextResponse.json({ de, ate, an4: rows.rows });
+    }
+
     return NextResponse.json({ de, ate, info: "em breve" });
   } catch (e) {
     return NextResponse.json({ erro: String(e) }, { status: 500 });

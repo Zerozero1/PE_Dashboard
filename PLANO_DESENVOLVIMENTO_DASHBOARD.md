@@ -381,7 +381,7 @@ Nota historica (fonte temporal): o evento real de dispensacao vinha de `tb_histo
 
 Sem imagem de referencia. DECISOES (2026-09-21):
 - Nao usar a tabela de auditoria da base relacional (`tl_prescricao_auditoria` sem SELECT para `usr_select`; tabela antiga inviavel).
-- AN1, AN2 e AN4 permanecem agregadas. A AN3 (emissões de documentos em um dia) mostra o maior dia de cada médico em documentos assinados (não assinados são desprezados), com a contagem de pacientes distintos do dia; o detalhe abre o mix por tipo e a lista de documentos emitidos (QR code, data/hora, tipo, instituição, UF e situação), sem identificador de paciente ou conteúdo do documento.
+- AN1 e AN2 permanecem agregadas (flags diárias em `fato_auditoria_dia`). A AN3 (maior volume diário de emissões a pacientes distintos no período) mostra o maior dia de cada médico em documentos assinados (não assinados são desprezados), com a contagem de pacientes distintos do dia; o detalhe abre o mix por tipo e a lista de documentos emitidos (QR code, data/hora, tipo, instituição, UF e situação). A AN4 (pacientes distintos por instituição no período) ranqueia instituições (CNES; sem CNES, a unidade) por pacientes distintos atendidos com documentos assinados; o detalhe abre a evolução mensal e as unidades do grupo. Sem identificador de paciente ou conteúdo do documento.
 - Sem exportacao na visao de auditoria (exportacao nao permitida em todo o MVP).
 
 A visão é alimentada por fatos do datamart (documentos, atendimentos, locais e o maior dia por médico da AN3). A média de referência, quando aplicável às anomalias, usa todos os médicos; a AN3 avalia o maior dia de emissão do próprio médico.
@@ -400,7 +400,7 @@ Consultas previstas:
 - Anomalia - Quantidade de documentos emitidos por período (muito acima da média)
 - Anomalia - Quantidade de atendimento de pacientes únicos por período (ranking decrescente por pacientes distintos, sem média — implementada como AN2)
 - Anomalia - Tempo de emissão entre documentos (muito acima da média)
-- Anomalia - quantidade de documentos emitidos pelo local de atendimento (muito acima da média)
+- Anomalia - pacientes distintos por instituição no período (ranking decrescente, sem média — implementada como AN4)
 
 
 Componentes:
@@ -449,7 +449,7 @@ Notas:
 | 12 | Medicos | Matriz/tabela | Inatividade por faixa de dias sem emissao (30/60/90/120) | fato_medico_extremos_emissao | Ultima emissao por pessoa (CPF) | U | Regra operacional: ultima emissao; alterado para pessoa em 2026-09-23 |
 | 12a | Medicos | Linha/barras | Medicos com emissao por mes (CPFs distintos) | fato_medico_emissao_mes | Distinct por mes (por UF + global) | P,U | Total do periodo via fato_medico_extremos_emissao (2026-09-23) |
 | 13–19 | Dispensacoes | — | REMOVIDAS (2026-09-23): visao Dispensacoes descontinuada | — | — | — | — |
-| 20 | Auditoria | Linha/barras | Anomalias detectadas por dia | fato_auditoria_dia (AN1/AN2/AN4), fato_medico_maior_dia (AN3) | Contagem por dia | P(curto),TD,DIM | Detalhe AN3 do dia (tipo/UF), sem paciente; exige filtros obrigatórios |
+| 20 | Auditoria | Linha/barras | Anomalias detectadas por dia | fato_auditoria_dia (AN1/AN2), fato_medico_maior_dia (AN3), fato_documento_unidade_paciente_dia (AN4) | Contagem por dia | P(curto),TD,DIM | Detalhe do dia sem paciente; exige filtros obrigatórios |
 | 21 | Auditoria | Ranking (barras) | Tipos de anomalia mais frequentes, com severidade | fato_auditoria_dia | Contagem por tipo_anomalia | P,TD | Severidade por desvio (2x/3x/5x) |
 | 22 | Auditoria | Ranking (barras) | Dimensoes afetadas mais frequentes | fato_auditoria_dia | Contagem por dimensao_afetada | P,DIM | |
 | 23 | Auditoria | Tabela paginada | Detalhe agregado dia x dimensao x tipo: valor observado, media esperada e desvio | fato_auditoria_dia | Soma por dia+dimensao+tipo | P,TD,DIM | |
@@ -461,22 +461,22 @@ Notas:
 
 A aba Auditoria usa fatos agregadas do datamart; a AN3 usa a fato do maior dia por médico/UF (`fato_medico_maior_dia`). Nao ha auditoria do uso do dashboard (decisao 2026-09-21): as consultas executadas na aba nao sao registradas.
 
-AN1, AN2 e AN4 mantêm flags agregadas em `fato_auditoria_dia`. A AN3 é derivada no ETL dentro do próprio DW e gravada em `fato_medico_maior_dia` (id_medico × UF → melhor dia em documentos assinados, e pacientes distintos do dia), a partir de `fato_documento_emissao` e `fato_documento_medico_paciente_dia`; a janela de 5 min foi descontinuada em 2026-09-30 (tabelas e scripts removidos). Documentos não assinados são desprezados na AN3. O drill-down lê `fato_documento_emissao` (mix por tipo e lista de documentos assinados com QR code), sem identificador de paciente nem conteúdo.
+AN1 e AN2 mantêm flags agregadas em `fato_auditoria_dia`. A AN3 é derivada no ETL dentro do próprio DW e gravada em `fato_medico_maior_dia` (id_medico × UF → melhor dia em documentos assinados, e pacientes distintos do dia), a partir de `fato_documento_emissao` e `fato_documento_medico_paciente_dia`; a janela de 5 min foi descontinuada em 2026-09-30 (tabelas e scripts removidos). A AN4 é carregada em `fato_documento_unidade_paciente_dia` (unidade × paciente × dia, somente assinados) e ranqueia instituições por pacientes distintos. Documentos não assinados são desprezados nas AN3/AN4. Os drill-downs leem `fato_documento_emissao` (AN3) e a própria fato da AN4/`dim_unidade` (instituição), sem identificador de paciente nem conteúdo.
 
-Para AN1, AN2 e AN4, a média de referência (quando aplicável) é o valor agregado de todos os médicos no mesmo período; a AN3 compara o maior dia de emissão do próprio médico, sem média populacional.
+Para AN1 e AN2, a média de referência (quando aplicável) é o valor agregado de todos os médicos no mesmo período; AN3 e AN4 são rankings por período, sem média populacional.
 
 | Codigo | Anomalia | Como e calculada | Severidade |
 |---|---|---|---|
-| AN1 | Maiores emissores de documentos medicos | Ranking decrescente de medicos por quantidade de documentos do tipo selecionado, no periodo e UF | - |
-| AN2 | Atendimentos de pacientes unicos | Ranking decrescente de medicos por `count(DISTINCT id_paciente)` no periodo (fato `fato_documento_medico_paciente_dia`); sem media de referencia (decisao 2026-09-28) | - |
-| AN3 | Emissões de documentos em um dia | Por médico (inscrição), o maior volume de documentos **assinados** emitidos em um único dia (não assinados são desprezados), com a contagem de pacientes distintos do dia. "Todos" usa o melhor dia do histórico (`fato_medico_maior_dia`); 7/30/90 dias usam o melhor dia dentro da janela (`fato_documento_emissao`). Sem corte mínimo; lista ordenada do maior dia para o menor, depois pacientes. O filtro de tipo não se aplica à AN3. | Triagem; não confirma automação |
-| AN4 | Documentos emitidos pelo local acima da media | Volume do local de atendimento comparado a media de todos os locais (que reflete todos os medicos) | 2x/3x/5x o desvio |
+| AN1 | Emissões de documentos no período | Ranking decrescente de medicos por quantidade de documentos do tipo selecionado, no periodo e UF | - |
+| AN2 | Atendimentos a pacientes distintos no período | Ranking decrescente de medicos por `count(DISTINCT id_paciente)` no periodo (fato `fato_documento_medico_paciente_dia`); sem media de referencia (decisao 2026-09-28) | - |
+| AN3 | Maior volume diário de emissões a pacientes distintos no período | Por médico (inscrição), o maior volume de documentos **assinados** emitidos em um único dia (não assinados são desprezados), com a contagem de pacientes distintos do dia. "Todos" usa o melhor dia do histórico (`fato_medico_maior_dia`); 7/30/90 dias usam o melhor dia dentro da janela (`fato_documento_emissao`). Sem corte mínimo; lista ordenada do maior dia para o menor, depois pacientes. O filtro de tipo não se aplica à AN3. | Triagem; não confirma automação |
+| AN4 | Pacientes distintos por instituição no período | Ranking decrescente de instituições por `count(DISTINCT id_paciente)` no período (somente documentos assinados). Instituição = CNES da unidade; sem CNES, a própria unidade de atendimento. Tabela com unidades e médicos vinculados (vínculos ativos); drill com rosca por tipo, evolução mensal e unidades do grupo | - |
 
 Fluxo da aba:
 
 1. Usuario escolhe o tipo de anomalia, periodo, UF, tipo de documento e quantidade de registros.
 2. Clica em "Pesquisar" para disparar a consulta (a view nao carrega automaticamente).
-3. AN1 exibe o ranking de médicos; ao clicar na linha (ícone circular "›"), abre um drill-down com: donut de documentos por tipo (quantidade e % do total), evolução mensal (acumulado x mês), especialidades, situação/tipo de inscrição e total no período — tudo lido do datamart (`fato_documento_medico_tipo_dia` + dimensões). AN2 exibe ranking de médicos por pacientes únicos no período; o drill-down mostra pacientes distintos por mês, especialidades, situação/tipo de inscrição e o total de pacientes distintos (`fato_documento_medico_paciente_dia`). AN3 exibe médicos ordenados pelo maior volume de documentos assinados em um único dia, com a contagem de pacientes distintos do dia; o botão de detalhe abre o mix por tipo e a lista dos documentos assinados daquele dia (QR code, data/hora, tipo, instituição, UF e situação), sem identificar paciente. A tabela respeita o limite do combo "Registros". AN4 permanece "em breve".
+3. AN1 exibe o ranking de médicos; ao clicar na linha (ícone circular "›"), abre um drill-down com: donut de documentos por tipo (quantidade e % do total), evolução mensal (acumulado x mês), especialidades, situação/tipo de inscrição e total no período — tudo lido do datamart (`fato_documento_medico_tipo_dia` + dimensões). AN2 exibe ranking de médicos por pacientes únicos no período; o drill-down mostra pacientes distintos por mês, especialidades, situação/tipo de inscrição e o total de pacientes distintos (`fato_documento_medico_paciente_dia`). AN3 exibe médicos ordenados pelo maior volume de documentos assinados em um único dia, com a contagem de pacientes distintos do dia; o botão de detalhe abre o mix por tipo e a lista dos documentos assinados daquele dia (QR code, data/hora, tipo, instituição, UF e situação), sem identificar paciente. A tabela respeita o limite do combo "Registros". AN4 exibe o ranking de instituições por pacientes distintos (com unidades e médicos vinculados); o detalhe abre a rosca de documentos por tipo, a evolução mensal e as unidades do grupo.
 
 Observacoes gerais:
 - Todas as consultas de tela leem apenas o datamart `prescricao_dw`; nenhuma consulta direta na origem `bd_cfm`.
@@ -751,7 +751,7 @@ Objetivo:
 - Implementar auditoria com seguranca e filtros restritivos.
 
 Atividades (status):
-- Criar fatos agregadas de auditoria (anomalias). (FEITO: AN1–AN4 com severidade 2x/3x/5x)
+- Criar fatos agregadas de auditoria (anomalias). (FEITO: AN1–AN4; AN1/AN2 com flags diárias e severidade 2x/3x/5x; AN3/AN4 rankings por período)
 - Criar tela com filtros obrigatorios. (FEITO: periodo + tipo de anomalia)
 
 Validacao:
@@ -820,7 +820,7 @@ Risco: dependencia de mapa externo.
 13. Hospedagem (2026-09-21): servidor interno existente (mesmo ambiente Windows do ETL).
 14. Perfis de acesso (2026-09-21): perfil unico — todos os usuarios do dominio veem as quatro visões; sem perfis separados.
 15. Exportacao CSV/Excel (2026-09-21): NAO permitida no MVP.
-16. Auditoria (2026-09-21): somente agregados; sem registros individuais. Atualizada em 2026-09-29 (detalhe AN3 restrito a eventos sinalizados) e em 2026-09-30: AN3 passa a ser "Emissões de documentos em um dia" (maior dia por médico em documentos assinados; não assinados são desprezados), com detalhe do dia (mix por tipo + lista de documentos assinados com QR code, data/hora, tipo, instituição, UF e situação) sem dados de paciente/conteúdo.
+16. Auditoria (2026-09-21): somente agregados; sem registros individuais. Atualizada em 2026-09-29 (detalhe AN3 restrito a eventos sinalizados) em 2026-09-30 AN3 passou a ser o maior dia por médico em documentos assinados (não assinados são desprezados) e em 2026-10-01 recebeu o rótulo "Maior volume diário de emissões a pacientes distintos no período", com detalhe do dia (mix por tipo + lista de documentos assinados com QR code, data/hora, tipo, instituição, UF e situação) sem dados de paciente/conteúdo.
 17. Auditoria do uso do dashboard (2026-09-21): NAO havera (sem registro de logins, acessos ou consultas dos usuarios); tabela `dashboard_access_log` removida do modelo. **REVOGADA em 2026-09-28**: criada a visao "Logs" (exclusiva de `mrichard@portalmedico.org.br`) com log de logins (`dashboard_access_log`) e log de atualizacoes (`dashboard_refresh_job`), ambos com botao de exclusao.
 18. Topologia (2026-09-21): aplicacao web (UI + API) e ETL (Python) em maquinas Windows separadas; comunicacao exclusivamente via fila de jobs no `prescricao_dw`.
 19. Anomalias (2026-09-21): media de referencia calculada sobre todos os medicos (nunca o historico individual do emissor).

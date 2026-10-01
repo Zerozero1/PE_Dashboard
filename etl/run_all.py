@@ -1,7 +1,9 @@
 """Pipeline completo do ETL (idempotente).
 
 Ordem: dimensoes -> fato docs -> origem-criacao -> especialidade -> unidade
-       -> medico-dia -> pacientes -> medicos (snapshot/novos) -> anomalias.
+       -> medico-dia -> medico-tipo -> medico-pacientes -> unidade-pacientes
+       -> pacientes -> medicos (snapshot/novos) -> AN3 maior dia
+       -> documentos emitidos -> anomalias (AN1/AN2).
 
 Uso: python run_all.py   (requer variaveis de ambiente; ver README.md)
 """
@@ -23,6 +25,8 @@ def main():
         ("fato medico-dia", "load_fatos medico"),
         ("fato medico-tipo", "load_fatos medico_tipo"),
         ("fato medico-pacientes", "load_fatos medico_pacientes"),
+        ("fato unidade-pacientes", "load_fatos unidade_pacientes"),
+        ("fato medico-unidade (vinculos)", "load_fatos medico_unidade"),
         ("fato pacientes", "load_fatos pacientes"),
         ("medicos (snapshot/novos)", "load_medicos"),
         ("AN3 maior dia (emissoes por dia)", "load_maior_dia"),

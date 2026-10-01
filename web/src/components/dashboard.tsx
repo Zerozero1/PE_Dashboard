@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const nf = new Intl.NumberFormat("pt-BR");
 const nfc = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
@@ -47,6 +47,28 @@ type AudAn3Detail = {
   documentos: { ds_qrcode: string | null; data_hora: string; tipo: string; instituicao: string; cnes: string | null; uf: string; in_assinado: string; in_cancelado: string }[];
 };
 
+type AudAn4Row = {
+  chave: string;
+  instituicao: string;
+  cnes: string | null;
+  uf: string | null;
+  unidades: number;
+  medicos: number;
+  pacientes: string;
+};
+
+type AudAn4Detail = {
+  chave: string;
+  instituicao: string;
+  cnes: string | null;
+  uf: string | null;
+  total_pacientes: string;
+  total_unidades: number;
+  serie_mensal: { mes: string; pacientes: string }[];
+  unidades: { id_unidade_atendimento: number; nome: string; cnes: string | null; uf: string; pacientes: string }[];
+  por_tipo: { tipo: string; documentos: string }[];
+};
+
 type MedData = {
   kpis: { inscricoes: number; ativos: number };
   novos_mensal: { mes: string; novos: string }[];
@@ -62,6 +84,7 @@ type AudData = {
   an1: { id_medico: number; crm: string; crm_uf: string; nome: string; docs: string }[];
   an2?: { id_medico: number; crm: string; crm_uf: string; nome: string; pacientes: string }[];
   an3?: AudAn3Row[];
+  an4?: AudAn4Row[];
 };
 
 type AudMedicoData = {
@@ -666,10 +689,10 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
 }
 
 const ANOMALIAS: [string, string][] = [
-  ["AN1", "AN1 · Maiores emissores de documentos médicos"],
-  ["AN2", "AN2 · Atendimentos de pacientes únicos"],
-  ["AN3", "AN3 · Emissões de documentos em um dia"],
-  ["AN4", "AN4 · Documentos emitidos pelo local acima da média"],
+  ["AN1", "AN1 · Emissões de documentos no período"],
+  ["AN2", "AN2 · Atendimentos a pacientes distintos no período"],
+  ["AN3", "AN3 · Maior volume diário de emissões a pacientes distintos no período"],
+  ["AN4", "AN4 · Pacientes distintos por instituição no período"],
 ];
 
 function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
@@ -689,19 +712,36 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
   const [an3Detalhe, setAn3Detalhe] = useState<AudAn3Detail | null>(null);
   const [an3Erro, setAn3Erro] = useState<string | null>(null);
   const [an3Carregando, setAn3Carregando] = useState(false);
+  const [an4Selecionado, setAn4Selecionado] = useState<AudAn4Row | null>(null);
+  const [an4Detalhe, setAn4Detalhe] = useState<AudAn4Detail | null>(null);
+  const [an4Erro, setAn4Erro] = useState<string | null>(null);
+  const [an4Carregando, setAn4Carregando] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
   const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
+
+  const cancelar = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setCarregando(false);
+  };
 
   const pesquisar = async () => {
     setAn3Selecionado(null);
     setAn3Detalhe(null);
     setAn3Erro(null);
-    if (anomalia !== "AN1" && anomalia !== "AN2" && anomalia !== "AN3") { setData(null); setErro(null); return; }
+    setAn4Selecionado(null);
+    setAn4Detalhe(null);
+    setAn4Erro(null);
+    if (anomalia !== "AN1" && anomalia !== "AN2" && anomalia !== "AN3" && anomalia !== "AN4") { setData(null); setErro(null); return; }
     const historicoCompleto = anomalia === "AN3" && dias === "todos";
     const qs = `anomalia=${anomalia}${historicoCompleto ? "" : `&de=${de}&ate=${ate}`}&uf=${uf}&tipo=${tipo}&limite=${limite}`;
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     setCarregando(true);
     setErro(null);
     try {
-      const r = await fetch(`/api/dashboard/auditoria?${qs}`);
+      const r = await fetch(`/api/dashboard/auditoria?${qs}`, { signal: ctrl.signal });
       const resultado = await r.json();
       if (!r.ok || resultado.erro) {
         setErro(resultado.erro ?? `HTTP ${r.status}`);
@@ -710,9 +750,16 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
         setData(resultado);
       }
     } catch (e) {
-      setErro(String(e));
+      if ((e as Error).name === "AbortError") {
+        setErro(null);
+      } else {
+        setErro(String(e));
+      }
     } finally {
-      setCarregando(false);
+      if (abortRef.current === ctrl) {
+        abortRef.current = null;
+        setCarregando(false);
+      }
     }
   };
 
@@ -720,6 +767,9 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
     setAn3Selecionado(null);
     setAn3Detalhe(null);
     setAn3Erro(null);
+    setAn4Selecionado(null);
+    setAn4Detalhe(null);
+    setAn4Erro(null);
     setMedico(m);
     setMedicoData(null);
     setMedicoErro(null);
@@ -740,6 +790,9 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
     setMedico(null);
     setMedicoData(null);
     setMedicoErro(null);
+    setAn4Selecionado(null);
+    setAn4Detalhe(null);
+    setAn4Erro(null);
     setAn3Selecionado(row);
     setAn3Detalhe(null);
     setAn3Erro(null);
@@ -765,6 +818,34 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
     }
   };
 
+  const abrirAn4 = async (row: AudAn4Row) => {
+    setMedico(null);
+    setMedicoData(null);
+    setMedicoErro(null);
+    setAn3Selecionado(null);
+    setAn3Detalhe(null);
+    setAn3Erro(null);
+    setAn4Selecionado(row);
+    setAn4Detalhe(null);
+    setAn4Erro(null);
+    setAn4Carregando(true);
+    const qs = new URLSearchParams({ chave: row.chave, de, ate });
+    try {
+      const r = await fetch(`/api/dashboard/auditoria/instituicao?${qs}`);
+      const resultado = await r.json();
+      if (!r.ok || resultado.erro) {
+        setAn4Erro(resultado.erro ?? `HTTP ${r.status}`);
+        setAn4Detalhe(null);
+      } else {
+        setAn4Detalhe(resultado);
+      }
+    } catch (e) {
+      setAn4Erro(String(e));
+    } finally {
+      setAn4Carregando(false);
+    }
+  };
+
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
@@ -781,11 +862,16 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
           </select>
         </label>
         <button className="btn primary" onClick={pesquisar} disabled={carregando}>Pesquisar</button>
+        {carregando && (
+          <button className="btn" type="button" onClick={cancelar} title="Interromper a consulta em andamento">
+            Cancelar
+          </button>
+        )}
         <div className="meta">{anomalia === "AN3" && dias === "todos" ? "histórico completo" : `${de} → ${ate}`} · {anomalia}</div>
       </div>
       {carregando && <Processando />}
       {erro && <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>}
-      {!carregando && anomalia !== "AN1" && anomalia !== "AN2" && anomalia !== "AN3" && (
+      {!carregando && anomalia !== "AN1" && anomalia !== "AN2" && anomalia !== "AN3" && anomalia !== "AN4" && (
         <article className="card" style={{ gridColumn: "span 12" }}>
           <div className="section-title"><h2>{ANOMALIAS.find((a) => a[0] === anomalia)?.[1]}</h2><span>em breve</span></div>
           <div style={{ color: "#566271", fontSize: 12 }}>Esta anomalia será implementada em uma próxima etapa.</div>
@@ -794,7 +880,7 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
       {!carregando && anomalia === "AN3" && data && (
         <article className="card" style={{ gridColumn: "span 12" }}>
           <div className="section-title">
-            <h2>AN3 · Emissões de documentos em um dia</h2>
+            <h2>AN3 · Maior volume diário de emissões a pacientes distintos no período</h2>
             <span>ordenado pelo maior volume de documentos em um único dia · limite {limite}</span>
           </div>
           <div className="uf-scroll" style={{ overflowX: "auto" }}>
@@ -841,14 +927,65 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
           </div>
         </article>
       )}
+      {!carregando && anomalia === "AN4" && data && (
+        <article className="card" style={{ gridColumn: "span 12" }}>
+          <div className="section-title">
+            <h2>AN4 · Pacientes distintos por instituição no período</h2>
+            <span>ordenado pelo total de pacientes distintos · limite {limite}</span>
+          </div>
+          <div className="uf-scroll" style={{ overflowX: "auto" }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>#</th><th>Instituição</th><th>CNES</th><th>UF</th>
+                  <th style={{ textAlign: "right" }}>Unidades</th>
+                  <th style={{ textAlign: "right" }}>Médicos</th>
+                  <th style={{ textAlign: "right" }}>Pacientes distintos</th>
+                  <th style={{ textAlign: "right" }}>Detalhe</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(data.an4 ?? []).map((r, i) => (
+                  <tr key={r.chave}>
+                    <td>{i + 1}</td>
+                    <td>{r.instituicao}</td>
+                    <td>{r.cnes ?? "—"}</td>
+                    <td>{r.uf ?? "—"}</td>
+                    <td style={{ textAlign: "right" }}>{nf.format(Number(r.unidades))}</td>
+                    <td style={{ textAlign: "right" }}>{nf.format(Number(r.medicos))}</td>
+                    <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.pacientes))}</td>
+                    <td style={{ textAlign: "right" }}>
+                      <button
+                        type="button"
+                        className="drill-ico"
+                        title="Detalhar a instituição"
+                        aria-label={`Detalhar a instituição ${r.instituicao}`}
+                        style={{ padding: 0, fontFamily: "inherit" }}
+                        onClick={() => abrirAn4(r)}
+                      >›</button>
+                    </td>
+                  </tr>
+                ))}
+                {(data.an4 ?? []).length === 0 && (
+                  <tr><td colSpan={8} style={{ color: "#566271", textAlign: "center" }}>Sem registros no período/filtros.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="sub" style={{ marginTop: 10, display: "grid", gap: 4 }}>
+            <div><b>Instituição:</b> agrupamento pelo CNES da unidade; sem CNES, pela própria unidade de atendimento. <b>Unidades:</b> quantas unidades compõem o grupo. <b>Médicos:</b> vínculos ativos atuais (cadastro médico–unidade), não restritos ao período.</div>
+            <div><b>Pacientes distintos:</b> pacientes diferentes que receberam documentos <b>assinados</b> no período (cada paciente conta uma vez na instituição). <b>Detalhe:</b> abre a evolução mensal e as unidades do grupo.</div>
+          </div>
+        </article>
+      )}
       {!carregando && (anomalia === "AN1" || anomalia === "AN2") && data && (() => {
         const rows = anomalia === "AN1" ? (data.an1 ?? []) : (data.an2 ?? []);
         const metricTitle = anomalia === "AN1" ? "Documentos" : "Pacientes";
-        const subtitle = anomalia === "AN1" ? "médicos por quantidade de documentos" : "médicos por quantidade de pacientes distintos";
+        const subtitle = anomalia === "AN1" ? "documentos no período por médico" : "pacientes distintos no período por médico";
         const getMetric = (r: typeof rows[number]) => anomalia === "AN1" ? Number((r as { docs: string }).docs) : Number((r as { pacientes: string }).pacientes);
         return (
         <article className="card" style={{ gridColumn: "span 12" }}>
-          <div className="section-title"><h2>{anomalia === "AN1" ? "AN1 · Maiores emissores de documentos médicos" : "AN2 · Atendimentos de pacientes únicos"}</h2><span>{subtitle}</span></div>
+          <div className="section-title"><h2>{anomalia === "AN1" ? "AN1 · Emissões de documentos no período" : "AN2 · Atendimentos a pacientes distintos no período"}</h2><span>{subtitle}</span></div>
           <table className="table">
             <thead>
               <tr>
@@ -887,6 +1024,15 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
           erro={an3Erro}
           carregando={an3Carregando}
           onClose={() => { setAn3Selecionado(null); setAn3Detalhe(null); setAn3Erro(null); }}
+        />
+      )}
+      {an4Selecionado && (
+        <An4Drill
+          row={an4Selecionado}
+          data={an4Detalhe}
+          erro={an4Erro}
+          carregando={an4Carregando}
+          onClose={() => { setAn4Selecionado(null); setAn4Detalhe(null); setAn4Erro(null); }}
         />
       )}
     </section>
@@ -971,6 +1117,65 @@ function An3Drill({ row, data, erro, carregando, onClose }: {
             </div>
           </div>
         </>
+      )}
+    </article>
+  );
+}
+
+function An4Drill({ row, data, erro, carregando, onClose }: {
+  row: AudAn4Row;
+  data: AudAn4Detail | null;
+  erro: string | null;
+  carregando: boolean;
+  onClose: () => void;
+}) {
+  const serie = data ? data.serie_mensal.map((s) => ({ x: s.mes, v: Number(s.pacientes) })) : [];
+  const mensal = data ? data.serie_mensal.map((s) => Number(s.pacientes)) : [];
+  return (
+    <article className="card" style={{ gridColumn: "span 12" }}>
+      <div className="section-title">
+        <h2>{data?.instituicao ?? row.instituicao}</h2>
+        <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span>{data?.cnes ? `CNES ${data.cnes}` : "sem CNES"}{data?.uf ? ` · ${data.uf}` : ""}</span>
+          <button className="btn" onClick={onClose} style={{ padding: "4px 9px", fontSize: 10 }}>Fechar ✕</button>
+        </span>
+      </div>
+      {carregando && <Processando />}
+      {erro && <div style={{ color: "var(--red)", fontSize: 12 }}>Erro: {erro}</div>}
+      {!carregando && !erro && data && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 18 }}>
+          <div style={{ gridColumn: "span 4" }}>
+            <div className="section-title"><h2>Documentos por tipo</h2><span>assinados</span></div>
+            <Donut rows={data.por_tipo.map((t) => ({ label: t.tipo, v: Number(t.documentos) }))} pctDec={1} />
+            <div className="section-title" style={{ marginTop: 16 }}><h2>Unidades do grupo</h2><span>{nf.format(data.total_unidades)}</span></div>
+            <div className="uf-scroll" style={{ maxHeight: 220, overflowY: "auto" }}>
+              <table className="table" style={{ fontSize: 10.5 }}>
+                <thead><tr><th>Unidade</th><th>UF</th><th style={{ textAlign: "right" }}>Pacientes</th></tr></thead>
+                <tbody>
+                  {data.unidades.map((u) => (
+                    <tr key={u.id_unidade_atendimento}>
+                      <td>{u.nome}</td>
+                      <td>{u.uf}</td>
+                      <td style={{ textAlign: "right" }}>{nf.format(Number(u.pacientes))}</td>
+                    </tr>
+                  ))}
+                  {data.unidades.length === 0 && (
+                    <tr><td colSpan={3} style={{ color: "#566271", textAlign: "center" }}>Sem unidades no período/filtros.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div style={{ gridColumn: "span 8" }}>
+            <div className="section-title"><h2>Pacientes distintos por mês</h2><span>mensal</span></div>
+            <div className="chart" style={{ height: 210 }}>
+              <BarChart rows={serie} bars={mensal} />
+            </div>
+            <div className="sub" style={{ marginTop: 14 }}>
+              Total de pacientes distintos no período: <b style={{ color: "var(--va)" }}>{nf.format(Number(data.total_pacientes))}</b>
+            </div>
+          </div>
+        </div>
       )}
     </article>
   );
