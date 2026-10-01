@@ -1,6 +1,6 @@
 # PE Dashboard — Aplicação Web
 
-**Versão: v1.2** (2026-10-01)
+**Versão: v1.3** (2026-10-01)
 
 Frontend/API do PE Dashboard: monolito Next.js 16 (App Router, TypeScript) que consome o datamart `prescricao_dw`.
 

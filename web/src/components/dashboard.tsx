@@ -536,12 +536,12 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
         </div>
       </article>
 
-      <article className="card" style={{ gridColumn: "span 7" }}>
+      <article className="card" style={{ gridColumn: "span 7", display: "flex", flexDirection: "column" }}>
         <div className="section-title">
           <h2>Emissões por versão do app</h2>
           <span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}{filtradosSemTipo && " · "}{filtradosSemTipo && <span className="tag">F</span>}</span>
         </div>
-        <div className="uf-scroll" style={{ maxHeight: 300, overflowY: "auto" }}>
+        <div className="uf-scroll" style={{ flexGrow: 1, flexShrink: 1, flexBasis: "auto", height: 0, minHeight: 200, overflowY: "auto" }}>
           <table className="table" style={{ fontSize: 10.5 }}>
             <thead><tr><th>Versão</th><th style={{ textAlign: "right" }}>Documentos</th><th style={{ textAlign: "right" }}>%</th></tr></thead>
             <tbody>
@@ -558,14 +558,12 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
             </tbody>
           </table>
         </div>
-        <div className="sub" style={{ marginTop: 4 }}>Total por versão no período selecionado. Documentos sem versão registrada não são exibidos.</div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 5" }}>
         <div className="section-title"><h2>Medicamentos prescritos</h2>{filtrados && <span className="tag">F</span>}</div>
         <RankRows rows={data.ranking_medicamentos.map((m) => ({ name: m.medicamento, v: Number(m.itens) }))} />
         {data.ranking_medicamentos.length === 0 && <div className="sub">Sem receitas no período/filtros.</div>}
-        <div className="sub" style={{ marginTop: 4 }}>Top 15 por itens de receita (grão mensal). Texto informado pelo médico, normalizado em maiúsculas; variações de escrita podem aparecer separadas.</div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 7" }}>
@@ -1525,7 +1523,7 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
           </section>
         )}
         <div className="footer">
-          <span>PE Dashboard · CFM v1.2</span>
+          <span>PE Dashboard · CFM v1.3</span>
           <span>Datamart prescricao_dw · última carga: {health?.job?.finalizado_em ? new Date(health.job.finalizado_em).toLocaleString("pt-BR") : "—"}</span>
         </div>
       </main>

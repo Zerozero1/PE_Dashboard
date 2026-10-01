@@ -100,6 +100,7 @@ h1{font-size:24px;margin:5px 0 0;letter-spacing:-.03em}.subtitle{color:var(--mut
 .map-box{position:relative;min-height:200px}.map-box svg{width:100%;height:auto;max-height:272px}
 .map-note{position:absolute;right:8px;bottom:4px;font-size:9px;color:#566271}
 .barrow{display:grid;grid-template-columns:128px 1fr 62px;gap:10px;align-items:center;font-size:10px;color:#8d99a7;margin-bottom:11px}
+.barrow:last-child{margin-bottom:0}
 .bar-track{height:6px;background:#202833;border-radius:6px;overflow:hidden}
 .bar-fill{display:block;height:100%;border-radius:6px;background:var(--va)}
 .barrow b{text-align:right;color:#c3ccd6;font-size:10.5px}

@@ -10,7 +10,7 @@ Painel analítico web restrito ao domínio `@portalmedico.org.br` (autenticaçã
 OAuth) sobre a base operacional `bd_cfm`. Os dados são transformados por um ETL Python
 em um datamart próprio (`prescricao_dw`) que alimenta três visões:
 
-**Versão do produto: v1.2** (2026-10-01)
+**Versão do produto: v1.3** (2026-10-01)
 
 - **Documentos médicos** — emissões por período/UF/tipo/especialidade, origem de criação, versão do app e medicamentos prescritos
 - **Médicos** — inscrições cadastradas (CRM/UF), médicos cadastrados (CPF), novos por

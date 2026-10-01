@@ -1,5 +1,5 @@
 # Plano de Desenvolvimento - PE Dashboard
-**Versão do produto: v1.2** (2026-10-01)
+**Versão do produto: v1.3** (2026-10-01)
 _Atualizado em: 2026-10-01_
 
 ## 1. Objetivo
