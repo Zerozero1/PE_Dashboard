@@ -8,7 +8,8 @@ Painel analítico web restrito ao domínio `@portalmedico.org.br` (Google OAuth)
 
 - **Documentos médicos** — emissões por período, UF, tipo e especialidade; origem de criação (Web/Web mobile/iOS/Android), versão do app e medicamentos prescritos; mapa e rankings.
 - **Médicos** — inscrições cadastradas (CRM/UF), médicos cadastrados (CPF único), novos por mês, inatividade por faixa sem emissão.
-- **Auditoria** — AN1 "Emissões de documentos no período", AN2 "Atendimentos a pacientes distintos no período", AN3 "Maior volume diário de emissões a pacientes distintos no período" (maior dia em documentos assinados; drill-down lista os documentos com QR code) e AN4 "Pacientes distintos por instituição no período" (CNES; drill com evolução mensal e unidades) — sem identificadores de paciente.
+- **RDC1000** — pool de numerações ANVISA reservadas por médico×tipo (disponíveis/utilizadas, médicos com/sem estoque, nunca usaram), cobertura (emitentes sem numeração no período) e maiores pools/consumos. Sem histórico — estado atual do pool.
+- **Auditoria** — AN1 "Emissões de documentos no período", AN2 "Atendimentos a pacientes distintos no período", AN3 "Maior volume diário de emissões a pacientes distintos no período" (maior dia em documentos assinados; o detalhamento abre **abaixo da linha** e lista os documentos com QR code) e AN4 "Pacientes distintos por instituição no período" (CNES; detalhamento com evolução mensal e unidades) — sem identificadores de paciente.
 
 ## Arquitetura
 
@@ -34,11 +35,11 @@ bd_cfm (origem, 172.16.2.177)          prescricao_dw (datamart, 172.16.7.112)
 web/              aplicação Next.js (App Router, TypeScript)
   src/app/api/    endpoints do dashboard e autenticação
   src/components/ visões e gráficos (SVG/CSS, sem lib de gráficos)
-etl/              ETL Python (dims → fatos → anomalias) + orquestração
+etl/              ETL Python (dims → fatos → snapshots → numeração ANVISA → médicos → maior dia → documentos) + orquestração
   load_dims.py    dimensões
-  load_fatos.py   fatos de documentos (docs, origem, versao, receitas, especialidade, unidade, medico, medico_tipo, medico_pacientes, unidade_pacientes, medico_unidade)
+  load_fatos.py   fatos de documentos (docs, origem, versao, receitas, especialidade, medico, medico_tipo, medico_pacientes, unidade_pacientes, medico_unidade)
   load_medicos.py médicos (snapshot, novos, emissão)
-  load_anomalias.py  anomalia AN1 (flag diária)
+  load_numeracao.py  pool de numerações ANVISA (RDC1000)
   jobs.py         worker/scheduler (fila dashboard_refresh_job)
 docker-compose.yml  web + etl-worker + etl-scheduler
 ```

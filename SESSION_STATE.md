@@ -1,10 +1,11 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-10-02 15:30 BRT_
+_Atualizado em: 2026-10-02 15:53 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões (Documentos, Medicos, Auditoria) + visao "Logs" (admin).
 
 ## ✅ Última Sessão (Resumo)
+- Documentos técnicos sincronizados (2026-10-02): README (visões — RDC1000 e detalhe inline na Auditoria; estrutura do `etl/` atualizada), web/README (endpoints `numeracao` e `auditoria/medico`), PLANO (decisões 22 — visão RDC1000 — e 23 — base de medicamentos ANVISA; drill inline e remoção da coluna Situação), DEPLOY (detalhes inline; AN3 sem situação) e etl/README (definição AN3 sem situação, inline). Versão **v1.5**. Encerramento de sessão.
 - AN3 — coluna **Situação** removida do detalhamento (todos os documentos listados são assinados); texto do card ajustado. `tsc`/`build` OK. Dev local (porta 3000) encerrado a pedido (segurava o `.next`). Carga da origem `tb_numeracao_anvisa` segue rodando (~10,6M linhas, +9k/45s em 2026-10-02 15:24; snapshot do DW só atualiza no job das 02:00). Pendente: commit/deploy.
 - Auditoria — detalhamento **inline** (2026-10-02): nas 4 anomalias o drill abre **logo abaixo da linha** (linha destacada, ícone `▾`, fecha clicando de novo ou no "Fechar ✕"); AN3/AN4 pelo botão `›`; trocar o tipo de anomalia fecha o drill aberto (novo `useEffect`). `MedicoDrill`/`An3Drill`/`An4Drill` ganharam prop `inline`; cards do rodapé removidos; CSS `.drill-row-open`/`.drill-inline-row`/`.drill-inline`. `tsc`/`build` OK (matei `next dev` local obsoleto que travava o `.next`). Pendente: commit/deploy.
 - Gráfico de emissores + versão **v1.5** (2026-10-02): o card "Médicos com pelo menos uma emissão de documento por mês" agora plota **somente meses fechados** (exclui o mês corrente do gráfico, além da tendência) e o **tooltip foi corrigido** — mostrava "mês: 0 · acumulado: N" por causa da série de barras ausente; o `BarChart` ganhou o prop `linhaLabel` e o card exibe "CPF distintos: N" (uma única série). Versão v1.5: `web/package.json`/`package-lock` (1.5.0), rodapé, cabeçalhos de versão (README, PLANO, etl/README, web/README) e DEPLOY (seção 9 agora v1.5, com check da aba RDC1000). `tsc`/`build` OK. Pendente: commit/deploy.

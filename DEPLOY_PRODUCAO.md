@@ -15,13 +15,13 @@ em um datamart próprio (`prescricao_dw`) que alimenta três visões:
 - **Documentos médicos** — emissões por período/UF/tipo/especialidade, origem de criação, versão do app e medicamentos prescritos
 - **Médicos** — inscrições cadastradas (CRM/UF), médicos cadastrados (CPF), novos por
   aceite do termo, inatividade por faixa de dias sem emissão
-- **Auditoria** — rankings AN1/AN2/AN3/AN4; os drill-downs mostram o dia do médico (AN3, com lista de documentos por QR code) e a instituição (AN4, evolução mensal e unidades), sem dados de pacientes ou conteúdo de documentos
+- **Auditoria** — rankings AN1/AN2/AN3/AN4; os detalhamentos abrem **inline abaixo da linha** e mostram o dia do médico (AN3, com lista de documentos por QR code) e a instituição (AN4, evolução mensal e unidades), sem dados de pacientes ou conteúdo de documentos
 
 Restrições de negócio já definidas: sem exportação CSV/Excel, sem auditoria do uso do
 dashboard e sem nomes de pacientes ou conteúdo de documentos. Os rankings de auditoria
 identificam médicos por nome e inscrição; o detalhe AN3 apresenta o maior dia de emissões
 (documentos assinados, pacientes distintos, mix por tipo e lista de documentos com QR code,
-data/hora, tipo, instituição, UF e situação), sem identificador de paciente nem conteúdo.
+data/hora, tipo, instituição e UF), sem identificador de paciente nem conteúdo.
 
 ## 2. Componentes e topologia
 
