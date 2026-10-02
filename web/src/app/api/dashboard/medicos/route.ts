@@ -42,11 +42,19 @@ export async function GET(req: NextRequest) {
         [uf]
       ),
       query(
-        `SELECT s.sg_uf AS uf, s.inscricoes_cadastradas, s.medicos_ativos, u.nu_populacao
-           FROM prescricao.fato_medico_snapshot s
-           LEFT JOIN prescricao.dim_uf u ON u.sg_uf = s.sg_uf
-          WHERE s.sg_uf <> '--'
-          ORDER BY s.inscricoes_cadastradas DESC`
+        todos
+          ? `SELECT e.sg_uf AS uf, count(*)::bigint AS medicos, u.nu_populacao
+               FROM prescricao.fato_medico_extremos_emissao e
+               LEFT JOIN prescricao.dim_uf u ON u.sg_uf = e.sg_uf
+              WHERE e.sg_uf <> '--'
+              GROUP BY 1, 3 ORDER BY 2 DESC`
+          : `SELECT f.sg_uf AS uf, count(DISTINCT dm.id_pessoa)::bigint AS medicos, u.nu_populacao
+               FROM prescricao.fato_documento_medico_dia f
+               JOIN prescricao.dim_medico dm ON dm.id_medico = f.id_medico
+               LEFT JOIN prescricao.dim_uf u ON u.sg_uf = f.sg_uf
+              WHERE f.dia BETWEEN $1 AND $2 AND f.sg_uf <> '--'
+              GROUP BY 1, 3 ORDER BY 2 DESC`,
+        todos ? [] : [de, ate]
       ),
       query(
         `WITH ref AS (SELECT max(dia) AS hoje FROM prescricao.fato_documento_medico_dia)

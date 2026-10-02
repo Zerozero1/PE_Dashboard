@@ -74,7 +74,7 @@ type AudAn4Detail = {
 type MedData = {
   kpis: { inscricoes: number; ativos: number };
   novos_mensal: { mes: string; novos: string }[];
-  por_uf: { uf: string; inscricoes_cadastradas: string; medicos_ativos: string; nu_populacao: number | null }[];
+  por_uf: { uf: string; medicos: string; nu_populacao: number | null }[];
   inatividade: { faixa: string; medicos: string }[];
   emissores_mensal: { mes: string; emissao: string }[];
   emissores_30d: number;
@@ -614,18 +614,18 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
     (xs, s) => [...xs, (xs[xs.length - 1] ?? 0) + Number(s.novos)], []);
   const novosAcumulados = data.novos_mensal.map((s, i) => ({ x: s.mes, v: prefixoNovos[i] }));
   const novosMensal = data.novos_mensal.map((s) => Number(s.novos));
-  const totalInsc = data.por_uf.reduce((a, u) => a + Number(u.inscricoes_cadastradas), 0);
-  const pctInsc = (v: number) => `${(totalInsc > 0 ? ((v / totalInsc) * 100).toFixed(1) : "0.0").replace(".", ",")}%`;
-  const densidade = (u: { medicos_ativos: string; nu_populacao: number | null }) =>
-    u.nu_populacao && u.nu_populacao > 0 ? (Number(u.medicos_ativos) / u.nu_populacao) * 100000 : 0;
-  const densidadeTxt = (u: { medicos_ativos: string; nu_populacao: number | null }) => {
+  const totalEmiss = data.por_uf.reduce((a, u) => a + Number(u.medicos), 0);
+  const pctEmiss = (v: number) => `${(totalEmiss > 0 ? ((v / totalEmiss) * 100).toFixed(1) : "0.0").replace(".", ",")}%`;
+  const densidade = (u: { medicos: string; nu_populacao: number | null }) =>
+    u.nu_populacao && u.nu_populacao > 0 ? (Number(u.medicos) / u.nu_populacao) * 100000 : 0;
+  const densidadeTxt = (u: { medicos: string; nu_populacao: number | null }) => {
     const d = densidade(u);
     return d > 0 ? d.toFixed(1).replace(".", ",") : "—";
   };
   const ufOrdenadas = [...data.por_uf].sort((a, b) =>
     ordem === "densidade"
       ? densidade(b) - densidade(a)
-      : Number(b.inscricoes_cadastradas) - Number(a.inscricoes_cadastradas));
+      : Number(b.medicos) - Number(a.medicos));
   const totalInat = data.inatividade.reduce((a, i) => a + Number(i.medicos), 0);
   const maxInat = Math.max(...data.inatividade.map((i) => Number(i.medicos)), 1);
   const INA_META: Record<string, { cor: string }> = {
@@ -636,15 +636,19 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
   };
   const ufFiltrada = uf !== "";
   const periodoFiltrado = dias !== "todos" || uf !== "";
-  const valsEmissores = data.emissores_mensal.map((s) => Number(s.emissao));
+  const mesAtual = ate.slice(0, 7);
+  const emissoresFechados = data.emissores_mensal.filter((s) => s.mes < mesAtual);
+  const valsEmissores = emissoresFechados.map((s) => Number(s.emissao));
   const mediaEmissores = valsEmissores.length >= 2
     ? Math.round((valsEmissores[valsEmissores.length - 1] - valsEmissores[0]) / (valsEmissores.length - 1))
     : null;
+  const mesParcial = data.emissores_mensal.some((s) => s.mes >= mesAtual);
+  const notaParcial = mesParcial ? " (média sobre meses fechados; o mês corrente é parcial)" : "";
   const tendenciaEmissores = mediaEmissores === null
     ? null
     : mediaEmissores === 0
-      ? <>Observa-se, ainda, uma variação média de <b style={{ color: "var(--va)" }}>{nf.format(0)}</b> médicos por mês na base de usuários.</>
-      : <>Observa-se, ainda, um {mediaEmissores > 0 ? "crescimento" : "decréscimo"} médio de <b style={{ color: "var(--va)" }}>{nf.format(Math.abs(mediaEmissores))}</b> médicos por mês na base de usuários.</>;
+      ? <>Observa-se, ainda, uma variação média de <b style={{ color: "var(--va)" }}>{nf.format(0)}</b> médicos por mês na base de usuários{notaParcial}.</>
+      : <>Observa-se, ainda, um {mediaEmissores > 0 ? "crescimento" : "decréscimo"} médio de <b style={{ color: "var(--va)" }}>{nf.format(Math.abs(mediaEmissores))}</b> médicos por mês na base de usuários{notaParcial}.</>;
   return (
     <section className="grid">
       <div className="filters" style={{ gridColumn: "span 12" }}>
@@ -694,17 +698,17 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ flex: 1.1, minWidth: 0 }}>
-            <MapBr note={false} rows={ufOrdenadas.map((u) => ({ uf: u.uf, v: ordem === "densidade" ? densidade(u) : Number(u.inscricoes_cadastradas) }))} />
+            <MapBr note={false} rows={ufOrdenadas.map((u) => ({ uf: u.uf, v: ordem === "densidade" ? densidade(u) : Number(u.medicos) }))} />
           </div>
           <div className="uf-scroll" style={{ flex: 1, maxHeight: 292, overflowY: "auto", paddingRight: 4 }}>
             <table className="table" style={{ fontSize: 10 }}>
-              <thead><tr><th>UF</th><th style={{ textAlign: "right" }}>Inscrições</th><th style={{ textAlign: "right" }}>%</th><th style={{ textAlign: "right" }}>Por 100k hab</th></tr></thead>
+              <thead><tr><th>UF</th><th style={{ textAlign: "right" }}>Médicos</th><th style={{ textAlign: "right" }}>%</th><th style={{ textAlign: "right" }}>Por 100k hab</th></tr></thead>
               <tbody>
                 {ufOrdenadas.map((u) => (
                   <tr key={u.uf}>
                     <td>{u.uf}</td>
-                    <td style={{ textAlign: "right" }}>{nf.format(Number(u.inscricoes_cadastradas))}</td>
-                    <td style={{ textAlign: "right" }}>{pctInsc(Number(u.inscricoes_cadastradas))}</td>
+                    <td style={{ textAlign: "right" }}>{nf.format(Number(u.medicos))}</td>
+                    <td style={{ textAlign: "right" }}>{pctEmiss(Number(u.medicos))}</td>
                     <td style={{ textAlign: "right", color: "var(--va)" }}>{densidadeTxt(u)}</td>
                   </tr>
                 ))}
@@ -712,7 +716,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
             </table>
           </div>
         </div>
-        <div className="sub" style={{ marginTop: 6 }}>Por 100k hab = médicos ativos (CPF) ÷ população da UF · inscrições cadastradas (CRM/UF).</div>
+        <div className="sub" style={{ marginTop: 6 }}>Médicos com emissão no período (CPF distintos) · por 100k hab = emitentes ÷ população da UF.</div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 5" }}>

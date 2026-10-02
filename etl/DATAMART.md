@@ -43,7 +43,7 @@
 
 | Tabela | Grão / PK | Colunas | Origem / carga | Consumidor |
 |---|---|---|---|---|
-| `fato_documento_medico_dia` | dia × UF × médico (`dia, sg_uf, id_medico`) | `documentos` | `tb_consulta_documento` + `rl_medico_unidade_atendimento` (`load_fatos medico`) | Referência de "último dia" na visão Médicos e insumo das derivações de médicos |
+| `fato_documento_medico_dia` | dia × UF × médico (`dia, sg_uf, id_medico`) | `documentos` | `tb_consulta_documento` + `rl_medico_unidade_atendimento` (`load_fatos medico`) | Referência de "último dia" na visão Médicos, insumo das derivações de médicos e **emitentes por UF nas janelas** do card "Médicos (CPF) por UF" |
 | `fato_documento_medico_tipo_dia` | dia × UF × médico × tipo (`dia, sg_uf, id_medico, id_tipo_documento`) | `documentos` | idem + `id_tipo_documento` (`load_fatos medico_tipo`) | Ranking AN1 (janelas) e drill por tipo; `snap_medico_tipo` |
 | `fato_documento_medico_paciente_dia` | dia × UF × médico × paciente (`dia, sg_uf, id_medico, id_paciente`; DISTINCT) | — | `rl_medico_paciente` (`load_fatos medico_pacientes`) | Ranking AN2 (`count(DISTINCT id_paciente)`), drill de pacientes, pacientes do dia da AN3; `snap_medico_paciente` |
 | `fato_documento_unidade_paciente_dia` | dia × UF × unidade × paciente (`dia, sg_uf, id_unidade_atendimento, id_paciente`; DISTINCT, **somente assinados**) | — | `rl_medico_paciente` (`load_fatos unidade_pacientes`) | Ranking AN4, drill da instituição; `snap_instituicao` |
@@ -58,7 +58,7 @@
 | `fato_medico_dia` | dia × UF (`dia, sg_uf`; inclui `--` global) | `novos_aceite_termo`, `medicos_com_emissao` | `tb_usuario.dh_aceite_termo` (novos) + `fato_documento_medico_dia` (emissão) — `load_medicos.py` | "Novos médicos por mês" |
 | `fato_medico_snapshot` | UF (`sg_uf`; inclui `--` global) | `inscricoes_cadastradas`, `medicos_ativos`, `atualizado_em` | `tb_medico` + `tb_usuario` + `tb_pessoa` (`load_medicos.py`) | KPIs de inscrições/ativos e tabela por UF |
 | `fato_medico_emissao_mes` | mês × UF (`mes, sg_uf`; inclui `--` global) | `cpfs_distintos` | Derivada no DW de `fato_documento_medico_dia` + `dim_medico` | "Médicos com emissão por mês" |
-| `fato_medico_extremos_emissao` | UF × pessoa (`sg_uf, id_pessoa`) | `primeiro_dia`, `ultimo_dia` | Derivada no DW (min/max de emissão por pessoa) | Inatividade (30/60/90/120 dias) e total de emissores 30d |
+| `fato_medico_extremos_emissao` | UF × pessoa (`sg_uf, id_pessoa`) | `primeiro_dia`, `ultimo_dia` | Derivada no DW (min/max de emissão por pessoa) | Inatividade (30/60/90/120 dias), total de emissores 30d e **emitentes por UF all-time** do card "Médicos (CPF) por UF" (modo "Todos") |
 
 ## Snapshots all-time (modo "Todos")
 
