@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const todos = de <= TODOS_DE;
 
   try {
-    const [porTipo, emitentes] = await Promise.all([
+    const [porTipo, emitentesDocs, gap, maioresPools, faixas, maioresConsumos, reposicao] = await Promise.all([
       query(
         `SELECT t.nm_documento AS tipo, n.id_tipo_documento,
                 count(*)::int AS medicos,
@@ -28,6 +28,28 @@ export async function GET(req: NextRequest) {
           GROUP BY 1, 2 ORDER BY disponiveis DESC`,
         [uf]
       ),
+      todos
+        ? query(
+            `SELECT f.id_tipo_documento,
+                    count(DISTINCT f.id_medico)::int AS emitentes,
+                    sum(f.documentos)::bigint AS documentos
+               FROM prescricao.snap_medico_tipo f
+              WHERE f.id_tipo_documento = ANY($1::int[])
+                AND ($2::text IS NULL OR f.sg_uf = $2)
+              GROUP BY 1`,
+            [TIPOS_POOL, uf]
+          )
+        : query(
+            `SELECT f.id_tipo_documento,
+                    count(DISTINCT f.id_medico)::int AS emitentes,
+                    sum(f.documentos)::bigint AS documentos
+               FROM prescricao.fato_documento_medico_tipo_dia f
+              WHERE f.dia BETWEEN $1 AND $2
+                AND f.id_tipo_documento = ANY($3::int[])
+                AND ($4::text IS NULL OR f.sg_uf = $4)
+              GROUP BY 1`,
+            [de, ate, TIPOS_POOL, uf]
+          ),
       todos
         ? query(
             `SELECT f.id_tipo_documento, count(DISTINCT f.id_medico)::int AS n
@@ -52,15 +74,77 @@ export async function GET(req: NextRequest) {
               GROUP BY 1`,
             [de, ate, TIPOS_POOL, uf]
           ),
+      query(
+        `SELECT m.nm_medico AS nome, m.nu_crm AS crm, m.sg_uf AS crm_uf,
+                t.nm_documento AS tipo, n.disponiveis, n.utilizados
+           FROM prescricao.snap_numeracao_anvisa_medico n
+           JOIN prescricao.dim_medico m ON m.id_medico = n.id_medico
+           JOIN prescricao.dim_tipo_documento t ON t.id_tipo_documento = n.id_tipo_documento
+          WHERE ($1::text IS NULL OR n.sg_uf = $1)
+          ORDER BY n.disponiveis DESC LIMIT 15`,
+        [uf]
+      ),
+      query(
+        `SELECT CASE
+                  WHEN disponiveis = 0 THEN '0 (esgotado)'
+                  WHEN disponiveis <= 50 THEN '1–50'
+                  WHEN disponiveis <= 500 THEN '51–500'
+                  WHEN disponiveis <= 1000 THEN '501–1.000'
+                  ELSE '1.001–2.000' END AS faixa,
+                count(*)::int AS medico_tipo,
+                sum(disponiveis)::bigint AS disponiveis,
+                min(disponiveis) AS ord
+           FROM prescricao.snap_numeracao_anvisa_medico
+          WHERE ($1::text IS NULL OR sg_uf = $1)
+          GROUP BY 1 ORDER BY ord`,
+        [uf]
+      ),
+      query(
+        `SELECT m.nm_medico AS nome, m.nu_crm AS crm, m.sg_uf AS crm_uf,
+                t.nm_documento AS tipo, n.disponiveis, n.utilizados
+           FROM prescricao.snap_numeracao_anvisa_medico n
+           JOIN prescricao.dim_medico m ON m.id_medico = n.id_medico
+           JOIN prescricao.dim_tipo_documento t ON t.id_tipo_documento = n.id_tipo_documento
+          WHERE n.utilizados > 0
+            AND ($1::text IS NULL OR n.sg_uf = $1)
+          ORDER BY n.utilizados DESC LIMIT 15`,
+        [uf]
+      ),
+      query(
+        `SELECT m.nm_medico AS nome, m.nu_crm AS crm, m.sg_uf AS crm_uf,
+                t.nm_documento AS tipo, n.disponiveis, n.utilizados
+           FROM prescricao.snap_numeracao_anvisa_medico n
+           JOIN prescricao.dim_medico m ON m.id_medico = n.id_medico
+           JOIN prescricao.dim_tipo_documento t ON t.id_tipo_documento = n.id_tipo_documento
+          WHERE (n.disponiveis = 0
+                 OR n.utilizados >= 0.9 * (n.disponiveis + n.utilizados))
+            AND ($1::text IS NULL OR n.sg_uf = $1)
+          ORDER BY (n.utilizados::numeric / NULLIF(n.disponiveis + n.utilizados, 0)) DESC NULLS LAST
+          LIMIT 15`,
+        [uf]
+      ),
     ]);
 
-    const gap = new Map<number, number>(
-      emitentes.rows.map((r) => [Number(r.id_tipo_documento), Number(r.n)]));
+    const emit = new Map<number, { emitentes: number; documentos: string }>(
+      emitentesDocs.rows.map((r) => [Number(r.id_tipo_documento),
+        { emitentes: Number(r.emitentes), documentos: String(r.documentos ?? "0") }]));
+    const gapMap = new Map<number, number>(
+      gap.rows.map((r) => [Number(r.id_tipo_documento), Number(r.n)]));
     const por_tipo = porTipo.rows.map((r) => ({
       ...r,
-      emitentes_sem_numeracao: gap.get(Number(r.id_tipo_documento)) ?? 0,
+      emitentes: emit.get(Number(r.id_tipo_documento))?.emitentes ?? 0,
+      documentos: emit.get(Number(r.id_tipo_documento))?.documentos ?? "0",
+      emitentes_sem_numeracao: gapMap.get(Number(r.id_tipo_documento)) ?? 0,
     }));
-    return NextResponse.json({ de, ate, por_tipo });
+    return NextResponse.json({
+      de,
+      ate,
+      por_tipo,
+      maiores_pools: maioresPools.rows,
+      faixas: faixas.rows,
+      maiores_consumos: maioresConsumos.rows,
+      reposicao: reposicao.rows,
+    });
   } catch (e) {
     return NextResponse.json({ erro: String(e) }, { status: 500 });
   }
