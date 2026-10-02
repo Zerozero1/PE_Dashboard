@@ -1213,7 +1213,7 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
             </table>
           </div>
           <div className="sub" style={{ marginTop: 10, display: "grid", gap: 4 }}>
-            <div><b>Documentos no dia:</b> total de documentos <b>assinados</b> emitidos pelo médico no dia de maior volume (Todos = melhor dia do histórico; 7/30/60/90/120 dias = melhor dia dentro da janela). <b>Detalhe:</b> abre o mix por tipo e a lista de documentos do dia (QR code, hora, tipo, instituição, UF e situação).</div>
+            <div><b>Documentos no dia:</b> total de documentos <b>assinados</b> emitidos pelo médico no dia de maior volume (Todos = melhor dia do histórico; 7/30/60/90/120 dias = melhor dia dentro da janela). <b>Detalhe:</b> abre o mix por tipo e a lista de documentos do dia (QR code, hora, tipo, instituição e UF).</div>
             <div><b>Pacientes no dia:</b> pacientes distintos atendidos nesse mesmo dia.</div>
           </div>
         </article>
@@ -1396,7 +1396,7 @@ function An3Drill({ row, data, erro, carregando, onClose, inline = false }: {
               <table className="table" style={{ fontSize: 10.5 }}>
                 <thead>
                   <tr>
-                    <th>#</th><th>QR code</th><th>Data/hora</th><th>Documento</th><th>Instituição</th><th>UF</th><th>Situação</th>
+                    <th>#</th><th>QR code</th><th>Data/hora</th><th>Documento</th><th>Instituição</th><th>UF</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1408,11 +1408,10 @@ function An3Drill({ row, data, erro, carregando, onClose, inline = false }: {
                       <td>{d.tipo}</td>
                       <td>{d.cnes ? `${d.instituicao} · CNES ${d.cnes}` : `${d.instituicao} · sem CNES`}</td>
                       <td>{d.uf}</td>
-                      <td>{d.in_cancelado === "S" ? <span style={{ color: "var(--red)" }}>Cancelado</span> : d.in_assinado === "S" ? "Assinado" : "Não assinado"}</td>
                     </tr>
                   ))}
                   {data.documentos.length === 0 && (
-                    <tr><td colSpan={7} style={{ color: "#566271", textAlign: "center" }}>Sem documentos no dia.</td></tr>
+                    <tr><td colSpan={6} style={{ color: "#566271", textAlign: "center" }}>Sem documentos no dia.</td></tr>
                   )}
                 </tbody>
               </table>
