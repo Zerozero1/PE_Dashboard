@@ -67,11 +67,16 @@ CREATE INDEX IF NOT EXISTS idx_fato_medico_dia_medico
 CREATE INDEX IF NOT EXISTS idx_fato_especialidade_esp
     ON prescricao.fato_documento_especialidade_dia (id_medico_especialidade, dia);
 
-CREATE INDEX IF NOT EXISTS idx_fato_unidade_un
-    ON prescricao.fato_documento_unidade_dia (id_unidade_atendimento, dia);
+-- Cobertura dos KPIs/serie/UF/tipo da visao Documentos (Index Only Scan) — 2026-10-02
+CREATE INDEX IF NOT EXISTS idx_fato_documento_dia_cover
+    ON prescricao.fato_documento_dia (dia)
+    INCLUDE (sg_uf, id_tipo_documento, documentos, assinados, cancelados);
 
-CREATE INDEX IF NOT EXISTS idx_dim_medico_uf
-    ON prescricao.dim_medico (sg_uf);
+-- Limpeza 2026-10-02: indices redundantes com a pkey ou sem consulta (removidos
+-- do DW); os DROP convergem bases antigas e evitam recriacao no setup.py.
+DROP INDEX IF EXISTS prescricao.idx_fato_unidade_un;
+
+DROP INDEX IF EXISTS prescricao.idx_dim_medico_uf;
 
 ALTER TABLE prescricao.dim_medico
     ADD COLUMN IF NOT EXISTS id_pessoa INTEGER;
@@ -91,8 +96,7 @@ ALTER TABLE prescricao.dim_unidade
 CREATE INDEX IF NOT EXISTS idx_dim_medico_pessoa
     ON prescricao.dim_medico (id_pessoa);
 
-CREATE INDEX IF NOT EXISTS idx_fato_documento_medico_dia_uf
-    ON prescricao.fato_documento_medico_dia (sg_uf, dia);
+DROP INDEX IF EXISTS prescricao.idx_fato_documento_medico_dia_uf;
 
 CREATE INDEX IF NOT EXISTS idx_fato_medico_dia_uf
     ON prescricao.fato_medico_dia (sg_uf, dia);
@@ -148,8 +152,7 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_documento_medico_paciente_dia (
 CREATE INDEX IF NOT EXISTS idx_fato_med_pac_medico
     ON prescricao.fato_documento_medico_paciente_dia (id_medico, dia);
 
-CREATE INDEX IF NOT EXISTS idx_fato_med_pac_uf
-    ON prescricao.fato_documento_medico_paciente_dia (sg_uf, dia);
+DROP INDEX IF EXISTS prescricao.idx_fato_med_pac_uf;
 
 -- AN3 de 5 minutos descontinuada em 2026-09-30 (substituida pela AN3 diaria).
 -- Tabelas removidas definitivamente; os DROP abaixo limpam bases que ainda as possuam.
@@ -330,8 +333,7 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_receita_medicamento_mes (
     PRIMARY KEY (mes, sg_uf, id_tipo_documento, medicamento)
 );
 
-CREATE INDEX IF NOT EXISTS idx_fato_receita_medicamento_mes_uf
-    ON prescricao.fato_receita_medicamento_mes (sg_uf, mes);
+DROP INDEX IF EXISTS prescricao.idx_fato_receita_medicamento_mes_uf;
 
 -- De-para curado texto->principio ativo (Fase 2 do ranking de medicamentos);
 -- semeado por seed_de_para_medicamento.sql (aplicado pelo setup.py).
