@@ -264,7 +264,7 @@ function Processando({ onCancel }: { onCancel?: () => void }) {
   );
 }
 
-function BarChart({ rows, bars, w = 800, h = 220, tick = 9, labelCentralizado = false }: { rows: { x: string; v: number; v2?: number }[]; bars?: number[]; w?: number; h?: number; tick?: number; labelCentralizado?: boolean }) {
+function BarChart({ rows, bars, w = 800, h = 220, tick = 9, labelCentralizado = false, linhaLabel = "acumulado" }: { rows: { x: string; v: number; v2?: number }[]; bars?: number[]; w?: number; h?: number; tick?: number; labelCentralizado?: boolean; linhaLabel?: string }) {
   const maxLine = Math.max(...rows.map((r) => Math.max(r.v, r.v2 ?? 0)), 1);
   const maxBars = Math.max(...(bars ?? []), 1);
   const pad = 40;
@@ -306,7 +306,7 @@ function BarChart({ rows, bars, w = 800, h = 220, tick = 9, labelCentralizado = 
       {pts2 && <polyline fill="none" stroke="var(--va2)" strokeWidth="2" strokeDasharray="5 5" points={pts2} />}
       {rows.map((r, i) => (
         <circle key={i} cx={pad + i * step} cy={h - (r.v / maxLine) * (h - 26)} r="3" fill="var(--va)">
-          <title>{`${r.x} · mês: ${nf.format(bars?.[i] ?? 0)} · acumulado: ${nf.format(r.v)}`}</title>
+          <title>{`${r.x} · ${bars ? `mês: ${nf.format(bars[i] ?? 0)} · ` : ""}${linhaLabel}: ${nf.format(r.v)}`}</title>
         </circle>
       ))}
       {n > 0 && (
@@ -702,7 +702,7 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
           <div className="legend"><span><i className="l1" />CPF distintos no mês</span>{periodoFiltrado && <span className="tag">F</span>}</div>
         </div>
         <div className="chart">
-          <BarChart rows={data.emissores_mensal.map((s) => ({ x: s.mes, v: Number(s.emissao) }))} tick={10} labelCentralizado />
+          <BarChart rows={emissoresFechados.map((s) => ({ x: s.mes, v: Number(s.emissao) }))} tick={10} labelCentralizado linhaLabel="CPF distintos" />
         </div>
         <div className="sub" style={{ marginTop: 4 }}>
           Nos últimos 30 dias, foram registrados <b style={{ color: "var(--va)" }}>{nf.format(data.emissores_30d)}</b> usuários ativos.{tendenciaEmissores && <> {tendenciaEmissores}</>}
@@ -1756,7 +1756,7 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
           </section>
         )}
         <div className="footer">
-          <span>PE Dashboard · CFM v1.4</span>
+          <span>PE Dashboard · CFM v1.5</span>
           <span>Datamart prescricao_dw · última carga: {health?.job?.finalizado_em ? new Date(health.job.finalizado_em).toLocaleString("pt-BR") : "—"}</span>
         </div>
       </main>

@@ -1,6 +1,6 @@
 # PE Dashboard — Prescrição Eletrônica CFM
 
-**Versão: v1.4** (2026-10-02)
+**Versão: v1.5** (2026-10-02)
 
 Painel analítico web restrito ao domínio `@portalmedico.org.br` (Google OAuth) sobre a base operacional `bd_cfm`, com datamart `prescricao_dw` e ETL Python.
 

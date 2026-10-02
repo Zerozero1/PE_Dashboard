@@ -10,7 +10,7 @@ Painel analítico web restrito ao domínio `@portalmedico.org.br` (autenticaçã
 OAuth) sobre a base operacional `bd_cfm`. Os dados são transformados por um ETL Python
 em um datamart próprio (`prescricao_dw`) que alimenta três visões:
 
-**Versão do produto: v1.4** (2026-10-02)
+**Versão do produto: v1.5** (2026-10-02)
 
 - **Documentos médicos** — emissões por período/UF/tipo/especialidade, origem de criação, versão do app e medicamentos prescritos
 - **Médicos** — inscrições cadastradas (CRM/UF), médicos cadastrados (CPF), novos por
@@ -249,7 +249,7 @@ válida (cargas idempotentes via upsert); o job diário roda o `run_all` complet
 - [ ] Backup do `prescricao_dw` definido
 - [ ] Rollback testado (reverter versão web sem afetar o DW)
 
-## 9. Checklist de atualização — v1.4 (HEAD ou superior)
+## 9. Checklist de atualização — v1.5 (HEAD ou superior)
 
 > Atualização de um ambiente **já em produção** (o DW é o mesmo de produção e já foi
 > migrado/populado: fatos `fato_receita_medicamento_mes` e `fato_documento_versao_dia`,
@@ -263,19 +263,21 @@ válida (cargas idempotentes via upsert); o job diário roda o `run_all` complet
 
 **A) Servidor web (Next.js)**
 
-- [ ] `git status` limpo e `git pull` até o commit da v1.4 (ou superior)
+- [ ] `git status` limpo e `git pull` até o commit da v1.5 (ou superior)
 - [ ] `cd web` → `npm ci`
 - [ ] `npm run build` (sem erros; `npm run lint` sem erros)
 - [ ] **Reiniciar o serviço** (PM2/NSSM)
-- [ ] Conferir: rodapé "PE Dashboard · CFM **v1.4**"; cards "Emissões por versão do app"
+- [ ] Conferir: rodapé "PE Dashboard · CFM **v1.5**"; cards "Emissões por versão do app"
       e "Medicamentos prescritos" (com opção "agrupar por princípio ativo" e **coluna de
       categoria terapêutica**); "Documentos emitidos por UF" + "Documentos por especialidade"
-      logo abaixo de "Emissões por mês" + "Distribuição por tipo"
+      logo abaixo de "Emissões por mês" + "Distribuição por tipo"; visão Médicos com
+      "Médicos por especialidade" e densidade por 100k hab; **aba RDC1000** (após Médicos)
+      com utilização/cobertura/maiores pools/consumos
 
 **B) Máquina do ETL (Python)**
 
 - [ ] `git status` — se houver alterações locais, **não forçar**: avaliar/stash e avisar
-- [ ] `git pull` até o commit da v1.4 (ou superior)
+- [ ] `git pull` até o commit da v1.5 (ou superior)
 - [ ] `python setup.py` (idempotente: aplica DDL, os seeds `seed_de_para_medicamento.sql`
       e `seed_categoria_medicamento.sql` e o `DROP` de limpeza da `fato_documento_paciente_dia`
       — tabela legada que o código novo não usa mais)

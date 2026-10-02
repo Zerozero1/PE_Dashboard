@@ -1,6 +1,6 @@
 # ETL — PE Dashboard
 
-**Versão do produto: v1.4** (2026-10-02)
+**Versão do produto: v1.5** (2026-10-02)
 
 Aplicação Python que carrega o datamart `prescricao_dw` a partir da origem `bd_cfm` (somente leitura).
 
