@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const todos = de <= TODOS_DE;
 
   try {
-    const [porTipo, emitentesDocs, gap, maioresPools, faixas, maioresConsumos, reposicao] = await Promise.all([
+    const [porTipo, emitentesDocs, gap, maioresPools, maioresConsumos] = await Promise.all([
       query(
         `SELECT t.nm_documento AS tipo, n.id_tipo_documento,
                 count(*)::int AS medicos,
@@ -85,21 +85,6 @@ export async function GET(req: NextRequest) {
         [uf]
       ),
       query(
-        `SELECT CASE
-                  WHEN disponiveis = 0 THEN '0 (esgotado)'
-                  WHEN disponiveis <= 50 THEN '1–50'
-                  WHEN disponiveis <= 500 THEN '51–500'
-                  WHEN disponiveis <= 1000 THEN '501–1.000'
-                  ELSE '1.001–2.000' END AS faixa,
-                count(*)::int AS medico_tipo,
-                sum(disponiveis)::bigint AS disponiveis,
-                min(disponiveis) AS ord
-           FROM prescricao.snap_numeracao_anvisa_medico
-          WHERE ($1::text IS NULL OR sg_uf = $1)
-          GROUP BY 1 ORDER BY ord`,
-        [uf]
-      ),
-      query(
         `SELECT m.nm_medico AS nome, m.nu_crm AS crm, m.sg_uf AS crm_uf,
                 t.nm_documento AS tipo, n.disponiveis, n.utilizados
            FROM prescricao.snap_numeracao_anvisa_medico n
@@ -108,19 +93,6 @@ export async function GET(req: NextRequest) {
           WHERE n.utilizados > 0
             AND ($1::text IS NULL OR n.sg_uf = $1)
           ORDER BY n.utilizados DESC LIMIT 15`,
-        [uf]
-      ),
-      query(
-        `SELECT m.nm_medico AS nome, m.nu_crm AS crm, m.sg_uf AS crm_uf,
-                t.nm_documento AS tipo, n.disponiveis, n.utilizados
-           FROM prescricao.snap_numeracao_anvisa_medico n
-           JOIN prescricao.dim_medico m ON m.id_medico = n.id_medico
-           JOIN prescricao.dim_tipo_documento t ON t.id_tipo_documento = n.id_tipo_documento
-          WHERE (n.disponiveis = 0
-                 OR n.utilizados >= 0.9 * (n.disponiveis + n.utilizados))
-            AND ($1::text IS NULL OR n.sg_uf = $1)
-          ORDER BY (n.utilizados::numeric / NULLIF(n.disponiveis + n.utilizados, 0)) DESC NULLS LAST
-          LIMIT 15`,
         [uf]
       ),
     ]);
@@ -141,9 +113,7 @@ export async function GET(req: NextRequest) {
       ate,
       por_tipo,
       maiores_pools: maioresPools.rows,
-      faixas: faixas.rows,
       maiores_consumos: maioresConsumos.rows,
-      reposicao: reposicao.rows,
     });
   } catch (e) {
     return NextResponse.json({ erro: String(e) }, { status: 500 });

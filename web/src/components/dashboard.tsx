@@ -99,9 +99,7 @@ type NumData = {
     emitentes_sem_numeracao: number;
   }[];
   maiores_pools: { nome: string; crm: string; crm_uf: string; tipo: string; disponiveis: string; utilizados: string }[];
-  faixas: { faixa: string; medico_tipo: number; disponiveis: string }[];
   maiores_consumos: { nome: string; crm: string; crm_uf: string; tipo: string; disponiveis: string; utilizados: string }[];
-  reposicao: { nome: string; crm: string; crm_uf: string; tipo: string; disponiveis: string; utilizados: string }[];
 };
 
 type AudData = {
@@ -858,7 +856,6 @@ function RdcView({ active, filtros }: { active: boolean; filtros: FiltrosData | 
             })}
           </tbody>
         </table>
-        <div className="sub" style={{ marginTop: 6 }}>Pool atual (sem histórico): D = disponível, U = utilizada · unidade = inscrição (CRM/UF) × tipo.</div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 12" }}>
@@ -882,7 +879,6 @@ function RdcView({ active, filtros }: { active: boolean; filtros: FiltrosData | 
             ))}
           </tbody>
         </table>
-        <div className="sub" style={{ marginTop: 6 }}>Emitentes sem numeração = médicos que emitiram esse tipo no período e não possuem pool de numeração (gap de cobertura).</div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 7" }}>
@@ -906,28 +902,15 @@ function RdcView({ active, filtros }: { active: boolean; filtros: FiltrosData | 
       </article>
 
       <article className="card" style={{ gridColumn: "span 5" }}>
-        <div className="section-title"><h2>Distribuição do estoque</h2><span>médico × tipo</span></div>
-        <table className="table" style={{ fontSize: 10 }}>
-          <thead><tr><th>Faixa de disponíveis</th><th style={{ textAlign: "right" }}>Médico×tipo</th><th style={{ textAlign: "right" }}>Disponíveis</th></tr></thead>
-          <tbody>
-            {data.faixas.map((f) => (
-              <tr key={f.faixa}>
-                <td>{f.faixa}</td>
-                <td style={{ textAlign: "right" }}>{nf.format(f.medico_tipo)}</td>
-                <td style={{ textAlign: "right" }}>{nf.format(Number(f.disponiveis))}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="sub" style={{ marginTop: 10, marginBottom: 4 }}>Maiores consumos (numerações utilizadas)</div>
+        <div className="section-title"><h2>Maiores consumos</h2><span>numerações utilizadas</span></div>
         {data.maiores_consumos.length === 0
           ? <div className="sub">Nenhuma numeração utilizada ainda.</div>
           : (
-            <div className="uf-scroll" style={{ maxHeight: 190, overflowY: "auto", paddingRight: 4 }}>
+            <div className="uf-scroll" style={{ maxHeight: 320, overflowY: "auto", paddingRight: 4 }}>
               <table className="table" style={{ fontSize: 10 }}>
                 <thead><tr><th>Médico</th><th>Tipo</th><th style={{ textAlign: "right" }}>Usadas</th><th style={{ textAlign: "right" }}>Consumo</th></tr></thead>
                 <tbody>
-                  {data.maiores_consumos.slice(0, 8).map((e, i) => {
+                  {data.maiores_consumos.map((e, i) => {
                     const d = Number(e.disponiveis);
                     const u = Number(e.utilizados);
                     return (
@@ -935,33 +918,6 @@ function RdcView({ active, filtros }: { active: boolean; filtros: FiltrosData | 
                         <td>{e.nome}</td>
                         <td>{e.tipo}</td>
                         <td style={{ textAlign: "right", color: "var(--va)" }}>{e.utilizados}</td>
-                        <td style={{ textAlign: "right" }}>{d + u > 0 ? `${((u / (d + u)) * 100).toFixed(1).replace(".", ",")}%` : "—"}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        <div className="sub" style={{ marginTop: 10, marginBottom: 4 }}>
-          Reposição necessária (consumo ≥ 90% ou esgotado): <b style={{ color: data.reposicao.length > 0 ? "var(--orange)" : "var(--va)" }}>{data.reposicao.length}</b>{data.reposicao.length >= 15 && " (top 15 exibidos)"}
-        </div>
-        {data.reposicao.length === 0
-          ? <div className="sub">Nenhum médico em nível crítico no momento.</div>
-          : (
-            <div className="uf-scroll" style={{ maxHeight: 170, overflowY: "auto", paddingRight: 4 }}>
-              <table className="table" style={{ fontSize: 10 }}>
-                <thead><tr><th>Médico</th><th>Tipo</th><th style={{ textAlign: "right" }}>Disp.</th><th style={{ textAlign: "right" }}>Usadas</th><th style={{ textAlign: "right" }}>Consumo</th></tr></thead>
-                <tbody>
-                  {data.reposicao.map((e, i) => {
-                    const d = Number(e.disponiveis);
-                    const u = Number(e.utilizados);
-                    return (
-                      <tr key={`${e.crm}-${e.tipo}-${i}`}>
-                        <td>{e.nome}</td>
-                        <td>{e.tipo}</td>
-                        <td style={{ textAlign: "right", color: "var(--orange)" }}>{e.disponiveis}</td>
-                        <td style={{ textAlign: "right" }}>{e.utilizados}</td>
                         <td style={{ textAlign: "right" }}>{d + u > 0 ? `${((u / (d + u)) * 100).toFixed(1).replace(".", ",")}%` : "—"}</td>
                       </tr>
                     );
@@ -995,7 +951,6 @@ function RdcView({ active, filtros }: { active: boolean; filtros: FiltrosData | 
             })}
           </tbody>
         </table>
-        <div className="sub" style={{ marginTop: 6 }}>Utilizadas/documentos ≈ adesão ao fluxo numerado: perto de 100% = cada documento consome um número; próximo de 0% = documentos do tipo emitidos sem numeração.</div>
       </article>
       <LegendaFiltro />
     </section>
