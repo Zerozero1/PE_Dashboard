@@ -1,10 +1,11 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-10-02 10:01 BRT_
+_Atualizado em: 2026-10-02 10:10 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões (Documentos, Medicos, Auditoria) + visao "Logs" (admin).
 
 ## ✅ Última Sessão (Resumo)
+- Skill de deploy (2026-10-02): criada **`.agent/skills/dashboard-deploy/`** (SKILL.md + `scripts/ssh_exec.py` + `scripts/deploy_remote.sh` + `references/troubleshooting.md`) e `opencode.json` na raiz registrando `skills.paths: [".agent/skills"]` (reiniciar o opencode para carregar). Credenciais da SCF179 ficam **fora do repo** (`~/.config/opencode/secrets/scf179.env`). Validado: SSH ok (`SCFM179/mrichard`) e `sudo` com a mesma senha (via `echo "$PW" | sudo -S`).
 - **Deploy v1.4 em produção (2026-10-02)** — host `SCFM179` (192.168.1.179), stack Docker `prescricao-dashboard` em `/opt/cfm/docker/code/prescricao-dashboard` (repo era `root`, estava em HEAD detached): `.env` **reconstruído dos containers** (16 chaves, sem expor valores — o diretório não tinha `.env`), `git fetch/checkout main/pull` até `ac51cfc`, `docker compose up -d --build` (3 containers Up, envs preservados) e `setup.py` (46 tabelas). Validado: `/api/health` ok (job #12 success, 62.892.041 docs) e domínio respondendo (nginx 307 → login). `fato_documento_paciente_dia` dropada pelo setup.
 - Limpeza pós-deploy (2026-10-02, no código): passos `unidade`/`anomalias` removidos (`run_all`/`load_fatos`; `load_anomalias.py` excluído), checks limpos (`audit_counts.py`/`status_dw.py`), DDL removido (`schema.sql`/`ddl_extra.sql`) e `DROP TABLE IF EXISTS` de `fato_documento_unidade_dia`, `stg_documento_unidade_dia` e `fato_auditoria_dia` no `ddl_extra.sql` — aplicado pelo `setup.py` no próximo pull da máquina.
 - Versão **v1.4** (2026-10-02): rodapé, `web/package.json`/`package-lock` (1.4.0) e docs (README raiz, PLANO, etl/README, web/README, DEPLOY_PRODUCAO) atualizados. Entregas da versão: **coluna de categoria terapêutica** no ranking de medicamentos (de-para 892 mapeamentos/57% dos itens + `categoria_medicamento` 268 princípios/27 categorias), layout do par versão/medicamentos invertido (versão span 5, medicamentos span 7) com contraste da categoria melhorado, e as otimizações de datamart da sessão (`snap_especialidade`, índice de cobertura, 5 índices removidos). Checklist de atualização (seção 9 do DEPLOY) aponta para a v1.4.
