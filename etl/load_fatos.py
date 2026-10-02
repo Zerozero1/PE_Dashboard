@@ -69,22 +69,6 @@ WHERE d.id_consulta_documento BETWEEN %s AND %s
 GROUP BY 1, 2, 3
 """
 
-SQL_UNIDADE = """
-SELECT d.dh_documento::date AS dia,
-       CASE WHEN ua.sg_uf = 'BR' THEN '--' ELSE COALESCE(ua.sg_uf, '--') END AS sg_uf,
-       ua.id_unidade_atendimento,
-       count(*) AS documentos
-FROM prescricao.tb_consulta_documento d
-LEFT JOIN prescricao.tb_consulta c ON c.id_consulta = d.id_consulta
-LEFT JOIN prescricao.rl_medico_unidade_atendimento mu
-       ON mu.id_medico_unidade_atendimento = c.id_medico_unidade_atendimento
-LEFT JOIN prescricao.tb_unidade_atendimento ua
-       ON ua.id_unidade_atendimento = mu.id_unidade_atendimento
-WHERE d.id_consulta_documento BETWEEN %s AND %s
-  AND ua.id_unidade_atendimento IS NOT NULL
-GROUP BY 1, 2, 3
-"""
-
 SQL_MEDICO_DOCS = """
 SELECT d.dh_documento::date AS dia,
        CASE WHEN ua.sg_uf = 'BR' THEN '--' ELSE COALESCE(ua.sg_uf, '--') END AS sg_uf,
@@ -280,15 +264,6 @@ def main():
             ["dia", "sg_uf", "id_medico_especialidade"],
             "prescricao.fato_documento_especialidade_dia", 3)
         log(f"fato_documento_especialidade_dia: concluido — {total:,} registros")
-
-    elif mode == "unidade":
-        log("fato_documento_unidade_dia: iniciando")
-        total = batch_loop(
-            origin, dw, SQL_UNIDADE, "prescricao.stg_documento_unidade_dia",
-            ["dia", "sg_uf", "id_unidade_atendimento", "documentos"],
-            ["dia", "sg_uf", "id_unidade_atendimento"],
-            "prescricao.fato_documento_unidade_dia", 3)
-        log(f"fato_documento_unidade_dia: concluido — {total:,} documentos")
 
     elif mode == "medico":
         log("fato_documento_medico_dia: iniciando")

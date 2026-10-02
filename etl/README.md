@@ -32,13 +32,12 @@ $env:DW_HOST='172.16.7.112'; $env:DW_DB='prescricao_dw'; $env:DW_USER='usr_presc
 |---|---|
 | `setup.py` | Aplica `schema.sql` + `ddl_extra.sql` + os seeds `seed_de_para_medicamento.sql` e `seed_categoria_medicamento.sql` (idempotente). Criar/atualizar estrutura no DW. |
 | `load_dims.py` | Carrega dimensões: dim_data, dim_uf, dim_tipo_documento, dim_medico, dim_especialidade, dim_unidade. |
-| `load_fatos.py <modo>` | Fatos de documentos, em modos: `docs`, `origem`, `versao`, `receitas`, `especialidade`, `unidade`, `medico`, `medico_tipo`, `medico_pacientes`, `unidade_pacientes`, `medico_unidade`. |
+| `load_fatos.py <modo>` | Fatos de documentos, em modos: `docs`, `origem`, `versao`, `receitas`, `especialidade`, `medico`, `medico_tipo`, `medico_pacientes`, `unidade_pacientes`, `medico_unidade`. |
 | `load_medicos.py` | `fato_medico_snapshot` (inscrições CRM/UF e CPFs únicos com aceite, por UF + total global `--`) + `fato_medico_dia.novos_aceite_termo` + `medicos_com_emissao` (derivado do DW). |
 | `load_maior_dia.py` | Constrói `fato_medico_maior_dia` (melhor dia por médico/UF em documentos **assinados**, com pacientes distintos do dia) a partir de `fato_documento_emissao` — alimenta a AN3 diária. |
 | `load_documentos.py` | Carrega `fato_documento_emissao` (um registro por documento assinado ou não: data/hora, médico, UF, tipo, unidade, situação e `ds_qrcode`) — alimenta a lista de documentos do drill da AN3. Carga cheia na primeira execução e incremental depois (revisa os últimos 5M ids); extração em lotes de 2M ids com stream ordenado e retry por lote. |
 | `load_snapshots.py` | Reconstrói os snapshots all-time (`snap_medico_tipo`, `snap_medico_paciente`, `snap_instituicao`, `snap_especialidade`) usados no modo "Todos" dos rankings AN1/AN2/AN4 e do card "Documentos por especialidade" (evita varreduras de 20-60M linhas por consulta) e o `snap_medicamento_top` (top 100 do ranking de medicamentos por UF×tipo). |
-| `load_anomalias.py` | `fato_auditoria_dia`: flag diária AN1 calculada no DW (os rankings AN2/AN3/AN4 vêm de `fato_documento_medico_paciente_dia`/`snap_*`, `fato_medico_maior_dia` e `fato_documento_unidade_paciente_dia`) — **descontinuada (2026-10-02)**; passo será removido do `run_all` após o deploy do ETL. |
-| `run_all.py` | Pipeline completo e idempotente (dims → fatos → maior dia → documentos emitidos → anomalias). |
+| `run_all.py` | Pipeline completo e idempotente (dims → fatos → snapshots → médicos → maior dia → documentos emitidos). |
 | `jobs.py` | Orquestração via fila `dashboard_refresh_job` (ver abaixo). |
 | `validate.py` / `status_dw.py` / `audit_counts.py` / `list_indexes.py` | Conferências: totais, cobertura, contagens da origem vs DW, índices. |
 | `audit_especialidades.py` | Diagnóstico da distribuição de especialidades na origem. |
@@ -88,7 +87,6 @@ Fatos:
 - `de_para_medicamento` (medicamento, principio_ativo) — de-para curado (seed) para o toggle "agrupar por princípio ativo" do ranking de medicamentos
 - `categoria_medicamento` (principio_ativo, categoria) — categoria terapêutica ampla (seed) exibida como coluna no ranking de medicamentos
 - `fato_documento_especialidade_dia` (dia, sg_uf, id_medico_especialidade, documentos)
-- `fato_documento_unidade_dia` (dia, sg_uf, id_unidade_atendimento, documentos) — **descontinuada (2026-10-02)**: nenhuma tela a consome; DROP após o deploy do ETL (o código antigo da máquina ainda a escreve)
 - `fato_documento_medico_dia` (dia, sg_uf, id_medico, documentos)
 - `fato_documento_medico_tipo_dia` (dia, sg_uf, id_medico, id_tipo_documento, documentos) — médico × tipo de documento; alimenta AN1 (emissões no período) e o drill-down por tipo
 - `fato_documento_medico_paciente_dia` (dia, sg_uf, id_medico, id_paciente) — grão médico×paciente×dia; alimenta AN2 (`count(DISTINCT id_paciente)` no período) e o drill-down de pacientes
@@ -100,14 +98,15 @@ Fatos:
 - `fato_medico_unidade` (id_medico, id_unidade_atendimento, in_ativo, dt_cadastro) — snapshot dos vínculos médico–unidade; alimenta a coluna "Médicos" (vínculos ativos) da AN4
 - `fato_medico_maior_dia` (id_medico, sg_uf, dia, documentos, pacientes) — melhor dia por médico/UF em documentos e pacientes distintos do dia; alimenta a AN3 diária
 - `fato_documento_emissao` (id_consulta_documento, dia, dh_documento, id_medico, sg_uf, id_tipo_documento, id_unidade_atendimento, in_assinado, in_cancelado, ds_qrcode) — um registro por documento; alimenta a lista de documentos do drill da AN3 (sem paciente/conteúdo)
-- `fato_auditoria_dia` (dia, tipo_anomalia, dimensao_afetada, valor_observado, valor_esperado, desvio, severidade; apenas AN1) — **descontinuada (2026-10-02)**: flag sem consumidor na UI; DROP após o deploy do ETL
 - `snap_medico_tipo` (id_medico, sg_uf, id_tipo_documento, documentos) — total all-time por médico/UF/tipo; ranking AN1 no modo "Todos"
 - `snap_medico_paciente` (id_medico, sg_uf, pacientes) — pacientes distintos all-time (linhas reais de UF + linha global `'**'`); ranking AN2 no modo "Todos"
 - `snap_especialidade` (sg_uf, id_medico_especialidade, documentos) — documentos all-time por UF×especialidade; card "Documentos por especialidade" no modo "Todos"
 - `snap_instituicao` (chave, instituicao, cnes, uf, unidades, medicos, pacientes) — instituições no modo "Todos" (AN4), já com vínculos ativos de médicos
 - `snap_medicamento_top` (sg_uf, id_tipo_documento, posicao, medicamento, itens) — top 100 do ranking de medicamentos no modo "Todos" por combinação de filtros (`'**'` = todas as UFs; `0` = todos os tipos)
 
-Staging: `stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_versao_dia`, `stg_documento_especialidade_dia`, `stg_documento_unidade_dia`, `stg_documento_medico_dia`, `stg_documento_medico_tipo_dia`, `stg_documento_medico_paciente_dia`, `stg_documento_unidade_paciente_dia`, `stg_medico_unidade`, `stg_medico_maior_dia`, `stg_receita_medicamento_mes`.
+Removidas em 2026-10-02 (sem consumidor na UI; `DROP` no `ddl_extra.sql`): `fato_documento_unidade_dia`, `fato_auditoria_dia`.
+
+Staging: `stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_versao_dia`, `stg_documento_especialidade_dia`, `stg_documento_medico_dia`, `stg_documento_medico_tipo_dia`, `stg_documento_medico_paciente_dia`, `stg_documento_unidade_paciente_dia`, `stg_medico_unidade`, `stg_medico_maior_dia`, `stg_receita_medicamento_mes`.
 
 Operacionais: `dashboard_refresh_config`, `dashboard_refresh_job`.
 

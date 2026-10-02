@@ -285,7 +285,7 @@ válida (cargas idempotentes via upsert); o job diário roda o `run_all` complet
   - [ ] `fato_documento_medico_paciente_dia` com `min(dia) = 2021-10-07` (**não truncou**)
   - [ ] `fato_receita_medicamento_mes` ≈ 53,4M itens
   - [ ] `fato_documento_versao_dia` ≈ 62,8M documentos
-  - [ ] `fato_auditoria_dia` sem linhas AN2/AN3 (apenas AN1)
+  - [ ] `fato_auditoria_dia` e `fato_documento_unidade_dia` **removidas** pelo `setup.py`
   - [ ] `snap_especialidade` populada (~214k linhas; ranking de especialidades no modo "Todos")
 
 **C) Atenções**
@@ -295,7 +295,7 @@ válida (cargas idempotentes via upsert); o job diário roda o `run_all` complet
 - [ ] **Deploy via Docker (seção 4.0):** `git pull` + `docker compose up -d --build` recria `web`,
       `etl-worker` e `etl-scheduler` com o código novo (substitui os passos de build/restart das
       seções A e B); uma vez, `docker compose exec etl-worker python setup.py` (seed + `DROP` de limpeza)
-- [ ] **Pós-deploy — limpeza confirmada (2026-10-02):** remover os passos `unidade`/`anomalias` do
-      pipeline e dropar `fato_documento_unidade_dia`, `fato_auditoria_dia` e `fato_documento_paciente_dia`
+- [ ] **Limpeza 2026-10-02 (no código):** passos `unidade`/`anomalias` removidos do pipeline; o
+      `setup.py` dropa `fato_documento_unidade_dia`, `fato_auditoria_dia` e `fato_documento_paciente_dia`
 - [ ] Rollback: web = voltar commit + build + restart; ETL = parar worker + voltar commit.
       As tabelas novas são aditivas — o DW não precisa de rollback

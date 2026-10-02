@@ -24,7 +24,6 @@ def main():
         ("fato versao do app", "load_fatos versao"),
         ("fato receita-medicamento", "load_fatos receitas"),
         ("fato especialidade", "load_fatos especialidade"),
-        ("fato unidade", "load_fatos unidade"),
         ("fato medico-dia", "load_fatos medico"),
         ("fato medico-tipo", "load_fatos medico_tipo"),
         ("fato medico-pacientes", "load_fatos medico_pacientes"),
@@ -34,7 +33,6 @@ def main():
         ("medicos (snapshot/novos)", "load_medicos"),
         ("AN3 maior dia (emissoes por dia)", "load_maior_dia"),
         ("documentos emitidos (drill AN3)", "load_documentos"),
-        ("anomalias", "load_anomalias"),
     ]
     for nome, cmd in steps:
         log(f"=== {nome} ===")

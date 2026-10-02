@@ -23,26 +23,11 @@ CREATE TABLE IF NOT EXISTS prescricao.stg_documento_especialidade_dia (
     documentos BIGINT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS prescricao.stg_documento_unidade_dia (
-    dia DATE NOT NULL,
-    sg_uf CHAR(2) NOT NULL,
-    id_unidade_atendimento INTEGER NOT NULL,
-    documentos BIGINT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS prescricao.stg_documento_medico_dia (
     dia DATE NOT NULL,
     sg_uf CHAR(2) NOT NULL,
     id_medico INTEGER NOT NULL,
     documentos BIGINT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS prescricao.fato_documento_unidade_dia (
-    dia DATE NOT NULL,
-    sg_uf CHAR(2) NOT NULL,
-    id_unidade_atendimento INTEGER NOT NULL,
-    documentos BIGINT NOT NULL,
-    PRIMARY KEY (dia, sg_uf, id_unidade_atendimento)
 );
 
 CREATE TABLE IF NOT EXISTS prescricao.fato_documento_medico_dia (
@@ -353,6 +338,12 @@ CREATE TABLE IF NOT EXISTS prescricao.categoria_medicamento (
 -- fato_documento_medico_paciente_dia + snap_medico_paciente). Aplicado pelo
 -- setup.py na maquina do ETL apos o pull (o codigo novo nao usa a tabela).
 DROP TABLE IF EXISTS prescricao.fato_documento_paciente_dia;
+
+-- Limpeza 2026-10-02: fato de unidade e flag diaria AN1 sem consumidor na UI
+-- (removidas do pipeline); aplicado pelo setup.py apos o pull.
+DROP TABLE IF EXISTS prescricao.fato_documento_unidade_dia;
+DROP TABLE IF EXISTS prescricao.stg_documento_unidade_dia;
+DROP TABLE IF EXISTS prescricao.fato_auditoria_dia;
 
 -- Snapshot all-time do ranking de medicamentos (modo "Todos"): top 100 por
 -- combinacao de filtros — '**' = todas as UFs; id_tipo_documento 0 = todos.

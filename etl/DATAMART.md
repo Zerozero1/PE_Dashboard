@@ -89,9 +89,9 @@ Construídas por `load_snapshots.py` (TRUNCATE + INSERT), dentro do `run_all`.
 
 ## Staging (transitório)
 
-`stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_versao_dia`, `stg_documento_especialidade_dia`, `stg_documento_unidade_dia`, `stg_documento_medico_dia`, `stg_documento_medico_tipo_dia`, `stg_documento_medico_paciente_dia`, `stg_documento_unidade_paciente_dia`, `stg_medico_unidade`, `stg_medico_maior_dia`, `stg_receita_medicamento_mes`.
+`stg_documento_dia`, `stg_documento_origem_dia`, `stg_documento_versao_dia`, `stg_documento_especialidade_dia`, `stg_documento_medico_dia`, `stg_documento_medico_tipo_dia`, `stg_documento_medico_paciente_dia`, `stg_documento_unidade_paciente_dia`, `stg_medico_unidade`, `stg_medico_maior_dia`, `stg_receita_medicamento_mes`.
 
-Sem PK: `stg_documento_*` de **soma** (`dia`, `origem`, `versao`, `especialidade`, `unidade`, `medico`, `medico_tipo`, `receita_medicamento_mes`). Com PK: os de **grão distinto** (`medico_paciente`, `unidade_paciente`, `medico_unidade`) e `stg_medico_maior_dia`.
+Sem PK: `stg_documento_*` de **soma** (`dia`, `origem`, `versao`, `especialidade`, `medico`, `medico_tipo`, `receita_medicamento_mes`). Com PK: os de **grão distinto** (`medico_paciente`, `unidade_paciente`, `medico_unidade`) e `stg_medico_maior_dia`.
 
 ## Índices
 
@@ -102,12 +102,12 @@ As fatos têm **pkey no grão** (usada também como caminho de consulta: filtros
 - `fato_documento_medico_tipo_dia (id_tipo_documento, sg_uf, dia)` — AN1 com filtro de tipo.
 - Índices redundantes com a pkey foram removidos em 2026-10-02 (≈2,1 GB); os `DROP INDEX IF EXISTS` no `ddl_extra.sql` convergem bases antigas.
 
-## Descontinuadas (drop após o deploy do ETL)
+## Removidas (2026-10-02)
 
 | Tabela | Situação |
 |---|---|
-| `fato_documento_paciente_dia` | Substituída por `fato_documento_medico_paciente_dia`; `DROP` já no `ddl_extra.sql` (aplicado pelo `setup.py` pós-deploy). |
-| `fato_documento_unidade_dia` | Write-only: nenhuma tela a consome; DROP confirmado pós-deploy (2026-10-02). |
-| `fato_auditoria_dia` | Flag diária AN1 sem consumidor na UI; DROP confirmado pós-deploy (2026-10-02). |
+| `fato_documento_paciente_dia` | Substituída por `fato_documento_medico_paciente_dia`; `DROP` aplicado pelo `setup.py`. |
+| `fato_documento_unidade_dia` | Write-only (nenhuma tela a consumia); removida do pipeline e dropada pelo `setup.py`. |
+| `fato_auditoria_dia` | Flag diária AN1 sem consumidor na UI; removida do pipeline e dropada pelo `setup.py`. |
 
 > Não dropar antes do deploy: o código antigo da máquina do ETL ainda escreve nessas tabelas.

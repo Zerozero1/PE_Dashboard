@@ -83,17 +83,6 @@ CREATE TABLE IF NOT EXISTS prescricao.fato_medico_dia (
     PRIMARY KEY (dia, sg_uf)
 );
 
-CREATE TABLE IF NOT EXISTS prescricao.fato_auditoria_dia (
-    dia DATE NOT NULL,
-    tipo_anomalia CHAR(3) NOT NULL,
-    dimensao_afetada VARCHAR(30) NOT NULL,
-    valor_observado NUMERIC NOT NULL,
-    valor_esperado NUMERIC NOT NULL,
-    desvio NUMERIC,
-    severidade SMALLINT,
-    PRIMARY KEY (dia, tipo_anomalia, dimensao_afetada)
-);
-
 CREATE TABLE IF NOT EXISTS prescricao.dashboard_refresh_config (
     id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
     horario_diario TIME NOT NULL DEFAULT '02:00',

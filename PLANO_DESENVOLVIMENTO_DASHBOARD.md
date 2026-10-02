@@ -217,7 +217,7 @@ Trade-off:
   - assinados (`in_assinado='S'`)
   - cancelados (`in_cancelado='S'`)
   - nao_assinados = documentos - assinados (derivado)
-- complementares: `fato_documento_especialidade_dia`, `fato_documento_unidade_dia` (descontinuada 2026-10-02 — sem consumo na UI), `fato_documento_medico_dia`, `fato_documento_medico_paciente_dia` (dia+UF+medico+paciente — alimenta a AN2, `count(DISTINCT id_paciente)`), `fato_documento_origem_dia` (dia + UF + `ds_origem_criacao` — WEB/WEB-MOBILE/IOS/ANDROID/NAO_INFORMADO; alimenta o grafico de evolucao dos dispositivos)
+- complementares: `fato_documento_especialidade_dia`, `fato_documento_unidade_dia` (removida 2026-10-02 — sem consumo na UI), `fato_documento_medico_dia`, `fato_documento_medico_paciente_dia` (dia+UF+medico+paciente — alimenta a AN2, `count(DISTINCT id_paciente)`), `fato_documento_origem_dia` (dia + UF + `ds_origem_criacao` — WEB/WEB-MOBILE/IOS/ANDROID/NAO_INFORMADO; alimenta o grafico de evolucao dos dispositivos)
 
 `fato_medico_dia`
 - grao: dia + UF + especialidade + situacao
@@ -383,7 +383,7 @@ Nota historica (fonte temporal): o evento real de dispensacao vinha de `tb_histo
 
 Sem imagem de referencia. DECISOES (2026-09-21):
 - Nao usar a tabela de auditoria da base relacional (`tl_prescricao_auditoria` sem SELECT para `usr_select`; tabela antiga inviavel).
-- A AN1 é ranking por período (fato `fato_documento_medico_tipo_dia`; `snap_medico_tipo` no modo "Todos"); a antiga flag diária em `fato_auditoria_dia` não é consumida pela UI e foi descontinuada em 2026-10-02 (DROP após o deploy do ETL). A AN2 é ranking por período sobre `fato_documento_medico_paciente_dia`. A AN3 (maior volume diário de emissões a pacientes distintos no período) mostra o maior dia de cada médico em documentos assinados (não assinados são desprezados), com a contagem de pacientes distintos do dia; o detalhe abre o mix por tipo e a lista de documentos emitidos (QR code, data/hora, tipo, instituição, UF e situação). A AN4 (pacientes distintos por instituição no período) ranqueia instituições (CNES; sem CNES, a unidade) por pacientes distintos atendidos com documentos assinados; o detalhe abre a evolução mensal e as unidades do grupo. Sem identificador de paciente ou conteúdo do documento.
+- A AN1 é ranking por período (fato `fato_documento_medico_tipo_dia`; `snap_medico_tipo` no modo "Todos"); a antiga flag diária em `fato_auditoria_dia` não é consumida pela UI e foi removida em 2026-10-02. A AN2 é ranking por período sobre `fato_documento_medico_paciente_dia`. A AN3 (maior volume diário de emissões a pacientes distintos no período) mostra o maior dia de cada médico em documentos assinados (não assinados são desprezados), com a contagem de pacientes distintos do dia; o detalhe abre o mix por tipo e a lista de documentos emitidos (QR code, data/hora, tipo, instituição, UF e situação). A AN4 (pacientes distintos por instituição no período) ranqueia instituições (CNES; sem CNES, a unidade) por pacientes distintos atendidos com documentos assinados; o detalhe abre a evolução mensal e as unidades do grupo. Sem identificador de paciente ou conteúdo do documento.
 - Sem exportacao na visao de auditoria (exportacao nao permitida em todo o MVP).
 
 A visão é alimentada por fatos do datamart (documentos, atendimentos, locais e o maior dia por médico da AN3). A média de referência, quando aplicável às anomalias, usa todos os médicos; a AN3 avalia o maior dia de emissão do próprio médico.
@@ -452,9 +452,9 @@ Notas:
 | 12a | Medicos | Linha/barras | Medicos com emissao por mes (CPFs distintos) | fato_medico_emissao_mes | Distinct por mes (por UF + global) | P,U | Total do periodo via fato_medico_extremos_emissao (2026-09-23) |
 | 13–19 | Dispensacoes | — | REMOVIDAS (2026-09-23): visao Dispensacoes descontinuada | — | — | — | — |
 | 20 | Auditoria | Linha/barras | Anomalias detectadas por dia | fato_documento_medico_tipo_dia/snap_medico_tipo (AN1), fato_documento_medico_paciente_dia (AN2), fato_medico_maior_dia (AN3), fato_documento_unidade_paciente_dia (AN4) | Contagem por dia | P(curto),TD,DIM | Detalhe do dia sem paciente; exige filtros obrigatórios |
-| 21 | Auditoria | Ranking (barras) | Tipos de anomalia mais frequentes, com severidade | fato_auditoria_dia (descontinuada 2026-10-02) | Contagem por tipo_anomalia | P,TD | Severidade por desvio (2x/3x/5x) |
-| 22 | Auditoria | Ranking (barras) | Dimensoes afetadas mais frequentes | fato_auditoria_dia (descontinuada 2026-10-02) | Contagem por dimensao_afetada | P,DIM | |
-| 23 | Auditoria | Tabela paginada | Detalhe agregado dia x dimensao x tipo: valor observado, media esperada e desvio | fato_auditoria_dia (descontinuada 2026-10-02) | Soma por dia+dimensao+tipo | P,TD,DIM | |
+| 21 | Auditoria | Ranking (barras) | Tipos de anomalia mais frequentes, com severidade | fato_auditoria_dia (removida 2026-10-02) | Contagem por tipo_anomalia | P,TD | Severidade por desvio (2x/3x/5x) |
+| 22 | Auditoria | Ranking (barras) | Dimensoes afetadas mais frequentes | fato_auditoria_dia (removida 2026-10-02) | Contagem por dimensao_afetada | P,DIM | |
+| 23 | Auditoria | Tabela paginada | Detalhe agregado dia x dimensao x tipo: valor observado, media esperada e desvio | fato_auditoria_dia (removida 2026-10-02) | Soma por dia+dimensao+tipo | P,TD,DIM | |
 | 24 | Auditoria | Bloco SQL | Comando SQL gerado a partir dos filtros escolhidos, editavel para ajuste fino | (metadado da query, nao consulta tabela) | - | - | Re-execucao sempre limitada ao datamart |
 | 25 | Cabecalho (global) | Status de carga | Ultima atualizacao: inicio, fim, duracao, sucesso/falha, solicitante | dashboard_refresh_job, dashboard_refresh_config | Ultimo job + config | - | Polling; visivel em todas as abas |
 | 26 | Cabecalho (global) | Indicador de dados | Data/hora da ultima carga com dados validos | dashboard_refresh_job | Ultimo job success | - | Falha mantem ultima versao valida |
@@ -463,7 +463,7 @@ Notas:
 
 A aba Auditoria usa fatos agregadas do datamart; a AN3 usa a fato do maior dia por médico/UF (`fato_medico_maior_dia`). Nao ha auditoria do uso do dashboard (decisao 2026-09-21): as consultas executadas na aba nao sao registradas.
 
-A AN1 é ranking por período (`fato_documento_medico_tipo_dia`; `snap_medico_tipo` no modo "Todos"); a antiga flag diária em `fato_auditoria_dia` foi descontinuada em 2026-10-02 (DROP após o deploy do ETL). A AN2 é ranking por período sobre `fato_documento_medico_paciente_dia` (no modo "Todos", `snap_medico_paciente`). A AN3 é derivada no ETL dentro do próprio DW e gravada em `fato_medico_maior_dia` (id_medico × UF → melhor dia em documentos assinados, e pacientes distintos do dia), a partir de `fato_documento_emissao` e `fato_documento_medico_paciente_dia`; a janela de 5 min foi descontinuada em 2026-09-30 (tabelas e scripts removidos). A AN4 é carregada em `fato_documento_unidade_paciente_dia` (unidade × paciente × dia, somente assinados) e ranqueia instituições por pacientes distintos. Documentos não assinados são desprezados nas AN3/AN4. Os drill-downs leem `fato_documento_emissao` (AN3) e a própria fato da AN4/`dim_unidade` (instituição), sem identificador de paciente nem conteúdo.
+A AN1 é ranking por período (`fato_documento_medico_tipo_dia`; `snap_medico_tipo` no modo "Todos"); a antiga flag diária em `fato_auditoria_dia` foi removida em 2026-10-02. A AN2 é ranking por período sobre `fato_documento_medico_paciente_dia` (no modo "Todos", `snap_medico_paciente`). A AN3 é derivada no ETL dentro do próprio DW e gravada em `fato_medico_maior_dia` (id_medico × UF → melhor dia em documentos assinados, e pacientes distintos do dia), a partir de `fato_documento_emissao` e `fato_documento_medico_paciente_dia`; a janela de 5 min foi descontinuada em 2026-09-30 (tabelas e scripts removidos). A AN4 é carregada em `fato_documento_unidade_paciente_dia` (unidade × paciente × dia, somente assinados) e ranqueia instituições por pacientes distintos. Documentos não assinados são desprezados nas AN3/AN4. Os drill-downs leem `fato_documento_emissao` (AN3) e a própria fato da AN4/`dim_unidade` (instituição), sem identificador de paciente nem conteúdo.
 
 Os rankings não usam média de referência: a AN1 soma documentos do período e a AN2 conta pacientes distintos; AN3 e AN4 são rankings por período.
 
@@ -753,7 +753,7 @@ Objetivo:
 - Implementar auditoria com seguranca e filtros restritivos.
 
 Atividades (status):
-- Criar fatos agregadas de auditoria (anomalias). (FEITO: AN1–AN4; AN1 com flag diária e severidade 2x/3x/5x; AN2/AN3/AN4 rankings por período)
+- Criar fatos agregadas de auditoria (anomalias). (FEITO: AN1–AN4; AN2/AN3/AN4 rankings por período — a flag diária AN1 foi removida em 2026-10-02)
 - Criar tela com filtros obrigatorios. (FEITO: periodo + tipo de anomalia)
 
 Validacao:

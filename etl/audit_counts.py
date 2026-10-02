@@ -8,10 +8,6 @@ def main():
     cur = dw.cursor()
     cur.execute("SELECT sum(documentos) FROM prescricao.fato_documento_dia")
     log(f"DW fato_documento_dia sum = {cur.fetchone()[0]:,}")
-    cur.execute("SELECT sum(documentos) FROM prescricao.fato_documento_unidade_dia")
-    log(f"DW fato_documento_unidade_dia sum = {cur.fetchone()[0]:,}")
-    cur.execute("SELECT min(dia), max(dia), count(*) FROM prescricao.fato_documento_unidade_dia")
-    log(f"unidade janela/linhas = {cur.fetchone()}")
     dw.close()
 
     origin = connect_origin()
