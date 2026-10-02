@@ -41,33 +41,47 @@ export async function GET(req: NextRequest) {
   let medParams: (string | null)[];
   if (todos) {
     medSql = agrupar
-      ? `SELECT COALESCE(d.principio_ativo, t.medicamento) AS medicamento, sum(t.itens)::bigint AS itens
+      ? `SELECT COALESCE(d.principio_ativo, t.medicamento) AS medicamento,
+                COALESCE(c.categoria, '') AS categoria,
+                sum(t.itens)::bigint AS itens
            FROM prescricao.snap_medicamento_top t
            LEFT JOIN prescricao.de_para_medicamento d ON d.medicamento = t.medicamento
+           LEFT JOIN prescricao.categoria_medicamento c
+             ON c.principio_ativo = COALESCE(d.principio_ativo, t.medicamento)
           WHERE t.sg_uf = COALESCE($1::text, '**')
             AND t.id_tipo_documento = COALESCE($2::int, 0)
-          GROUP BY 1 ORDER BY itens DESC LIMIT 15`
-      : `SELECT t.medicamento, t.itens
+          GROUP BY 1, 2 ORDER BY itens DESC LIMIT 15`
+      : `SELECT t.medicamento, COALESCE(c.categoria, '') AS categoria, t.itens
            FROM prescricao.snap_medicamento_top t
+           LEFT JOIN prescricao.de_para_medicamento d ON d.medicamento = t.medicamento
+           LEFT JOIN prescricao.categoria_medicamento c
+             ON c.principio_ativo = COALESCE(d.principio_ativo, t.medicamento)
           WHERE t.sg_uf = COALESCE($1::text, '**')
             AND t.id_tipo_documento = COALESCE($2::int, 0)
           ORDER BY t.posicao LIMIT 15`;
     medParams = [uf, tipo];
   } else {
     medSql = agrupar
-      ? `SELECT COALESCE(d.principio_ativo, f.medicamento) AS medicamento, sum(f.itens)::bigint AS itens
+      ? `SELECT COALESCE(d.principio_ativo, f.medicamento) AS medicamento,
+                COALESCE(c.categoria, '') AS categoria,
+                sum(f.itens)::bigint AS itens
            FROM prescricao.fato_receita_medicamento_mes f
            LEFT JOIN prescricao.de_para_medicamento d ON d.medicamento = f.medicamento
+           LEFT JOIN prescricao.categoria_medicamento c
+             ON c.principio_ativo = COALESCE(d.principio_ativo, f.medicamento)
           WHERE f.mes BETWEEN to_char($1::date,'YYYY-MM')::char(7) AND to_char($2::date,'YYYY-MM')::char(7)
             AND ($3::text IS NULL OR f.sg_uf = $3)
             AND ($4::int IS NULL OR f.id_tipo_documento = $4)
-          GROUP BY 1 ORDER BY itens DESC LIMIT 15`
-      : `SELECT f.medicamento, sum(f.itens)::bigint AS itens
+          GROUP BY 1, 2 ORDER BY itens DESC LIMIT 15`
+      : `SELECT f.medicamento, COALESCE(c.categoria, '') AS categoria, sum(f.itens)::bigint AS itens
            FROM prescricao.fato_receita_medicamento_mes f
+           LEFT JOIN prescricao.de_para_medicamento d ON d.medicamento = f.medicamento
+           LEFT JOIN prescricao.categoria_medicamento c
+             ON c.principio_ativo = COALESCE(d.principio_ativo, f.medicamento)
           WHERE f.mes BETWEEN to_char($1::date,'YYYY-MM')::char(7) AND to_char($2::date,'YYYY-MM')::char(7)
             AND ($3::text IS NULL OR f.sg_uf = $3)
             AND ($4::int IS NULL OR f.id_tipo_documento = $4)
-          GROUP BY 1 ORDER BY itens DESC LIMIT 15`;
+          GROUP BY 1, 2 ORDER BY itens DESC LIMIT 15`;
     medParams = p;
   }
 

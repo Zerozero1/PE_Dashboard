@@ -10,7 +10,7 @@ Painel analítico web restrito ao domínio `@portalmedico.org.br` (autenticaçã
 OAuth) sobre a base operacional `bd_cfm`. Os dados são transformados por um ETL Python
 em um datamart próprio (`prescricao_dw`) que alimenta três visões:
 
-**Versão do produto: v1.3** (2026-10-01)
+**Versão do produto: v1.4** (2026-10-02)
 
 - **Documentos médicos** — emissões por período/UF/tipo/especialidade, origem de criação, versão do app e medicamentos prescritos
 - **Médicos** — inscrições cadastradas (CRM/UF), médicos cadastrados (CPF), novos por
@@ -249,11 +249,12 @@ válida (cargas idempotentes via upsert); o job diário roda o `run_all` complet
 - [ ] Backup do `prescricao_dw` definido
 - [ ] Rollback testado (reverter versão web sem afetar o DW)
 
-## 9. Checklist de atualização — v1.3 (commit `7937a50` ou superior)
+## 9. Checklist de atualização — v1.4 (HEAD ou superior)
 
 > Atualização de um ambiente **já em produção** (o DW é o mesmo de produção e já foi
 > migrado/populado: fatos `fato_receita_medicamento_mes` e `fato_documento_versao_dia`,
-> snapshots `snap_medicamento_top` etc. — **nada a fazer no banco**).
+> snapshots `snap_medicamento_top`/`snap_especialidade` e seeds de de-para/categorias —
+> **nada a fazer no banco** além de rodar o `setup.py`, que aplica os seeds).
 
 **Pré-condições**
 
@@ -262,22 +263,22 @@ válida (cargas idempotentes via upsert); o job diário roda o `run_all` complet
 
 **A) Servidor web (Next.js)**
 
-- [ ] `git status` limpo e `git pull` até o commit `7937a50` (ou superior)
+- [ ] `git status` limpo e `git pull` até o commit da v1.4 (ou superior)
 - [ ] `cd web` → `npm ci`
 - [ ] `npm run build` (sem erros; `npm run lint` sem erros)
 - [ ] **Reiniciar o serviço** (PM2/NSSM)
-- [ ] Conferir: rodapé "PE Dashboard · CFM **v1.3**"; cards "Emissões por versão do app"
-      e "Medicamentos prescritos" (com opção "agrupar por princípio ativo"); "Documentos
-      emitidos por UF" + "Documentos por especialidade" logo abaixo de "Emissões por mês"
-      + "Distribuição por tipo"
+- [ ] Conferir: rodapé "PE Dashboard · CFM **v1.4**"; cards "Emissões por versão do app"
+      e "Medicamentos prescritos" (com opção "agrupar por princípio ativo" e **coluna de
+      categoria terapêutica**); "Documentos emitidos por UF" + "Documentos por especialidade"
+      logo abaixo de "Emissões por mês" + "Distribuição por tipo"
 
 **B) Máquina do ETL (Python)**
 
 - [ ] `git status` — se houver alterações locais, **não forçar**: avaliar/stash e avisar
-- [ ] `git pull` até `7937a50` (ou superior)
-- [ ] `python setup.py` (idempotente: aplica DDL, o seed `seed_de_para_medicamento.sql`
-      e o `DROP` de limpeza da `fato_documento_paciente_dia` — tabela legada que o
-      código novo não usa mais)
+- [ ] `git pull` até o commit da v1.4 (ou superior)
+- [ ] `python setup.py` (idempotente: aplica DDL, os seeds `seed_de_para_medicamento.sql`
+      e `seed_categoria_medicamento.sql` e o `DROP` de limpeza da `fato_documento_paciente_dia`
+      — tabela legada que o código novo não usa mais)
 - [ ] **Reiniciar o worker e o scheduler** (`jobs.py`) — o Python só carrega o código
       novo ao reiniciar
 - [ ] Validar no DW após a primeira carga nova:

@@ -27,7 +27,7 @@ type DocsData = {
   por_tipo: { tipo: string; docs: string }[];
   por_uf: { uf: string; docs: string }[];
   ranking_especialidade: { especialidade: string; docs: string }[];
-  ranking_medicamentos: { medicamento: string; itens: string }[];
+  ranking_medicamentos: { medicamento: string; categoria: string; itens: string }[];
 };
 
 type AudAn3Row = {
@@ -392,12 +392,13 @@ function Donut({ rows, cores, agruparOutros = true, pctDec = 0 }: { rows: { labe
   );
 }
 
-function RankRows({ rows, showPct }: { rows: { name: string; v: number }[]; showPct?: boolean }) {
+function RankRows({ rows, showPct, showCat }: { rows: { name: string; v: number; cat?: string }[]; showPct?: boolean; showCat?: boolean }) {
   const max = Math.max(...rows.map((r) => r.v), 1);
   const total = rows.reduce((a, b) => a + b.v, 0);
   return rows.map((r) => (
-    <div className="barrow" key={r.name}>
-      <span>{r.name}</span>
+    <div className={`barrow${showCat ? " barrow-cat" : ""}`} key={r.name}>
+      <span title={r.name}>{r.name}</span>
+      {showCat && <span className="cat" title={r.cat || ""}>{r.cat || "—"}</span>}
       <span className="bar-track"><i className="bar-fill" style={{ width: `${(r.v / max) * 100}%` }} /></span>
       <b>
         {nf.format(r.v)}
@@ -555,7 +556,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
         </div>
       </article>
 
-      <article className="card" style={{ gridColumn: "span 7", display: "flex", flexDirection: "column" }}>
+      <article className="card" style={{ gridColumn: "span 5", display: "flex", flexDirection: "column" }}>
         <div className="section-title">
           <h2>Emissões por versão do app</h2>
           <span>{data.de.slice(0, 7)} → {data.ate.slice(0, 7)}{filtradosSemTipo && " · "}{filtradosSemTipo && <span className="tag">F</span>}</span>
@@ -579,7 +580,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
         </div>
       </article>
 
-      <article className="card" style={{ gridColumn: "span 5" }}>
+      <article className="card" style={{ gridColumn: "span 7" }}>
         <div className="section-title">
           <h2>Medicamentos prescritos</h2>
           <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "#8d99a7", cursor: "pointer", textTransform: "none", letterSpacing: 0 }}>
@@ -588,7 +589,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
           </label>
           {filtrados && <span className="tag">F</span>}
         </div>
-        <RankRows rows={data.ranking_medicamentos.map((m) => ({ name: m.medicamento, v: Number(m.itens) }))} />
+        <RankRows showCat rows={data.ranking_medicamentos.map((m) => ({ name: m.medicamento, v: Number(m.itens), cat: m.categoria }))} />
         {data.ranking_medicamentos.length === 0 && <div className="sub">Sem receitas no período/filtros.</div>}
       </article>
 
@@ -1520,7 +1521,7 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
           </section>
         )}
         <div className="footer">
-          <span>PE Dashboard · CFM v1.3</span>
+          <span>PE Dashboard · CFM v1.4</span>
           <span>Datamart prescricao_dw · última carga: {health?.job?.finalizado_em ? new Date(health.job.finalizado_em).toLocaleString("pt-BR") : "—"}</span>
         </div>
       </main>

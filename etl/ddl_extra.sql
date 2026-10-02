@@ -342,6 +342,13 @@ CREATE TABLE IF NOT EXISTS prescricao.de_para_medicamento (
     principio_ativo VARCHAR(120) NOT NULL
 );
 
+-- Categorias terapeuticas amplas por principio ativo (coluna do ranking de
+-- medicamentos); semeada por seed_categoria_medicamento.sql (setup.py).
+CREATE TABLE IF NOT EXISTS prescricao.categoria_medicamento (
+    principio_ativo VARCHAR(120) PRIMARY KEY,
+    categoria VARCHAR(60) NOT NULL
+);
+
 -- Limpeza 2026-10-01: fato e flag AN2 nao exibidos na UI (AN2 usa
 -- fato_documento_medico_paciente_dia + snap_medico_paciente). Aplicado pelo
 -- setup.py na maquina do ETL apos o pull (o codigo novo nao usa a tabela).

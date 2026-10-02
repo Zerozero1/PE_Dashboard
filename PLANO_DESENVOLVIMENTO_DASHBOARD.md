@@ -1,5 +1,5 @@
 # Plano de Desenvolvimento - PE Dashboard
-**Versão do produto: v1.3** (2026-10-01)
+**Versão do produto: v1.4** (2026-10-02)
 _Atualizado em: 2026-10-01_
 
 ## 1. Objetivo
@@ -306,7 +306,7 @@ Referencia visual:
 - Emissoes por periodo.
 - Distribuicao por tipo de documento.
 - Emissões por versão do app (tabela com o total por versão no período selecionado).
-- Medicamentos prescritos (top 15 por itens de receita; grão mensal; texto do médico normalizado; opção "agrupar por princípio ativo" com de-para curado).
+- Medicamentos prescritos (top 15 por itens de receita; grão mensal; texto do médico normalizado; opção "agrupar por princípio ativo" com de-para curado e coluna de categoria terapêutica).
 - Documentos por especialidade.
 
 Filtros:

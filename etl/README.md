@@ -1,6 +1,6 @@
 # ETL — PE Dashboard
 
-**Versão do produto: v1.3** (2026-10-01)
+**Versão do produto: v1.4** (2026-10-02)
 
 Aplicação Python que carrega o datamart `prescricao_dw` a partir da origem `bd_cfm` (somente leitura).
 
@@ -30,7 +30,7 @@ $env:DW_HOST='172.16.7.112'; $env:DW_DB='prescricao_dw'; $env:DW_USER='usr_presc
 
 | Script | Função |
 |---|---|
-| `setup.py` | Aplica `schema.sql` + `ddl_extra.sql` + o seed `seed_de_para_medicamento.sql` (idempotente). Criar/atualizar estrutura no DW. |
+| `setup.py` | Aplica `schema.sql` + `ddl_extra.sql` + os seeds `seed_de_para_medicamento.sql` e `seed_categoria_medicamento.sql` (idempotente). Criar/atualizar estrutura no DW. |
 | `load_dims.py` | Carrega dimensões: dim_data, dim_uf, dim_tipo_documento, dim_medico, dim_especialidade, dim_unidade. |
 | `load_fatos.py <modo>` | Fatos de documentos, em modos: `docs`, `origem`, `versao`, `receitas`, `especialidade`, `unidade`, `medico`, `medico_tipo`, `medico_pacientes`, `unidade_pacientes`, `medico_unidade`. |
 | `load_medicos.py` | `fato_medico_snapshot` (inscrições CRM/UF e CPFs únicos com aceite, por UF + total global `--`) + `fato_medico_dia.novos_aceite_termo` + `medicos_com_emissao` (derivado do DW). |
@@ -69,7 +69,7 @@ python jobs.py enqueue-manual <email>  # cria job manual (botão "Atualizar dado
 - **`unidade_pacientes`** (grão unidade×paciente×dia, para a AN4): mesmo padrão do `medico_pacientes`, restrito a documentos **assinados**; grava em `stg_documento_unidade_paciente_dia` e reconstrói `fato_documento_unidade_paciente_dia`.
 - **`medico_unidade`** (snapshot de vínculos): lê `rl_medico_unidade_atendimento` (≈580k linhas) e reconstrói `fato_medico_unidade` (médico × unidade, `in_ativo`, `dt_cadastro`) — alimenta a coluna "Médicos" da AN4 e o drill (rosca por tipo vem de `fato_documento_emissao`).
 - **`receitas`** (ranking de medicamentos): lote por faixa de `id_receita` (2M), agregação na origem em grão mês×UF×tipo×texto normalizado (maiúsculas/espaços, até 255 caracteres; vazio/NULL → `NAO_INFORMADO`) e rebuild da `fato_receita_medicamento_mes` com `SUM` por chave. Não há catálogo oficial de medicamentos na origem (texto livre por médico) — o ranking agrupa pelo texto informado.
-- **De-para de medicamentos (Fase 2)**: `de_para_medicamento` (texto → princípio ativo canônico) é semeada por `seed_de_para_medicamento.sql` (aplicada pelo `setup.py`; ~580 mapeamentos cobrindo os textos de maior volume — variações de sal, marcas conhecidas e erros de escrita). O endpoint do ranking aceita `agrupar=principio` (LEFT JOIN; textos não mapeados caem no próprio texto), resolvendo marca×genérico (ex.: MOUNJARO/TIRZEPATIDA → TIRZEPATIDA).
+- **De-para de medicamentos (Fase 2)**: `de_para_medicamento` (texto → princípio ativo canônico) é semeada por `seed_de_para_medicamento.sql` (aplicada pelo `setup.py`; **892 mapeamentos / 268 princípios**, cobrindo ~57% dos itens — variações de sal, marcas conhecidas e erros de escrita; política conservadora: marca duvidosa fica fora). O endpoint do ranking aceita `agrupar=principio` (LEFT JOIN; textos não mapeados caem no próprio texto), resolvendo marca×genérico (ex.: MOUNJARO/TIRZEPATIDA → TIRZEPATIDA), e devolve `categoria` por linha (tabela `categoria_medicamento`, 27 categorias amplas semeadas por `seed_categoria_medicamento.sql`).
 - **Especialidade**: deriva do cadastro do médico que assina (`tb_medico_especialidade` via `rl_medico_unidade_atendimento.id_medico`, `in_ativo='S'`) — não de `rl_med_especialidade_consulta` (vínculo da consulta, com outliers de até 104 especialidades).
 
 ## Modelo físico (schema `prescricao` do DW)
@@ -86,6 +86,7 @@ Fatos:
 - `fato_documento_versao_dia` (dia, sg_uf, ds_versao_sistema, documentos) — versão do app por dia×UF (vazio → `NAO_INFORMADO`); alimenta a tabela "Emissões por versão do app" (total por versão no período)
 - `fato_receita_medicamento_mes` (mes, sg_uf, id_tipo_documento, medicamento, itens) — itens de receita por medicamento (texto normalizado) em grão mensal; alimenta o ranking "Medicamentos prescritos"
 - `de_para_medicamento` (medicamento, principio_ativo) — de-para curado (seed) para o toggle "agrupar por princípio ativo" do ranking de medicamentos
+- `categoria_medicamento` (principio_ativo, categoria) — categoria terapêutica ampla (seed) exibida como coluna no ranking de medicamentos
 - `fato_documento_especialidade_dia` (dia, sg_uf, id_medico_especialidade, documentos)
 - `fato_documento_unidade_dia` (dia, sg_uf, id_unidade_atendimento, documentos) — **descontinuada (2026-10-02)**: nenhuma tela a consome; DROP após o deploy do ETL (o código antigo da máquina ainda a escreve)
 - `fato_documento_medico_dia` (dia, sg_uf, id_medico, documentos)

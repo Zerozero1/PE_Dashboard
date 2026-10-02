@@ -36,7 +36,7 @@
 | `fato_documento_dia` | dia × UF × tipo (`dia, sg_uf, id_tipo_documento`) | `documentos`, `assinados`, `cancelados` | `tb_consulta_documento` + joins de UF (`load_fatos docs`, lotes 2M por `id_consulta_documento`) | KPIs, série mensal, por UF e por tipo da visão Documentos |
 | `fato_documento_origem_dia` | dia × UF × origem (`dia, sg_uf, ds_origem_criacao`) | `documentos` | `ds_origem_criacao` (vazio → `NAO_INFORMADO`; `load_fatos origem`) | Gráficos "Emissões/Participação por plataforma" |
 | `fato_documento_versao_dia` | dia × UF × versão (`dia, sg_uf, ds_versao_sistema`) | `documentos` | `ds_versao_sistema` (vazio → `NAO_INFORMADO`; `load_fatos versao`) | Tabela "Emissões por versão do app" |
-| `fato_receita_medicamento_mes` | mês × UF × tipo × texto (`mes, sg_uf, id_tipo_documento, medicamento`) | `itens` | `tb_receita` + `tb_medicamento` (`load_fatos receitas`, lotes 2M por `id_receita`; texto normalizado: `upper`, espaços colapsados, 255 chars) | Ranking "Medicamentos prescritos" (janelas) e `snap_medicamento_top` |
+| `fato_receita_medicamento_mes` | mês × UF × tipo × texto (`mes, sg_uf, id_tipo_documento, medicamento`) | `itens` | `tb_receita` + `tb_medicamento` (`load_fatos receitas`, lotes 2M por `id_receita`; texto normalizado: `upper`, espaços colapsados, 255 chars) | Ranking "Medicamentos prescritos" (janelas; com categoria via `de_para` + `categoria_medicamento`) e `snap_medicamento_top` |
 | `fato_documento_especialidade_dia` | dia × UF × especialidade (`dia, sg_uf, id_medico_especialidade`) | `documentos` | `tb_consulta_documento` + `tb_medico_especialidade` (somente vínculo ativo; `load_fatos especialidade`) | Ranking "Documentos por especialidade" (janelas) e `snap_especialidade` |
 
 ### Documentos por médico / paciente / unidade (Auditoria e Médicos)
@@ -72,11 +72,12 @@
 
 Construídas por `load_snapshots.py` (TRUNCATE + INSERT), dentro do `run_all`.
 
-## De-para de medicamentos
+## De-para e categorias de medicamentos
 
 | Tabela | Colunas | Descrição |
 |---|---|---|
-| `de_para_medicamento` | `medicamento` (PK), `principio_ativo` | Texto informado pelo médico → princípio ativo canônico; seed curado `seed_de_para_medicamento.sql` (583 mapeamentos / 189 princípios), aplicado pelo `setup.py`. Usado pelo toggle "agrupar por princípio ativo". |
+| `de_para_medicamento` | `medicamento` (PK), `principio_ativo` | Texto informado pelo médico → princípio ativo canônico; seed curado `seed_de_para_medicamento.sql` (**892 mapeamentos / 268 princípios**, ~57% dos itens), aplicado pelo `setup.py`. Usado pelo toggle "agrupar por princípio ativo". Política conservadora: marca duvidosa fica fora. |
+| `categoria_medicamento` | `principio_ativo` (PK), `categoria` | Categoria terapêutica ampla (**268 princípios**, 27 categorias: Analgésico, Ansiolítico/hipnótico, Antialérgico, Antibiótico, Anticonvulsivante/neuromodulador, Antidepressivo, Antidiabético/obesidade, Antiemético/antivertiginoso, Antifúngico/antiviral, Antigotoso, Anti-inflamatório/corticoide, Antiparasitário, Antiparkinsoniano, Antipsicótico, Canabinoide, Cardiovascular, Cognição/demência, Dermatológico, Estabilizador de humor, Gastrointestinal, Hormônio/reposição, Outros, Psicoestimulante/TDAH, Relaxante muscular, Respiratório, Urológico, Vitamina/suplemento); seed `seed_categoria_medicamento.sql` (aplicado pelo `setup.py`). Exibida como **coluna** no ranking "Medicamentos prescritos" (linhas sem categoria aparecem como "—"). |
 
 ## Tabelas operacionais
 
