@@ -334,6 +334,30 @@ CREATE TABLE IF NOT EXISTS prescricao.categoria_medicamento (
     categoria VARCHAR(60) NOT NULL
 );
 
+-- Registro de medicamentos da ANVISA (dados abertos), carregado por
+-- load_anvisa.py. Substitui a leitura da origem `tb_medicamentos_anvisa`,
+-- cujas linhas estao desalinhadas (import quebrado no bd_cfm).
+CREATE TABLE IF NOT EXISTS prescricao.medicamento_anvisa (
+    tp_produto VARCHAR(50),
+    nm_produto VARCHAR(200),
+    dt_final_processo DATE,
+    tp_categoria_regulatoria VARCHAR(50),
+    nu_reg_produto VARCHAR(25),
+    dt_vencimento_reg DATE,
+    nu_processo VARCHAR(30),
+    tp_classe_terapeutica VARCHAR(250),
+    nm_empresa_reg VARCHAR(200),
+    in_situacao_reg VARCHAR(25),
+    ds_principio_ativo VARCHAR(400),
+    carregado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_medicamento_anvisa_reg
+    ON prescricao.medicamento_anvisa (nu_reg_produto);
+
+CREATE INDEX IF NOT EXISTS idx_medicamento_anvisa_principio
+    ON prescricao.medicamento_anvisa (ds_principio_ativo);
+
 -- Limpeza 2026-10-01: fato e flag AN2 nao exibidos na UI (AN2 usa
 -- fato_documento_medico_paciente_dia + snap_medico_paciente). Aplicado pelo
 -- setup.py na maquina do ETL apos o pull (o codigo novo nao usa a tabela).

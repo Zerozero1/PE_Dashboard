@@ -242,7 +242,7 @@ Os numeros abaixo sao estimativas do catalogo PostgreSQL (`pg_class.reltuples`) 
 | `tb_parametro` | 18 | Parametros de configuracao. Pode conter dados sensiveis de configuracao; nao expor valores. |
 | `tb_campanha` | 2 | Campanhas de pesquisa. |
 | `tb_pesquisa` | 53.031 | Respostas/convites de pesquisa. |
-| `tb_medicamentos_anvisa` | 1.404 | Referencia de medicamentos ANVISA. |
+| `tb_medicamentos_anvisa` | 1.490 | Referencia de medicamentos ANVISA — **import quebrado: linhas desalinhadas (nome do produto x principio ativo; ex.: CABERGOLINA com principio CLONAZEPAM). NAO usar.** A versao correta e `prescricao.medicamento_anvisa` no DW (dados abertos, 43.593 linhas; `etl/load_anvisa.py`). |
 | `tb_termo` | 1 | Termo vigente/armazenado. |
 | `tb_sessao_ativa_usuario` | 3.966.356 | Sessoes por login, IP, agente, status e plataforma. |
 | `tb_solicitacao_login` | 8.405.955 | Tokens/segredos de solicitacao de login; tratar como sensivel. |

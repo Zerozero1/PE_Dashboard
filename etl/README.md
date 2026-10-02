@@ -37,6 +37,7 @@ $env:DW_HOST='172.16.7.112'; $env:DW_DB='prescricao_dw'; $env:DW_USER='usr_presc
 | `load_maior_dia.py` | Constrói `fato_medico_maior_dia` (melhor dia por médico/UF em documentos **assinados**, com pacientes distintos do dia) a partir de `fato_documento_emissao` — alimenta a AN3 diária. |
 | `load_documentos.py` | Carrega `fato_documento_emissao` (um registro por documento assinado ou não: data/hora, médico, UF, tipo, unidade, situação e `ds_qrcode`) — alimenta a lista de documentos do drill da AN3. Carga cheia na primeira execução e incremental depois (revisa os últimos 5M ids); extração em lotes de 2M ids com stream ordenado e retry por lote. |
 | `load_snapshots.py` | Reconstrói os snapshots all-time (`snap_medico_tipo`, `snap_medico_paciente`, `snap_instituicao`, `snap_especialidade`) usados no modo "Todos" dos rankings AN1/AN2/AN4 e do card "Documentos por especialidade" (evita varreduras de 20-60M linhas por consulta) e o `snap_medicamento_top` (top 100 do ranking de medicamentos por UF×tipo). |
+| `load_anvisa.py` | Carrega o registro de medicamentos da ANVISA (dados abertos; ~43,6 mil linhas) em `medicamento_anvisa` — **manual** (não está no `run_all`; baixa o CSV oficial ou aceita um caminho local). A tabela da origem `tb_medicamentos_anvisa` está com linhas desalinhadas e **não deve ser usada**. |
 | `run_all.py` | Pipeline completo e idempotente (dims → fatos → snapshots → médicos → maior dia → documentos emitidos). |
 | `jobs.py` | Orquestração via fila `dashboard_refresh_job` (ver abaixo). |
 | `validate.py` / `status_dw.py` / `audit_counts.py` / `list_indexes.py` | Conferências: totais, cobertura, contagens da origem vs DW, índices. |
@@ -86,6 +87,7 @@ Fatos:
 - `fato_receita_medicamento_mes` (mes, sg_uf, id_tipo_documento, medicamento, itens) — itens de receita por medicamento (texto normalizado) em grão mensal; alimenta o ranking "Medicamentos prescritos"
 - `de_para_medicamento` (medicamento, principio_ativo) — de-para curado (seed) para o toggle "agrupar por princípio ativo" do ranking de medicamentos
 - `categoria_medicamento` (principio_ativo, categoria) — categoria terapêutica ampla (seed) exibida como coluna no ranking de medicamentos
+- `medicamento_anvisa` (tp_produto, nm_produto, dt_final_processo, tp_categoria_regulatoria, nu_reg_produto, dt_vencimento_reg, nu_processo, tp_classe_terapeutica, nm_empresa_reg, in_situacao_reg, ds_principio_ativo, carregado_em) — registro de medicamentos da ANVISA (dados abertos; carga manual por `load_anvisa.py`)
 - `fato_documento_especialidade_dia` (dia, sg_uf, id_medico_especialidade, documentos)
 - `fato_documento_medico_dia` (dia, sg_uf, id_medico, documentos)
 - `fato_documento_medico_tipo_dia` (dia, sg_uf, id_medico, id_tipo_documento, documentos) — médico × tipo de documento; alimenta AN1 (emissões no período) e o drill-down por tipo
