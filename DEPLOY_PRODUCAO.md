@@ -285,6 +285,7 @@ válida (cargas idempotentes via upsert); o job diário roda o `run_all` complet
   - [ ] `fato_receita_medicamento_mes` ≈ 53,4M itens
   - [ ] `fato_documento_versao_dia` ≈ 62,8M documentos
   - [ ] `fato_auditoria_dia` sem linhas AN2/AN3 (apenas AN1)
+  - [ ] `snap_especialidade` populada (~214k linhas; ranking de especialidades no modo "Todos")
 
 **C) Atenções**
 

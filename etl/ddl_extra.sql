@@ -242,6 +242,13 @@ CREATE TABLE IF NOT EXISTS prescricao.snap_medico_paciente (
     PRIMARY KEY (id_medico, sg_uf)
 );
 
+CREATE TABLE IF NOT EXISTS prescricao.snap_especialidade (
+    sg_uf CHAR(2) NOT NULL,
+    id_medico_especialidade INTEGER NOT NULL,
+    documentos BIGINT NOT NULL,
+    PRIMARY KEY (sg_uf, id_medico_especialidade)
+);
+
 CREATE TABLE IF NOT EXISTS prescricao.snap_instituicao (
     chave VARCHAR(40) PRIMARY KEY,
     instituicao VARCHAR(255),

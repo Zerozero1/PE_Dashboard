@@ -22,6 +22,20 @@ export async function GET(req: NextRequest) {
   const p = [de, ate, uf, tipo];
   const todos = de <= TODOS_DE;
   const agrupar = req.nextUrl.searchParams.get("agrupar") === "principio";
+  const espSql = todos
+    ? `SELECT e.ds_especialidade AS especialidade, sum(s.documentos) AS docs
+         FROM prescricao.snap_especialidade s
+         JOIN prescricao.dim_especialidade e
+           ON e.id_medico_especialidade = s.id_medico_especialidade
+        WHERE ($1::text IS NULL OR s.sg_uf = $1)
+        GROUP BY 1 ORDER BY 2 DESC LIMIT 10`
+    : `SELECT e.ds_especialidade AS especialidade, sum(f.documentos) AS docs
+         FROM prescricao.fato_documento_especialidade_dia f
+         JOIN prescricao.dim_especialidade e
+           ON e.id_medico_especialidade = f.id_medico_especialidade
+        WHERE f.dia BETWEEN $1 AND $2 AND ($3::text IS NULL OR f.sg_uf = $3)
+        GROUP BY 1 ORDER BY 2 DESC LIMIT 10`;
+  const espParams = todos ? [uf] : [de, ate, uf];
 
   let medSql: string;
   let medParams: (string | null)[];
@@ -87,15 +101,7 @@ export async function GET(req: NextRequest) {
           GROUP BY 1 ORDER BY 2 DESC`,
         p
       ),
-      query(
-        `SELECT e.ds_especialidade AS especialidade, sum(f.documentos) AS docs
-           FROM prescricao.fato_documento_especialidade_dia f
-           JOIN prescricao.dim_especialidade e
-             ON e.id_medico_especialidade = f.id_medico_especialidade
-          WHERE f.dia BETWEEN $1 AND $2 AND ($3::text IS NULL OR f.sg_uf = $3)
-          GROUP BY 1 ORDER BY 2 DESC LIMIT 10`,
-        [de, ate, uf]
-      ),
+      query(espSql, espParams),
       query(
         `SELECT to_char(f.dia,'YYYY-MM') AS mes,
                 f.ds_origem_criacao AS origem,

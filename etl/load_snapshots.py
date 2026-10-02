@@ -69,6 +69,17 @@ def main():
     log(f"snap_instituicao: {cur.rowcount:,} linhas")
     dw.commit()
 
+    cur.execute("TRUNCATE prescricao.snap_especialidade")
+    cur.execute(
+        "INSERT INTO prescricao.snap_especialidade "
+        "(sg_uf, id_medico_especialidade, documentos) "
+        "SELECT sg_uf, id_medico_especialidade, sum(documentos)::bigint "
+        "  FROM prescricao.fato_documento_especialidade_dia "
+        " GROUP BY 1, 2"
+    )
+    log(f"snap_especialidade: {cur.rowcount:,} linhas")
+    dw.commit()
+
     cur.execute("TRUNCATE prescricao.snap_medicamento_top")
     base = (
         "SELECT sg_uf, id_tipo_documento, medicamento, sum(itens)::bigint AS itens "
