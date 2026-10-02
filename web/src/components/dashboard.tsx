@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 
 const nf = new Intl.NumberFormat("pt-BR");
 const nfc = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
@@ -988,6 +988,18 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
   const abortRef = useRef<AbortController | null>(null);
   const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
 
+  useEffect(() => {
+    setMedico(null);
+    setMedicoData(null);
+    setMedicoErro(null);
+    setAn3Selecionado(null);
+    setAn3Detalhe(null);
+    setAn3Erro(null);
+    setAn4Selecionado(null);
+    setAn4Detalhe(null);
+    setAn4Erro(null);
+  }, [anomalia]);
+
   const cancelar = () => {
     abortRef.current?.abort();
     abortRef.current = null;
@@ -1158,27 +1170,42 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
                 </tr>
               </thead>
               <tbody>
-                {(data.an3 ?? []).map((r, i) => (
-                  <tr key={r.id_medico}>
-                    <td>{i + 1}</td>
-                    <td>{r.crm}</td>
-                    <td>{r.crm_uf ?? "—"}</td>
-                    <td>{r.nome ?? "—"}</td>
-                    <td>{r.dia}</td>
-                    <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.documentos))}</td>
-                    <td style={{ textAlign: "right" }}>{nf.format(Number(r.pacientes))}</td>
-                    <td style={{ textAlign: "right" }}>
-                      <button
-                        type="button"
-                        className="drill-ico"
-                        title="Detalhar o dia"
-                        aria-label={`Detalhar o dia de ${r.nome ?? "médico"}`}
-                        style={{ padding: 0, fontFamily: "inherit" }}
-                        onClick={() => abrirAn3(r)}
-                      >›</button>
-                    </td>
-                  </tr>
-                ))}
+                {(data.an3 ?? []).map((r, i) => {
+                  const aberto = an3Selecionado?.id_medico === r.id_medico;
+                  return (
+                    <Fragment key={r.id_medico}>
+                      <tr className={`drill-row${aberto ? " drill-row-open" : ""}`}>
+                        <td>{i + 1}</td>
+                        <td>{r.crm}</td>
+                        <td>{r.crm_uf ?? "—"}</td>
+                        <td>{r.nome ?? "—"}</td>
+                        <td>{r.dia}</td>
+                        <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.documentos))}</td>
+                        <td style={{ textAlign: "right" }}>{nf.format(Number(r.pacientes))}</td>
+                        <td style={{ textAlign: "right" }}>
+                          <button
+                            type="button"
+                            className="drill-ico"
+                            title="Detalhar o dia"
+                            aria-label={`Detalhar o dia de ${r.nome ?? "médico"}`}
+                            style={{ padding: 0, fontFamily: "inherit" }}
+                            onClick={() => {
+                              if (aberto) { setAn3Selecionado(null); setAn3Detalhe(null); setAn3Erro(null); return; }
+                              abrirAn3(r);
+                            }}
+                          >{aberto ? "▾" : "›"}</button>
+                        </td>
+                      </tr>
+                      {aberto && an3Selecionado && (
+                        <tr className="drill-inline-row">
+                          <td colSpan={8}>
+                            <An3Drill inline row={an3Selecionado} data={an3Detalhe} erro={an3Erro} carregando={an3Carregando} onClose={() => { setAn3Selecionado(null); setAn3Detalhe(null); setAn3Erro(null); }} />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
                 {(data.an3 ?? []).length === 0 && (
                   <tr><td colSpan={8} style={{ color: "#566271", textAlign: "center" }}>Sem registros no período/filtros.</td></tr>
                 )}
@@ -1209,27 +1236,42 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
                 </tr>
               </thead>
               <tbody>
-                {(data.an4 ?? []).map((r, i) => (
-                  <tr key={r.chave}>
-                    <td>{i + 1}</td>
-                    <td>{r.instituicao}</td>
-                    <td>{r.cnes ?? "—"}</td>
-                    <td>{r.uf ?? "—"}</td>
-                    <td style={{ textAlign: "right" }}>{nf.format(Number(r.unidades))}</td>
-                    <td style={{ textAlign: "right" }}>{nf.format(Number(r.medicos))}</td>
-                    <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.pacientes))}</td>
-                    <td style={{ textAlign: "right" }}>
-                      <button
-                        type="button"
-                        className="drill-ico"
-                        title="Detalhar a instituição"
-                        aria-label={`Detalhar a instituição ${r.instituicao}`}
-                        style={{ padding: 0, fontFamily: "inherit" }}
-                        onClick={() => abrirAn4(r)}
-                      >›</button>
-                    </td>
-                  </tr>
-                ))}
+                {(data.an4 ?? []).map((r, i) => {
+                  const aberto = an4Selecionado?.chave === r.chave;
+                  return (
+                    <Fragment key={r.chave}>
+                      <tr className={`drill-row${aberto ? " drill-row-open" : ""}`}>
+                        <td>{i + 1}</td>
+                        <td>{r.instituicao}</td>
+                        <td>{r.cnes ?? "—"}</td>
+                        <td>{r.uf ?? "—"}</td>
+                        <td style={{ textAlign: "right" }}>{nf.format(Number(r.unidades))}</td>
+                        <td style={{ textAlign: "right" }}>{nf.format(Number(r.medicos))}</td>
+                        <td style={{ textAlign: "right", color: "var(--va)", fontWeight: 700 }}>{nf.format(Number(r.pacientes))}</td>
+                        <td style={{ textAlign: "right" }}>
+                          <button
+                            type="button"
+                            className="drill-ico"
+                            title="Detalhar a instituição"
+                            aria-label={`Detalhar a instituição ${r.instituicao}`}
+                            style={{ padding: 0, fontFamily: "inherit" }}
+                            onClick={() => {
+                              if (aberto) { setAn4Selecionado(null); setAn4Detalhe(null); setAn4Erro(null); return; }
+                              abrirAn4(r);
+                            }}
+                          >{aberto ? "▾" : "›"}</button>
+                        </td>
+                      </tr>
+                      {aberto && an4Selecionado && (
+                        <tr className="drill-inline-row">
+                          <td colSpan={8}>
+                            <An4Drill inline row={an4Selecionado} data={an4Detalhe} erro={an4Erro} carregando={an4Carregando} onClose={() => { setAn4Selecionado(null); setAn4Detalhe(null); setAn4Erro(null); }} />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
                 {(data.an4 ?? []).length === 0 && (
                   <tr><td colSpan={8} style={{ color: "#566271", textAlign: "center" }}>Sem registros no período/filtros.</td></tr>
                 )}
@@ -1258,18 +1300,33 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => (
-                <tr key={`${r.crm}-${r.crm_uf}-${i}`} onClick={() => abrirMedico({ id_medico: r.id_medico, nome: r.nome ?? "—" })} style={{ cursor: "pointer" }} className="drill-row">
-                  <td>{i + 1}</td>
-                  <td>{r.crm}</td>
-                  <td>{r.crm_uf}</td>
-                  <td>{r.nome ?? "—"}</td>
-                  <td style={{ textAlign: "right" }}>{nf.format(getMetric(r))}</td>
-                  <td style={{ textAlign: "right" }}>
-                    <span className="drill-ico" title="Ver detalhes">›</span>
-                  </td>
-                </tr>
-              ))}
+              {rows.map((r, i) => {
+                const aberto = medico?.id_medico === r.id_medico;
+                return (
+                  <Fragment key={`${r.crm}-${r.crm_uf}-${i}`}>
+                    <tr onClick={() => {
+                      if (aberto) { setMedico(null); setMedicoData(null); setMedicoErro(null); return; }
+                      abrirMedico({ id_medico: r.id_medico, nome: r.nome ?? "—" });
+                    }} style={{ cursor: "pointer" }} className={`drill-row${aberto ? " drill-row-open" : ""}`}>
+                      <td>{i + 1}</td>
+                      <td>{r.crm}</td>
+                      <td>{r.crm_uf}</td>
+                      <td>{r.nome ?? "—"}</td>
+                      <td style={{ textAlign: "right" }}>{nf.format(getMetric(r))}</td>
+                      <td style={{ textAlign: "right" }}>
+                        <span className="drill-ico" title="Ver detalhes">{aberto ? "▾" : "›"}</span>
+                      </td>
+                    </tr>
+                    {aberto && medico && (
+                      <tr className="drill-inline-row">
+                        <td colSpan={6}>
+                          <MedicoDrill inline medico={medico} anomalia={anomalia} data={medicoData} erro={medicoErro} carregando={medicoCarregando} onClose={() => { setMedico(null); setMedicoData(null); setMedicoErro(null); }} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
               {rows.length === 0 && (
                 <tr><td colSpan={6} style={{ color: "#566271", textAlign: "center" }}>Sem registros no período/filtros.</td></tr>
               )}
@@ -1278,41 +1335,22 @@ function AuditoriaView({ filtros }: { filtros: FiltrosData | null }) {
         </article>
         );
       })()}
-      {medico && (
-        <MedicoDrill medico={medico} anomalia={anomalia} data={medicoData} erro={medicoErro} carregando={medicoCarregando} onClose={() => setMedico(null)} />
-      )}
-      {an3Selecionado && (
-        <An3Drill
-          row={an3Selecionado}
-          data={an3Detalhe}
-          erro={an3Erro}
-          carregando={an3Carregando}
-          onClose={() => { setAn3Selecionado(null); setAn3Detalhe(null); setAn3Erro(null); }}
-        />
-      )}
-      {an4Selecionado && (
-        <An4Drill
-          row={an4Selecionado}
-          data={an4Detalhe}
-          erro={an4Erro}
-          carregando={an4Carregando}
-          onClose={() => { setAn4Selecionado(null); setAn4Detalhe(null); setAn4Erro(null); }}
-        />
-      )}
     </section>
   );
 }
 
-function An3Drill({ row, data, erro, carregando, onClose }: {
+function An3Drill({ row, data, erro, carregando, onClose, inline = false }: {
   row: AudAn3Row;
   data: AudAn3Detail | null;
   erro: string | null;
   carregando: boolean;
   onClose: () => void;
+  inline?: boolean;
 }) {
   const maxTipo = Math.max(1, ...(data?.por_tipo ?? []).map((t) => Number(t.documentos)));
+  const Wrapper = (inline ? "div" : "article") as "div";
   return (
-    <article className="card" style={{ gridColumn: "span 12" }}>
+    <Wrapper className={inline ? "drill-inline" : "card"} style={inline ? undefined : { gridColumn: "span 12" }}>
       <div className="section-title">
         <div>
           <h2>{row.nome ?? "Médico"}</h2>
@@ -1382,21 +1420,23 @@ function An3Drill({ row, data, erro, carregando, onClose }: {
           </div>
         </>
       )}
-    </article>
+    </Wrapper>
   );
 }
 
-function An4Drill({ row, data, erro, carregando, onClose }: {
+function An4Drill({ row, data, erro, carregando, onClose, inline = false }: {
   row: AudAn4Row;
   data: AudAn4Detail | null;
   erro: string | null;
   carregando: boolean;
   onClose: () => void;
+  inline?: boolean;
 }) {
   const serie = data ? data.serie_mensal.map((s) => ({ x: s.mes, v: Number(s.pacientes) })) : [];
   const mensal = data ? data.serie_mensal.map((s) => Number(s.pacientes)) : [];
+  const Wrapper = (inline ? "div" : "article") as "div";
   return (
-    <article className="card" style={{ gridColumn: "span 12" }}>
+    <Wrapper className={inline ? "drill-inline" : "card"} style={inline ? undefined : { gridColumn: "span 12" }}>
       <div className="section-title">
         <h2>{data?.instituicao ?? row.instituicao}</h2>
         <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1441,7 +1481,7 @@ function An4Drill({ row, data, erro, carregando, onClose }: {
           </div>
         </div>
       )}
-    </article>
+    </Wrapper>
   );
 }
 
@@ -1558,13 +1598,14 @@ function LogsView({ active }: { active: boolean }) {
   );
 }
 
-function MedicoDrill({ medico, anomalia, data, erro, carregando, onClose }: {
+function MedicoDrill({ medico, anomalia, data, erro, carregando, onClose, inline = false }: {
   medico: { id_medico: number; nome: string };
   anomalia: string;
   data: AudMedicoData | null;
   erro: string | null;
   carregando: boolean;
   onClose: () => void;
+  inline?: boolean;
 }) {
   const isAn2 = anomalia === "AN2";
   const total = isAn2
@@ -1579,9 +1620,10 @@ function MedicoDrill({ medico, anomalia, data, erro, carregando, onClose }: {
   const mensal = isAn2 ? undefined : (data ? data.serie_mensal.map((s) => Number(s.docs)) : []);
   const situacaoLabel = data?.medico?.situacao ? `Situação ${data.medico.situacao}` : null;
   const inscricaoLabel = data?.medico?.tipo_inscricao ? `Inscrição ${data.medico.tipo_inscricao}` : null;
+  const Wrapper = (inline ? "div" : "article") as "div";
 
   return (
-    <article className="card" style={{ gridColumn: "span 12" }}>
+    <Wrapper className={inline ? "drill-inline" : "card"} style={inline ? undefined : { gridColumn: "span 12" }}>
       <div className="section-title">
         <h2>{medico.nome}</h2>
         <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1637,7 +1679,7 @@ function MedicoDrill({ medico, anomalia, data, erro, carregando, onClose }: {
           </div>
         </div>
       )}
-    </article>
+    </Wrapper>
   );
 }
 
