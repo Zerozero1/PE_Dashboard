@@ -74,10 +74,11 @@ type AudAn4Detail = {
 type MedData = {
   kpis: { inscricoes: number; ativos: number };
   novos_mensal: { mes: string; novos: string }[];
-  por_uf: { uf: string; inscricoes_cadastradas: string; medicos_ativos: string }[];
+  por_uf: { uf: string; inscricoes_cadastradas: string; medicos_ativos: string; nu_populacao: number | null }[];
   inatividade: { faixa: string; medicos: string }[];
   emissores_mensal: { mes: string; emissao: string }[];
   emissores_30d: number;
+  ranking_especialidades: { especialidade: string; medicos: string; documentos: string }[];
 };
 
 type AudData = {
@@ -601,6 +602,7 @@ function DocumentsView({ active, filtros }: { active: boolean; filtros: FiltrosD
 function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosData | null }) {
   const [dias, setDias] = useState<"todos" | string>("todos");
   const [uf, setUf] = useState("");
+  const [ordem, setOrdem] = useState<"volume" | "densidade">("volume");
   const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
   const qs = `de=${de}&ate=${ate}&uf=${uf}`;
   const { data, erro, carregando } = useApi<MedData>(`/api/dashboard/medicos?${qs}`, active);
@@ -614,6 +616,16 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
   const novosMensal = data.novos_mensal.map((s) => Number(s.novos));
   const totalInsc = data.por_uf.reduce((a, u) => a + Number(u.inscricoes_cadastradas), 0);
   const pctInsc = (v: number) => `${(totalInsc > 0 ? ((v / totalInsc) * 100).toFixed(1) : "0.0").replace(".", ",")}%`;
+  const densidade = (u: { medicos_ativos: string; nu_populacao: number | null }) =>
+    u.nu_populacao && u.nu_populacao > 0 ? (Number(u.medicos_ativos) / u.nu_populacao) * 100000 : 0;
+  const densidadeTxt = (u: { medicos_ativos: string; nu_populacao: number | null }) => {
+    const d = densidade(u);
+    return d > 0 ? d.toFixed(1).replace(".", ",") : "—";
+  };
+  const ufOrdenadas = [...data.por_uf].sort((a, b) =>
+    ordem === "densidade"
+      ? densidade(b) - densidade(a)
+      : Number(b.inscricoes_cadastradas) - Number(a.inscricoes_cadastradas));
   const totalInat = data.inatividade.reduce((a, i) => a + Number(i.medicos), 0);
   const maxInat = Math.max(...data.inatividade.map((i) => Number(i.medicos)), 1);
   const INA_META: Record<string, { cor: string }> = {
@@ -672,26 +684,35 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
       </article>
 
       <article className="card" style={{ gridColumn: "span 7" }}>
-        <div className="section-title"><h2>Médicos (CPF) por UF</h2><span>inscrições cadastradas (CRM/UF)</span></div>
+        <div className="section-title">
+          <h2>Médicos (CPF) por UF</h2>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <span style={{ fontSize: 10, color: "#667381" }}>ordenar:</span>
+            <button className="btn" style={{ padding: "1px 8px", fontSize: 10, opacity: ordem === "volume" ? 1 : 0.5 }} onClick={() => setOrdem("volume")}>Volume</button>
+            <button className="btn" style={{ padding: "1px 8px", fontSize: 10, opacity: ordem === "densidade" ? 1 : 0.5 }} onClick={() => setOrdem("densidade")}>Por 100k hab</button>
+          </div>
+        </div>
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ flex: 1.1, minWidth: 0 }}>
-            <MapBr note={false} rows={data.por_uf.map((u) => ({ uf: u.uf, v: Number(u.inscricoes_cadastradas) }))} />
+            <MapBr note={false} rows={ufOrdenadas.map((u) => ({ uf: u.uf, v: ordem === "densidade" ? densidade(u) : Number(u.inscricoes_cadastradas) }))} />
           </div>
           <div className="uf-scroll" style={{ flex: 1, maxHeight: 292, overflowY: "auto", paddingRight: 4 }}>
             <table className="table" style={{ fontSize: 10 }}>
-              <thead><tr><th>UF</th><th style={{ textAlign: "right" }}>Inscrições</th><th style={{ textAlign: "right" }}>%</th></tr></thead>
+              <thead><tr><th>UF</th><th style={{ textAlign: "right" }}>Inscrições</th><th style={{ textAlign: "right" }}>%</th><th style={{ textAlign: "right" }}>Por 100k hab</th></tr></thead>
               <tbody>
-                {data.por_uf.map((u) => (
+                {ufOrdenadas.map((u) => (
                   <tr key={u.uf}>
                     <td>{u.uf}</td>
                     <td style={{ textAlign: "right" }}>{nf.format(Number(u.inscricoes_cadastradas))}</td>
                     <td style={{ textAlign: "right" }}>{pctInsc(Number(u.inscricoes_cadastradas))}</td>
+                    <td style={{ textAlign: "right", color: "var(--va)" }}>{densidadeTxt(u)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
+        <div className="sub" style={{ marginTop: 6 }}>Por 100k hab = médicos ativos (CPF) ÷ população da UF · inscrições cadastradas (CRM/UF).</div>
       </article>
 
       <article className="card" style={{ gridColumn: "span 5" }}>
@@ -717,6 +738,36 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
             );
           })}
         </div>
+      </article>
+
+      <article className="card" style={{ gridColumn: "span 12" }}>
+        <div className="section-title">
+          <h2>Médicos por especialidade</h2>
+          <span>{de} → {ate}{periodoFiltrado && " · "}{periodoFiltrado && <span className="tag">F</span>}</span>
+        </div>
+        <div className="uf-scroll" style={{ maxHeight: 420, overflowY: "auto", paddingRight: 4 }}>
+          <table className="table" style={{ fontSize: 10.5 }}>
+            <thead><tr><th>Especialidade</th><th style={{ textAlign: "right" }}>Médicos</th><th style={{ textAlign: "right" }}>Documentos</th><th style={{ textAlign: "right" }}>Docs/médico</th></tr></thead>
+            <tbody>
+              {data.ranking_especialidades.map((e) => {
+                const m = Number(e.medicos);
+                const d = Number(e.documentos);
+                return (
+                  <tr key={e.especialidade}>
+                    <td>{e.especialidade}</td>
+                    <td style={{ textAlign: "right" }}>{nf.format(m)}</td>
+                    <td style={{ textAlign: "right" }}>{nf.format(d)}</td>
+                    <td style={{ textAlign: "right", color: "var(--va)" }}>{m > 0 ? nf.format(Math.round(d / m)) : "—"}</td>
+                  </tr>
+                );
+              })}
+              {data.ranking_especialidades.length === 0 && (
+                <tr><td colSpan={4} style={{ color: "#566271", textAlign: "center" }}>Sem emissões no período/filtros.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="sub" style={{ marginTop: 6 }}>Médicos com emissão no período (CPF distintos) · especialidade = vínculo ativo · docs/médico = intensidade de uso.</div>
       </article>
       <LegendaFiltro />
     </section>

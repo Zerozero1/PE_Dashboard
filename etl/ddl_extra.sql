@@ -69,6 +69,9 @@ ALTER TABLE prescricao.dim_medico
 ALTER TABLE prescricao.dim_medico
     ADD COLUMN IF NOT EXISTS nm_medico VARCHAR(200);
 
+ALTER TABLE prescricao.dim_uf
+    ADD COLUMN IF NOT EXISTS nu_populacao BIGINT;
+
 ALTER TABLE prescricao.dim_unidade
     ADD COLUMN IF NOT EXISTS co_cnes VARCHAR(50);
 
@@ -235,6 +238,17 @@ CREATE TABLE IF NOT EXISTS prescricao.snap_especialidade (
     id_medico_especialidade INTEGER NOT NULL,
     documentos BIGINT NOT NULL,
     PRIMARY KEY (sg_uf, id_medico_especialidade)
+);
+
+-- Efetivo medico por especialidade (modo "Todos" da visao Medicos): medicos
+-- distintos (dedup por CPF/id_pessoa) e documentos por UF x especialidade;
+-- linha global '**' calculada a parte (distinct nao e aditivo entre UFs).
+CREATE TABLE IF NOT EXISTS prescricao.snap_especialidade_medicos (
+    sg_uf CHAR(2) NOT NULL,
+    ds_especialidade VARCHAR(200) NOT NULL,
+    medicos BIGINT NOT NULL,
+    documentos BIGINT NOT NULL,
+    PRIMARY KEY (sg_uf, ds_especialidade)
 );
 
 CREATE TABLE IF NOT EXISTS prescricao.snap_instituicao (

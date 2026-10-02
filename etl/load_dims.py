@@ -35,8 +35,8 @@ def main():
 
     load_simple_dim(
         origin, dw, "prescricao.dim_uf",
-        ["sg_uf", "ds_uf", "in_regiao"],
-        "SELECT sg_uf, ds_uf, in_regiao FROM prescricao.td_uf", ["sg_uf"])
+        ["sg_uf", "ds_uf", "in_regiao", "nu_populacao"],
+        "SELECT sg_uf, ds_uf, in_regiao, nu_populacao::bigint FROM prescricao.td_uf", ["sg_uf"])
 
     load_simple_dim(
         origin, dw, "prescricao.dim_tipo_documento",

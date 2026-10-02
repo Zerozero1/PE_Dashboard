@@ -21,7 +21,7 @@
 | Tabela | Colunas | Descrição | Origem / carga |
 |---|---|---|---|
 | `dim_data` | `data` (PK), `ano`, `mes`, `ano_mes` | Calendário diário. | Gerada em `load_dims.py` (2021-11-01 → hoje), upsert. Sem uso direto na API atual. |
-| `dim_uf` | `sg_uf` (PK), `ds_uf`, `in_regiao` | UFs com nome e região. | `td_uf` (`load_dims.py`). Sem uso direto na API atual. |
+| `dim_uf` | `sg_uf` (PK), `ds_uf`, `in_regiao`, `nu_populacao` | UFs com nome, região e população (para densidade médica por 100 mil hab.). | `td_uf` (`load_dims.py`). Consumida pelo card "Médicos (CPF) por UF" (coluna por 100k hab). |
 | `dim_tipo_documento` | `id_tipo_documento` (PK), `nm_documento`, `in_ativo` | Tipos de documento (receita, atestado etc.). | `td_tipo_documento` (`load_dims.py`). Consumida por "Distribuição por tipo", drill AN1 e rosca do drill AN4. |
 | `dim_medico` | `id_medico` (PK), `nu_crm`, `sg_uf`, `in_situacao`, `in_tipo_inscricao`, `id_pessoa`, `nm_medico` | Inscrições CRM/UF + pessoa (CPF) para distincts. | `tb_medico` LEFT JOIN `tb_pessoa` (`load_dims.py`; `ds_foto` nunca é lida). Usada nos rankings/drills (AN1–AN4) e nas derivações de médicos. |
 | `dim_especialidade` | `id_medico_especialidade` (PK), `id_medico`, `ds_especialidade`, `nu_registro` | Especialidades por médico. | `tb_medico_especialidade` (`load_dims.py`). Consumida pelo ranking "Documentos por especialidade" e pelo drill AN1. |
@@ -67,6 +67,7 @@
 | `snap_medico_tipo` | `id_medico, sg_uf, id_tipo_documento, documentos` | Total por médico/UF/tipo | Ranking AN1 no modo "Todos" |
 | `snap_medico_paciente` | `id_medico, sg_uf, pacientes` | Pacientes distintos (UFs + global `'**'`) | Ranking AN2 no modo "Todos" |
 | `snap_especialidade` | `sg_uf, id_medico_especialidade, documentos` | Documentos por UF×especialidade | "Documentos por especialidade" no modo "Todos" |
+| `snap_especialidade_medicos` | `sg_uf, ds_especialidade, medicos, documentos` | Efetivo médico (dedup CPF) e documentos por UF×especialidade (linha global `'**'`) | Ranking "Médicos por especialidade" (visão Médicos) no modo "Todos" |
 | `snap_instituicao` | `chave, instituicao, cnes, uf, unidades, medicos, pacientes` | Instituições (CNES ou `UNIDADE:<id>`) com vínculos ativos | Ranking AN4 no modo "Todos" |
 | `snap_medicamento_top` | `sg_uf, id_tipo_documento, posicao, medicamento, itens` | Top 100 por combinação de filtros (`'**'` = todas as UFs; `0` = todos os tipos) | Ranking de medicamentos no modo "Todos" |
 

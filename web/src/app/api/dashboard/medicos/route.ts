@@ -1,14 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
 
+const TODOS_DE = "2021-10-01";
+
 export async function GET(req: NextRequest) {
   const url = req.nextUrl;
   const ate = url.searchParams.get("ate") ?? new Date().toISOString().slice(0, 10);
   const de = url.searchParams.get("de") ?? new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
   const uf = url.searchParams.get("uf") || null;
+  const todos = de <= TODOS_DE;
+  const espSql = todos
+    ? `SELECT ds_especialidade AS especialidade, medicos, documentos
+         FROM prescricao.snap_especialidade_medicos
+        WHERE sg_uf = CASE WHEN $1::text IS NULL THEN '**' ELSE $1 END
+        ORDER BY medicos DESC LIMIT 15`
+    : `SELECT COALESCE(NULLIF(btrim(e.ds_especialidade), ''), 'NAO_INFORMADO') AS especialidade,
+              count(DISTINCT dm.id_pessoa)::bigint AS medicos,
+              sum(f.documentos)::bigint AS documentos
+         FROM prescricao.fato_documento_especialidade_dia f
+         JOIN prescricao.dim_especialidade e
+           ON e.id_medico_especialidade = f.id_medico_especialidade
+         JOIN prescricao.dim_medico dm ON dm.id_medico = e.id_medico
+        WHERE f.dia BETWEEN $1 AND $2 AND ($3::text IS NULL OR f.sg_uf = $3)
+        GROUP BY 1 ORDER BY medicos DESC LIMIT 15`;
+  const espParams = todos ? [uf] : [de, ate, uf];
 
   try {
-    const [snapshot, novos, porUf, inatividade, emissoresMensal, emissores30d] = await Promise.all([
+    const [snapshot, novos, porUf, inatividade, emissoresMensal, emissores30d, especialidades] = await Promise.all([
       query(
         `SELECT inscricoes_cadastradas AS inscricoes,
                 medicos_ativos AS ativos
@@ -24,10 +42,11 @@ export async function GET(req: NextRequest) {
         [uf]
       ),
       query(
-        `SELECT sg_uf AS uf, inscricoes_cadastradas, medicos_ativos
-           FROM prescricao.fato_medico_snapshot
-          WHERE sg_uf <> '--'
-          ORDER BY inscricoes_cadastradas DESC`
+        `SELECT s.sg_uf AS uf, s.inscricoes_cadastradas, s.medicos_ativos, u.nu_populacao
+           FROM prescricao.fato_medico_snapshot s
+           LEFT JOIN prescricao.dim_uf u ON u.sg_uf = s.sg_uf
+          WHERE s.sg_uf <> '--'
+          ORDER BY s.inscricoes_cadastradas DESC`
       ),
       query(
         `WITH ref AS (SELECT max(dia) AS hoje FROM prescricao.fato_documento_medico_dia)
@@ -59,6 +78,7 @@ export async function GET(req: NextRequest) {
                                  FROM prescricao.fato_documento_medico_dia)`,
         [uf]
       ),
+      query(espSql, espParams),
     ]);
 
     const s = snapshot.rows[0];
@@ -74,6 +94,7 @@ export async function GET(req: NextRequest) {
       inatividade: inatividade.rows,
       emissores_mensal: emissoresMensal.rows,
       emissores_30d: Number(emissores30d.rows[0]?.n ?? 0),
+      ranking_especialidades: especialidades.rows,
     });
   } catch (e) {
     return NextResponse.json({ erro: String(e) }, { status: 500 });

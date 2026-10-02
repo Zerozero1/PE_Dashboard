@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS prescricao.dim_data (
 CREATE TABLE IF NOT EXISTS prescricao.dim_uf (
     sg_uf CHAR(2) PRIMARY KEY,
     ds_uf VARCHAR(60),
-    in_regiao VARCHAR(20)
+    in_regiao VARCHAR(20),
+    nu_populacao BIGINT
 );
 
 CREATE TABLE IF NOT EXISTS prescricao.dim_tipo_documento (

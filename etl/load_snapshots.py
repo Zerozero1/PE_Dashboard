@@ -80,6 +80,34 @@ def main():
     log(f"snap_especialidade: {cur.rowcount:,} linhas")
     dw.commit()
 
+    cur.execute("TRUNCATE prescricao.snap_especialidade_medicos")
+    cur.execute(
+        "INSERT INTO prescricao.snap_especialidade_medicos "
+        "(sg_uf, ds_especialidade, medicos, documentos) "
+        "SELECT f.sg_uf, COALESCE(NULLIF(btrim(e.ds_especialidade), ''), 'NAO_INFORMADO'), "
+        "       count(DISTINCT dm.id_pessoa)::bigint, sum(f.documentos)::bigint "
+        "  FROM prescricao.fato_documento_especialidade_dia f "
+        "  JOIN prescricao.dim_especialidade e "
+        "    ON e.id_medico_especialidade = f.id_medico_especialidade "
+        "  JOIN prescricao.dim_medico dm ON dm.id_medico = e.id_medico "
+        " GROUP BY 1, 2"
+    )
+    log(f"snap_especialidade_medicos (por UF): {cur.rowcount:,} linhas")
+    dw.commit()
+    cur.execute(
+        "INSERT INTO prescricao.snap_especialidade_medicos "
+        "(sg_uf, ds_especialidade, medicos, documentos) "
+        "SELECT '**', COALESCE(NULLIF(btrim(e.ds_especialidade), ''), 'NAO_INFORMADO'), "
+        "       count(DISTINCT dm.id_pessoa)::bigint, sum(f.documentos)::bigint "
+        "  FROM prescricao.fato_documento_especialidade_dia f "
+        "  JOIN prescricao.dim_especialidade e "
+        "    ON e.id_medico_especialidade = f.id_medico_especialidade "
+        "  JOIN prescricao.dim_medico dm ON dm.id_medico = e.id_medico "
+        " GROUP BY 2"
+    )
+    log(f"snap_especialidade_medicos (global '**'): {cur.rowcount:,} linhas")
+    dw.commit()
+
     cur.execute("TRUNCATE prescricao.snap_medicamento_top")
     base = (
         "SELECT sg_uf, id_tipo_documento, medicamento, sum(itens)::bigint AS itens "
