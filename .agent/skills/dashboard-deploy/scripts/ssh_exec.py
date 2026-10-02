@@ -61,6 +61,8 @@ def load_credentials():
 def main():
     host = os.environ.get("SCF179_HOST", DEFAULT_HOST)
     timeout = int(os.environ.get("SCF179_TIMEOUT", "600"))
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     if len(sys.argv) > 1:
         cmd = base64.b64decode(sys.argv[1]).decode("utf-8")
     else:

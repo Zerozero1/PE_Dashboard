@@ -1,10 +1,11 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-10-02 11:21 BRT_
+_Atualizado em: 2026-10-02 11:32 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões (Documentos, Medicos, Auditoria) + visao "Logs" (admin).
 
 ## ✅ Última Sessão (Resumo)
+- **Deploy do commit `81b24b3` em produção (2026-10-02, via skill `dashboard-deploy`)**: SCF179 → `git pull` até `81b24b3`, `docker compose up -d --build` (3 containers recriados), `setup.py` (45 tabelas) e validações: health ok (62.892.041 docs, até 2026-10-02), domínio 307, `fato_documento_medico_paciente_dia` intacta (2021-10-07 → 2026-10-02), `snap_especialidade` 213.981, `snap_especialidade_medicos` 1.995, `categoria_medicamento` 268, `medicamento_anvisa` 43.593, tabelas removidas ausentes. Bug do `ssh_exec.py` corrigido no caminho (UnicodeEncodeError no console Windows ao imprimir saída com `►`): `sys.stdout/stderr.reconfigure(encoding="utf-8", errors="replace")`.
 - Tendência de emissores por mês (2026-10-02): o card "Médicos com pelo menos uma emissão de documento por mês" calculava a média de crescimento incluindo o **mês corrente (parcial)** — derrubando a média; agora a tendência usa **apenas meses fechados** (`s.mes < mês de ate`) e o rodapé avisa "(média sobre meses fechados; o mês corrente é parcial)" quando a série tem mês parcial. `tsc`/`build` OK.
 - Contraste dos cabeçalhos de tabela (2026-10-02): `.table th` passou de `#5e6b79` para `#93a1b0` e o `border-bottom` de `var(--line)` para `#2c3846` — mais legível e ainda discreto (9px, uppercase, 600), aplicado a **todas** as tabelas via `globals.css`. `build` OK.
 - Card "Médicos (CPF) por UF" — métrica corrigida (2026-10-02): agora usa **médicos que efetivamente emitiram** (CPF distintos no período) — all-time via `fato_medico_extremos_emissao`; janelas via `fato_documento_medico_dia` + `dim_medico`; densidade por 100k hab calculada sobre os **emitentes**. Substitui os conceitos anteriores (inscrições CRM/UF e cadastro com aceite), que confundiam o card. Leitura: SP 68.791 emitentes all-time (166,2/100k) e 40.094 em 30 dias (96,9/100k); RJ 47.707 (298,0/100k). `tsc`/`build` OK; docs (web/README, DATAMART) atualizadas.
