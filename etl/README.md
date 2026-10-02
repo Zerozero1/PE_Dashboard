@@ -38,7 +38,8 @@ $env:DW_HOST='172.16.7.112'; $env:DW_DB='prescricao_dw'; $env:DW_USER='usr_presc
 | `load_documentos.py` | Carrega `fato_documento_emissao` (um registro por documento assinado ou não: data/hora, médico, UF, tipo, unidade, situação e `ds_qrcode`) — alimenta a lista de documentos do drill da AN3. Carga cheia na primeira execução e incremental depois (revisa os últimos 5M ids); extração em lotes de 2M ids com stream ordenado e retry por lote. |
 | `load_snapshots.py` | Reconstrói os snapshots all-time (`snap_medico_tipo`, `snap_medico_paciente`, `snap_instituicao`, `snap_especialidade`, `snap_especialidade_medicos`) usados no modo "Todos" dos rankings AN1/AN2/AN4, do card "Documentos por especialidade" e do ranking "Médicos por especialidade" (evita varreduras de 20-60M linhas por consulta) e o `snap_medicamento_top` (top 100 do ranking de medicamentos por UF×tipo). |
 | `load_anvisa.py` | Carrega o registro de medicamentos da ANVISA (dados abertos; ~43,6 mil linhas) em `medicamento_anvisa` — **manual** (não está no `run_all`; baixa o CSV oficial ou aceita um caminho local). A tabela da origem `tb_medicamentos_anvisa` está com linhas desalinhadas e **não deve ser usada**. |
-| `run_all.py` | Pipeline completo e idempotente (dims → fatos → snapshots → médicos → maior dia → documentos emitidos). |
+| `load_numeracao.py` | Carrega o pool de numerações ANVISA reservadas (origem `tb_numeracao_anvisa`) agregado por médico×tipo (disponíveis `D` / utilizadas `U`) em `snap_numeracao_anvisa_medico` — alimenta a visão **RDC1000** (utilização e cobertura). |
+| `run_all.py` | Pipeline completo e idempotente (dims → fatos → snapshots → numeração ANVISA → médicos → maior dia → documentos emitidos). |
 | `jobs.py` | Orquestração via fila `dashboard_refresh_job` (ver abaixo). |
 | `validate.py` / `status_dw.py` / `audit_counts.py` / `list_indexes.py` | Conferências: totais, cobertura, contagens da origem vs DW, índices. |
 | `audit_especialidades.py` | Diagnóstico da distribuição de especialidades na origem. |
@@ -106,6 +107,7 @@ Fatos:
 - `snap_especialidade_medicos` (sg_uf, ds_especialidade, medicos, documentos) — efetivo médico (dedup CPF) e documentos all-time por UF×especialidade (linha global `'**'`); ranking "Médicos por especialidade" no modo "Todos"
 - `snap_instituicao` (chave, instituicao, cnes, uf, unidades, medicos, pacientes) — instituições no modo "Todos" (AN4), já com vínculos ativos de médicos
 - `snap_medicamento_top` (sg_uf, id_tipo_documento, posicao, medicamento, itens) — top 100 do ranking de medicamentos no modo "Todos" por combinação de filtros (`'**'` = todas as UFs; `0` = todos os tipos)
+- `snap_numeracao_anvisa_medico` (sg_uf, id_medico, id_tipo_documento, disponiveis, utilizados) — pool de numerações ANVISA reservadas por médico×tipo (`D`/`U`); visão RDC1000
 
 Removidas em 2026-10-02 (sem consumidor na UI; `DROP` no `ddl_extra.sql`): `fato_documento_unidade_dia`, `fato_auditoria_dia`.
 

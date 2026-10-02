@@ -372,6 +372,18 @@ CREATE INDEX IF NOT EXISTS idx_medicamento_anvisa_reg
 CREATE INDEX IF NOT EXISTS idx_medicamento_anvisa_principio
     ON prescricao.medicamento_anvisa (ds_principio_ativo);
 
+-- Pool de numeracoes ANVISA reservadas (origem tb_numeracao_anvisa) agregado
+-- por medico x tipo: disponiveis (D) e utilizados (U). Alimenta a visao RDC1000
+-- (load_numeracao.py, no run_all).
+CREATE TABLE IF NOT EXISTS prescricao.snap_numeracao_anvisa_medico (
+    sg_uf CHAR(2) NOT NULL,
+    id_medico INTEGER NOT NULL,
+    id_tipo_documento INTEGER NOT NULL,
+    disponiveis BIGINT NOT NULL,
+    utilizados BIGINT NOT NULL,
+    PRIMARY KEY (id_medico, id_tipo_documento)
+);
+
 -- Limpeza 2026-10-01: fato e flag AN2 nao exibidos na UI (AN2 usa
 -- fato_documento_medico_paciente_dia + snap_medico_paciente). Aplicado pelo
 -- setup.py na maquina do ETL apos o pull (o codigo novo nao usa a tabela).

@@ -30,6 +30,7 @@ def main():
         ("fato unidade-pacientes", "load_fatos unidade_pacientes"),
         ("fato medico-unidade (vinculos)", "load_fatos medico_unidade"),
         ("snapshots AN1/AN2/AN4", "load_snapshots"),
+        ("numeracao anvisa (RDC1000)", "load_numeracao"),
         ("medicos (snapshot/novos)", "load_medicos"),
         ("AN3 maior dia (emissoes por dia)", "load_maior_dia"),
         ("documentos emitidos (drill AN3)", "load_documentos"),

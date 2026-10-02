@@ -81,6 +81,23 @@ type MedData = {
   ranking_especialidades: { especialidade: string; medicos: string; documentos: string }[];
 };
 
+type NumData = {
+  de: string;
+  ate: string;
+  por_tipo: {
+    tipo: string;
+    id_tipo_documento: number;
+    medicos: number;
+    com_estoque: number;
+    sem_estoque: number;
+    nunca_usaram: number;
+    ja_usaram: number;
+    disponiveis: string;
+    utilizados: string;
+    emitentes_sem_numeracao: number;
+  }[];
+};
+
 type AudData = {
   de: string;
   ate: string;
@@ -126,12 +143,13 @@ function Sel({ label, value, onChange, options }: { label: string; value: string
 
 const PERIODOS: [string, string][] = [["todos", "Todos"], ["30", "30 dias"], ["7", "7 dias"], ["90", "90 dias"], ["365", "12 meses"]];
 
-const VIEWS = ["documentos", "medicos", "auditoria"] as const;
+const VIEWS = ["documentos", "medicos", "rdc1000", "auditoria"] as const;
 type ViewId = (typeof VIEWS)[number] | "logs";
 
 const VIEW_META: Record<ViewId, { title: string; subtitle: string; theme: string }> = {
   documentos: { title: "Documentos médicos", subtitle: "Emissões por período, UF, tipo e especialidade — UF da unidade de atendimento.", theme: "theme-cyan" },
   medicos: { title: "Médicos", subtitle: "Cadastro, situação da inscrição e atividade de prescrição por UF.", theme: "theme-cyan" },
+  rdc1000: { title: "RDC1000", subtitle: "Numerações ANVISA reservadas por médico e tipo de documento — utilização e cobertura do pool.", theme: "theme-cyan" },
   auditoria: { title: "Auditoria", subtitle: "Anomalias agregadas — média de referência de todos os médicos · somente agregados.", theme: "theme-cyan" },
   logs: { title: "Logs", subtitle: "Utilização (logins) e atualizações de dados — visão administrativa.", theme: "theme-cyan" },
 };
@@ -772,6 +790,93 @@ function MedicosView({ active, filtros }: { active: boolean; filtros: FiltrosDat
           </table>
         </div>
         <div className="sub" style={{ marginTop: 6 }}>Médicos com emissão no período (CPF distintos) · especialidade = vínculo ativo · docs/médico = intensidade de uso.</div>
+      </article>
+      <LegendaFiltro />
+    </section>
+  );
+}
+
+function RdcView({ active, filtros }: { active: boolean; filtros: FiltrosData | null }) {
+  const [dias, setDias] = useState<"todos" | string>("todos");
+  const [uf, setUf] = useState("");
+  const { de, ate } = periodo(dias === "todos" ? "todos" : Number(dias));
+  const qs = `de=${de}&ate=${ate}&uf=${uf}`;
+  const { data, erro, carregando } = useApi<NumData>(`/api/dashboard/numeracao?${qs}`, active);
+  if (erro) return <div className="card" style={{ gridColumn: "span 12", color: "var(--red)" }}>Erro: {erro}</div>;
+  if (!data) return <div className="card" style={{ gridColumn: "span 12", color: "#566271" }}>Carregando…</div>;
+  const totDisp = data.por_tipo.reduce((a, t) => a + Number(t.disponiveis), 0);
+  const totUsados = data.por_tipo.reduce((a, t) => a + Number(t.utilizados), 0);
+  const taxa = totDisp + totUsados > 0
+    ? ((totUsados / (totDisp + totUsados)) * 100).toFixed(2).replace(".", ",")
+    : "0,00";
+  const medicos = data.por_tipo.reduce((a, t) => a + Number(t.medicos), 0);
+  const nunca = data.por_tipo.reduce((a, t) => a + Number(t.nunca_usaram), 0);
+  const gapTotal = data.por_tipo.reduce((a, t) => a + Number(t.emitentes_sem_numeracao), 0);
+  const filtrados = dias !== "todos" || uf !== "";
+  const taxaTxt = (d: number, u: number) =>
+    d + u > 0 ? `${((u / (d + u)) * 100).toFixed(2).replace(".", ",")}%` : "0,00%";
+  return (
+    <section className="grid">
+      <div className="filters" style={{ gridColumn: "span 12" }}>
+        <Sel label="Período" value={dias} onChange={setDias} options={PERIODOS} />
+        <Sel label="UF" value={uf} onChange={setUf} options={[["", "Todas"], ...(filtros?.ufs.map((u) => [u, u] as [string, string]) ?? [])]} />
+        <div className="meta">{de} → {ate}</div>
+      </div>
+      {carregando && <Processando />}
+      <KpiCard label="Numerações no pool" value={nf.format(totDisp + totUsados)} meta="disponíveis + utilizadas" tag={uf !== ""} />
+      <KpiCard label="Utilizadas" value={nf.format(totUsados)} meta="status U" tag={uf !== ""} />
+      <KpiCard label="Taxa de uso" value={`${taxa}%`} meta="utilizadas / pool" tag={uf !== ""} />
+      <KpiCard label="Médicos com numeração" value={nf.format(medicos)} meta="inscrições (CRM/UF) × tipo" tag={uf !== ""} />
+      <KpiCard label="Nunca usaram" value={nf.format(nunca)} meta="com estoque e nenhuma U" tag={uf !== ""} />
+
+      <article className="card" style={{ gridColumn: "span 12" }}>
+        <div className="section-title">
+          <h2>Utilização das numerações por tipo</h2>
+          <span>{de} → {ate}{filtrados && " · "}{filtrados && <span className="tag">F</span>}</span>
+        </div>
+        <table className="table" style={{ fontSize: 10.5 }}>
+          <thead><tr><th>Tipo de documento</th><th style={{ textAlign: "right" }}>Disponíveis</th><th style={{ textAlign: "right" }}>Utilizadas</th><th style={{ textAlign: "right" }}>Taxa de uso</th><th style={{ textAlign: "right" }}>Médicos</th></tr></thead>
+          <tbody>
+            {data.por_tipo.map((t) => {
+              const d = Number(t.disponiveis);
+              const u = Number(t.utilizados);
+              return (
+                <tr key={t.id_tipo_documento}>
+                  <td>{t.tipo}</td>
+                  <td style={{ textAlign: "right" }}>{nf.format(d)}</td>
+                  <td style={{ textAlign: "right" }}>{nf.format(u)}</td>
+                  <td style={{ textAlign: "right", color: "var(--va)" }}>{taxaTxt(d, u)}</td>
+                  <td style={{ textAlign: "right" }}>{nf.format(t.medicos)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <div className="sub" style={{ marginTop: 6 }}>Pool atual (sem histórico): D = disponível, U = utilizada · unidade = inscrição (CRM/UF) × tipo.</div>
+      </article>
+
+      <article className="card" style={{ gridColumn: "span 12" }}>
+        <div className="section-title">
+          <h2>Cobertura e estoque por tipo</h2>
+          <span>emitentes sem numeração: {dias === "todos" ? "histórico" : "no período"}{gapTotal > 0 && " · "}{gapTotal > 0 && <span className="tag">F</span>}</span>
+        </div>
+        <table className="table" style={{ fontSize: 10.5 }}>
+          <thead><tr><th>Tipo de documento</th><th style={{ textAlign: "right" }}>Com numeração</th><th style={{ textAlign: "right" }}>Com estoque</th><th style={{ textAlign: "right" }}>Sem estoque</th><th style={{ textAlign: "right" }}>Nunca usaram</th><th style={{ textAlign: "right" }}>Já usaram</th><th style={{ textAlign: "right" }}>Emitentes sem numeração</th></tr></thead>
+          <tbody>
+            {data.por_tipo.map((t) => (
+              <tr key={t.id_tipo_documento}>
+                <td>{t.tipo}</td>
+                <td style={{ textAlign: "right" }}>{nf.format(t.medicos)}</td>
+                <td style={{ textAlign: "right" }}>{nf.format(t.com_estoque)}</td>
+                <td style={{ textAlign: "right" }}>{nf.format(t.sem_estoque)}</td>
+                <td style={{ textAlign: "right" }}>{nf.format(t.nunca_usaram)}</td>
+                <td style={{ textAlign: "right" }}>{nf.format(t.ja_usaram)}</td>
+                <td style={{ textAlign: "right", color: t.emitentes_sem_numeracao > 0 ? "var(--orange)" : undefined }}>{nf.format(t.emitentes_sem_numeracao)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="sub" style={{ marginTop: 6 }}>Emitentes sem numeração = médicos que emitiram esse tipo no período e não possuem pool de numeração (gap de cobertura).</div>
       </article>
       <LegendaFiltro />
     </section>
@@ -1560,6 +1665,7 @@ export default function Dashboard({ email, mock }: { email: string; mock?: boole
             </header>
             {v === "documentos" && <DocumentsView active={view === v} filtros={filtros} />}
             {v === "medicos" && <MedicosView active={view === v} filtros={filtros} />}
+            {v === "rdc1000" && <RdcView active={view === v} filtros={filtros} />}
             {v === "auditoria" && <AuditoriaView filtros={filtros} />}
           </section>
         ))}

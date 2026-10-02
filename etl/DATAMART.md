@@ -70,6 +70,7 @@
 | `snap_especialidade_medicos` | `sg_uf, ds_especialidade, medicos, documentos` | Efetivo médico (dedup CPF) e documentos por UF×especialidade (linha global `'**'`) | Ranking "Médicos por especialidade" (visão Médicos) no modo "Todos" |
 | `snap_instituicao` | `chave, instituicao, cnes, uf, unidades, medicos, pacientes` | Instituições (CNES ou `UNIDADE:<id>`) com vínculos ativos | Ranking AN4 no modo "Todos" |
 | `snap_medicamento_top` | `sg_uf, id_tipo_documento, posicao, medicamento, itens` | Top 100 por combinação de filtros (`'**'` = todas as UFs; `0` = todos os tipos) | Ranking de medicamentos no modo "Todos" |
+| `snap_numeracao_anvisa_medico` | `sg_uf, id_medico, id_tipo_documento, disponiveis, utilizados` | Pool de numerações ANVISA reservadas por médico×tipo (estado atual; sem histórico) | Visão **RDC1000**: utilização por tipo/UF e cobertura (gap de emitentes sem numeração) |
 
 Construídas por `load_snapshots.py` (TRUNCATE + INSERT), dentro do `run_all`.
 

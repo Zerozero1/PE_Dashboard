@@ -1,10 +1,11 @@
 # SESSION STATE — PE Dashboard
-_Atualizado em: 2026-10-02 11:32 BRT_
+_Atualizado em: 2026-10-02 12:15 BRT_
 
 ## 🎯 Objetivo Atual
 Dashboard web restrito ao dominio `@portalmedico.org.br` (Google OAuth) sobre a base `bd_cfm`, com datamart `prescricao_dw`, ETL Python e 3 visões (Documentos, Medicos, Auditoria) + visao "Logs" (admin).
 
 ## ✅ Última Sessão (Resumo)
+- **Visão RDC1000 (2026-10-02)**: nova aba **RDC1000** (após Médicos) com (1) **Utilização das numerações** por tipo (disponíveis D / utilizadas U / taxa / médicos) e (2) **Cobertura e estoque** (com/sem estoque, nunca usaram, já usaram e **emitentes sem numeração** no período). Fonte: `tb_numeracao_anvisa` (acesso concedido pelo DBA; **pool em carga em andamento** — cresceu de 6,72M para ~6,97M durante a sessão; o tipo 5 foi renomeado na origem de "Antimicrobiano" para "Receita Sujeita à Retenção", dims recarregadas). Novo `etl/load_numeracao.py` + tabela `snap_numeracao_anvisa_medico` (7.055 pares médico×tipo; 6.960.341 D / 8.548 U) no `run_all`; endpoint `/api/dashboard/numeracao`. `tsc`/`build` OK; docs (etl/README, DATAMART, web/README) atualizadas. **Pendente: deploy** (web + ETL) para a aba entrar em produção.
 - **Deploy do commit `81b24b3` em produção (2026-10-02, via skill `dashboard-deploy`)**: SCF179 → `git pull` até `81b24b3`, `docker compose up -d --build` (3 containers recriados), `setup.py` (45 tabelas) e validações: health ok (62.892.041 docs, até 2026-10-02), domínio 307, `fato_documento_medico_paciente_dia` intacta (2021-10-07 → 2026-10-02), `snap_especialidade` 213.981, `snap_especialidade_medicos` 1.995, `categoria_medicamento` 268, `medicamento_anvisa` 43.593, tabelas removidas ausentes. Bug do `ssh_exec.py` corrigido no caminho (UnicodeEncodeError no console Windows ao imprimir saída com `►`): `sys.stdout/stderr.reconfigure(encoding="utf-8", errors="replace")`.
 - Tendência de emissores por mês (2026-10-02): o card "Médicos com pelo menos uma emissão de documento por mês" calculava a média de crescimento incluindo o **mês corrente (parcial)** — derrubando a média; agora a tendência usa **apenas meses fechados** (`s.mes < mês de ate`) e o rodapé avisa "(média sobre meses fechados; o mês corrente é parcial)" quando a série tem mês parcial. `tsc`/`build` OK.
 - Contraste dos cabeçalhos de tabela (2026-10-02): `.table th` passou de `#5e6b79` para `#93a1b0` e o `border-bottom` de `var(--line)` para `#2c3846` — mais legível e ainda discreto (9px, uppercase, 600), aplicado a **todas** as tabelas via `globals.css`. `build` OK.
