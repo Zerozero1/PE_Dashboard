@@ -74,6 +74,8 @@ python jobs.py enqueue-manual <email>  # cria job manual (botão "Atualizar dado
 
 ## Modelo físico (schema `prescricao` do DW)
 
+> Dicionário de dados completo (cada tabela: grão, colunas, origem, carga e quem consome): [`DATAMART.md`](DATAMART.md).
+
 Star schema **sem foreign keys**: dimensões e fatos se relacionam apenas pelas chaves (ex.: `fato_documento_dia.id_tipo_documento` → `dim_tipo_documento.id_tipo_documento`). A integridade referencial é garantida pelo ETL (JOINs na origem, que já tem as FKs), não por constraints — decisão 2026-09-28 (ver "Decisoes Registradas" no plano).
 
 Dimensões: `dim_data`, `dim_uf`, `dim_tipo_documento`, `dim_medico`, `dim_especialidade`, `dim_unidade`.

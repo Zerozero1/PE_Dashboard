@@ -85,6 +85,7 @@ Ver `.env.example` (docker) e os READMEs de cada parte. Credenciais de banco e O
 - [`PLANO_DESENVOLVIMENTO_DASHBOARD.md`](PLANO_DESENVOLVIMENTO_DASHBOARD.md) — plano, decisões e consultas por visão
 - [`RESUMO_BASE_bd_cfm.md`](RESUMO_BASE_bd_cfm.md) — base relacional de origem (`bd_cfm`)
 - [`etl/README.md`](etl/README.md) — datamart, scripts e modelo físico
+- [`etl/DATAMART.md`](etl/DATAMART.md) — dicionário de dados (grão, colunas, origem, carga e consumo de cada tabela)
 - [`web/README.md`](web/README.md) — aplicação web, endpoints e deploy
 - [`DEPLOY_PRODUCAO.md`](DEPLOY_PRODUCAO.md) — guia de implantação (inclui Docker)
 - [`SESSION_STATE.md`](SESSION_STATE.md) — memória de sessão (resumo e próximos passos)
